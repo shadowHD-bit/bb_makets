@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Тарифы и комиссии — Bitbanker Admin</title>
+<style>
+:root{
+  --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;
+  --bg-white-0:#fff;--bg-weak-50:#f7f7f7;--bg-soft-200:#ebebeb;
+  --stroke-soft-200:#ebebeb;
+  --primary-base:#7246e6;--primary-alpha-10:#7246e61a;
+  --state-success-base:#1fc16b;--state-success-lighter:#e3f7ec;--state-success-dark:#0b4627;
+  --state-warning-base:#fa7319;--state-warning-lighter:#fff3eb;--state-warning-dark:#c77a12;
+  --state-error-base:#fb3748;--state-error-lighter:#ffebec;--state-error-dark:#681219;
+  --state-info-lighter:#f4f0fe;--state-faded-lighter:#f5f5f5;--yellow-200:#ffecc0;
+  --r4:4px;--r6:6px;--r8:8px;--r10:10px;--r12:12px;--r16:16px;--rf:999px;
+  --f:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --sx:0 1px 2px 0 #0a0d1408;--st:0 2px 4px 0 #0e121b08,0 6px 10px 0 #0e121b0f;
+  --sd:-24px 0 48px 0 #0e121b2e;--sg:0 4px 12px 0 #7246e647;
+  --th:36px;--tr:48px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--f);font-size:14px;line-height:20px;color:var(--text-strong-950);background:var(--bg-weak-50);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;background:none;border:none;padding:0}
+input,select,textarea{font:inherit}
+.lay{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR (visual only) ── */
+.sb{width:280px;min-width:280px;height:100%;background:var(--bg-white-0);border-right:1px solid var(--stroke-soft-200);display:flex;flex-direction:column;overflow:hidden}
+.sb-top{height:72px;display:flex;align-items:center;padding:0 12px;flex-shrink:0}
+.sb-brand{display:flex;align-items:center;gap:12px;width:100%;padding:8px;border-radius:var(--r10)}
+.sb-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary-base),#9B7BF0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;flex-shrink:0}
+.sb-nm{font-size:14px;font-weight:500;flex:1}.sb-sm{font-size:12px;color:var(--text-soft-400)}
+.sb-sc{flex:1;overflow-y:auto;padding:4px 12px 8px}
+.sb-lbl{padding:8px 8px 4px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-soft-400)}
+.sbi{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:var(--r8);font-size:14px;font-weight:500;color:var(--text-sub-600)}
+.sbi .ic{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center}.sbi .ic svg{width:100%;height:100%}
+.sbi .lb{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chv{width:10px;height:10px;flex-shrink:0;color:var(--text-soft-400);display:flex;align-items:center;justify-content:center;transform:rotate(-90deg)}.chv svg{width:100%;height:100%}
+.chv.dn{transform:none}
+.sbi.op{color:var(--primary-base)}.sbi.op .ic{color:var(--primary-base)}.sbi.op .chv{color:var(--primary-base);transform:none}
+.snav{display:flex;flex-direction:column;gap:2px;padding-bottom:4px;padding-left:12px}
+.sni{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px 6px 12px;border-radius:var(--r8);font-size:13px;font-weight:500;color:var(--text-sub-600);position:relative}
+.sni.ac{background:var(--bg-weak-50);box-shadow:inset 2px 0 0 0 var(--primary-base);color:var(--primary-base)}
+.sni .ni{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center}.sni .ni svg{width:100%;height:100%}
+.nd{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-left:auto}
+.nd.g{background:var(--state-success-base)}.nd.o{background:var(--state-warning-base)}.nd.r{background:var(--state-error-base)}
+.sb-bot{padding:8px 12px;border-top:1px solid var(--stroke-soft-200);flex-shrink:0}
+.sb-col{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:var(--r8);font-size:13px;font-weight:500;color:var(--text-soft-400)}
+.sb-col .ci{width:13px;height:13px;display:flex;align-items:center;justify-content:center;transform:rotate(180deg)}.sb-col .ci svg{width:100%;height:100%}
+
+/* ── MAIN ── */
+.mn{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── TOPBAR (visual only) ── */
+.tb{height:72px;background:var(--bg-white-0);border-bottom:1px solid var(--stroke-soft-200);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+.tb-sr{width:340px;display:flex;align-items:center;gap:8px;border:1px solid var(--stroke-soft-200);border-radius:var(--r10);padding:7px 10px;background:var(--bg-white-0);box-shadow:var(--sx);flex-shrink:0}
+.tb-sr svg{width:16px;height:16px;color:var(--text-soft-400);flex-shrink:0}
+.tb-sr input{flex:1;border:none;outline:none;font-size:14px;color:var(--text-strong-950);background:transparent}
+.tb-sr input::placeholder{color:var(--text-soft-400)}
+.sp{flex:1}
+.tb-lg{display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--stroke-soft-200);border-radius:var(--r10);background:var(--bg-white-0);color:var(--text-sub-600);font-size:14px;font-weight:500;box-shadow:var(--sx);white-space:nowrap}
+.flag{width:20px;height:20px;border-radius:50%;overflow:hidden;display:inline-block;flex-shrink:0}
+.tb-bw{position:relative}
+.tb-bl{width:36px;height:36px;border-radius:var(--r10);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);display:flex;align-items:center;justify-content:center;color:var(--text-sub-600);box-shadow:var(--sx)}
+.tb-bl svg{width:16px;height:16px}
+.tb-bg{position:absolute;top:2px;right:2px;min-width:16px;height:16px;background:var(--state-error-base);color:#fff;font-size:10px;font-weight:600;border-radius:var(--rf);display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:16px}
+.tb-dv{width:1px;height:28px;background:var(--stroke-soft-200);margin:0 4px;flex-shrink:0}
+.tb-u{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:var(--r10)}
+.tb-ua{width:36px;height:36px;border-radius:50%;background:var(--yellow-200);color:var(--text-strong-950);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-un{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;white-space:nowrap}
+.tb-ue{font-size:12px;color:var(--text-soft-400);white-space:nowrap}
+
+/* ── CONTENT ── */
+.ct{flex:1;overflow-y:auto;padding:24px}
+
+/* page header card */
+.ph{background:var(--bg-white-0);border-radius:var(--r16);box-shadow:var(--sx);margin-bottom:16px;overflow:hidden}
+.ph-t{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px}
+.ph-t h1{font-size:18px;font-weight:500;letter-spacing:-.27px;line-height:24px}
+.ph-t p{font-size:14px;color:var(--text-sub-600);margin-top:3px}
+.ph-a{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r10);font-size:14px;font-weight:500;white-space:nowrap;cursor:pointer;font-family:var(--f);outline:none;transition:all .12s}
+.btn svg{width:16px;height:16px;flex-shrink:0}
+.bp{background:var(--primary-base);color:#fff;border:1px solid var(--primary-base)}.bp:hover{filter:brightness(1.08);box-shadow:var(--sg)}
+.bg{background:var(--bg-white-0);color:var(--text-sub-600);border:1px solid var(--stroke-soft-200);box-shadow:var(--sx)}.bg:hover{background:var(--bg-weak-50)}
+.bd{background:var(--bg-white-0);color:var(--state-error-base);border:1px solid var(--stroke-soft-200);box-shadow:var(--sx)}.bd:hover{background:var(--state-error-lighter)}
+.ib{width:32px;height:32px;border-radius:var(--r8);display:flex;align-items:center;justify-content:center;color:var(--text-soft-400);transition:background .12s}.ib:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}.ib svg{width:16px;height:16px}
+
+/* card */
+.card{background:var(--bg-white-0);border-radius:var(--r12);box-shadow:var(--sx);overflow:hidden}
+
+/* subtabs */
+.stabs{display:flex;padding:0 16px;border-bottom:1px solid var(--stroke-soft-200)}
+.stab{padding:12px 16px;font-size:14px;font-weight:500;color:var(--text-sub-600);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s,border-color .12s;white-space:nowrap;user-select:none}
+.stab:hover{color:var(--text-strong-950)}
+.stab.on{color:var(--primary-base);border-bottom-color:var(--primary-base)}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--stroke-soft-200);flex-wrap:wrap}
+.tr{margin-left:auto;display:flex;gap:8px}
+.sw{position:relative}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-soft-400);pointer-events:none;width:14px;height:14px}
+.si{height:34px;border:1px solid var(--stroke-soft-200);border-radius:var(--r10);padding:0 10px 0 30px;font-size:13px;color:var(--text-strong-950);background:var(--bg-white-0);outline:none;width:240px;box-shadow:var(--sx);font-family:var(--f)}
+.si::placeholder{color:var(--text-soft-400)}
+.fs{height:34px;border:1px solid var(--stroke-soft-200);border-radius:var(--r10);padding:0 28px 0 10px;font-size:13px;color:var(--text-sub-600);background:var(--bg-white-0);box-shadow:var(--sx);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='none' stroke='%23a3a3a3' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;font-family:var(--f)}
+
+/* table */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+thead tr{height:var(--th);background:var(--bg-weak-50)}
+thead th{padding:0 12px;text-align:left;font-size:12px;font-weight:500;letter-spacing:.03em;color:var(--text-soft-400);border-bottom:1px solid var(--stroke-soft-200);white-space:nowrap}
+thead th:first-child{padding-left:20px}thead th:last-child{padding-right:20px}
+tbody tr{height:var(--tr);border-bottom:1px solid var(--stroke-soft-200);cursor:pointer;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg-weak-50)}
+td{padding:0 12px;font-size:13px;color:var(--text-strong-950);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+td:first-child{padding-left:20px}td:last-child{padding-right:20px}
+.cm{font-size:13px;font-weight:500;color:var(--text-strong-950)}
+.cs{font-size:11px;color:var(--text-soft-400)}
+.mono{font-size:12px;color:var(--text-sub-600);font-family:ui-monospace,monospace}
+.tl{color:var(--primary-base);cursor:pointer}.tl:hover{text-decoration:underline}
+.tag{display:inline-block;padding:1px 8px;border-radius:var(--rf);font-size:11px;font-weight:500;background:var(--state-faded-lighter);color:var(--text-sub-600);border:1px solid var(--stroke-soft-200)}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--rf);font-size:12px;font-weight:500;white-space:nowrap;line-height:16px}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.b-ok{background:var(--state-success-lighter);color:var(--state-success-dark)}.b-ok .dot{background:var(--state-success-base)}
+.b-info{background:var(--state-info-lighter);color:var(--primary-base)}.b-info .dot{background:var(--primary-base)}
+.b-fade{background:var(--state-faded-lighter);color:var(--text-sub-600)}.b-fade .dot{background:#9e9e9e}
+.b-warn{background:var(--state-warning-lighter);color:var(--state-warning-dark)}.b-warn .dot{background:var(--state-warning-base)}
+
+/* pagination */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-top:1px solid var(--stroke-soft-200)}
+.pag-i{font-size:13px;color:var(--text-soft-400)}
+.pag-p{display:flex;gap:4px}
+.pc{min-width:28px;height:28px;border-radius:var(--r8);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);color:var(--text-sub-600);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;transition:background .1s}
+.pc:hover:not(:disabled){background:var(--bg-weak-50)}.pc.on{background:var(--bg-soft-200);color:var(--text-strong-950)}.pc.ar{border-color:transparent;background:transparent}.pc:disabled{opacity:.4;cursor:default}
+
+/* ── DRAWERS ── */
+.bdrop{position:fixed;inset:0;background:rgba(14,18,27,.12);z-index:90;opacity:0;pointer-events:none;transition:opacity .15s}
+.bdrop.open{opacity:1;pointer-events:all}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:500px;background:var(--bg-white-0);box-shadow:var(--sd);display:flex;flex-direction:column;z-index:91;transform:translateX(100%);transition:transform .2s cubic-bezier(.4,0,.2,1)}
+.drawer.open{transform:translateX(0)}
+.dh{padding:18px 20px 14px;border-bottom:1px solid var(--stroke-soft-200);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}
+.dt{font-size:16px;font-weight:600;color:var(--text-strong-950);line-height:22px}
+.ds{font-size:12px;color:var(--text-soft-400);margin-top:2px}
+.db{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.df{padding:12px 20px;border-top:1px solid var(--stroke-soft-200);display:flex;gap:8px;flex-shrink:0}
+.sec{display:flex;flex-direction:column;gap:6px}
+.sec-t{font-size:11px;font-weight:600;color:var(--text-soft-400);text-transform:uppercase;letter-spacing:.05em}
+.rows{border:1px solid var(--stroke-soft-200);border-radius:var(--r10);overflow:hidden}
+.row{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--stroke-soft-200);min-height:36px}
+.row:last-child{border-bottom:none}
+.rl{font-size:13px;color:var(--text-soft-400)}
+.rv{font-size:13px;color:var(--text-strong-950);text-align:right;font-weight:500}
+.rvl{font-size:13px;color:var(--primary-base);cursor:pointer;text-align:right}.rvl:hover{text-decoration:underline}
+.ilist{display:flex;flex-direction:column;gap:4px}
+.irow{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);cursor:pointer;transition:background .1s}
+.irow:hover{background:var(--bg-weak-50)}
+.irn{font-size:13px;font-weight:500;color:var(--text-strong-950)}
+.irm{font-size:12px;color:var(--text-soft-400)}
+.addbtn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px dashed var(--stroke-soft-200);border-radius:var(--r8);font-size:13px;color:var(--text-soft-400);cursor:pointer;width:100%;justify-content:center;background:transparent;transition:all .12s;font-family:var(--f)}
+.addbtn:hover{border-color:var(--primary-base);color:var(--primary-base);background:var(--primary-alpha-10)}
+.addbtn svg{width:14px;height:14px}
+/* factors table */
+.ftab{width:100%;border-collapse:collapse;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);overflow:hidden;font-size:12px}
+.ftab th,.ftab td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--stroke-soft-200)}
+.ftab th{background:var(--bg-weak-50);font-weight:500;color:var(--text-soft-400)}
+.ftab tbody tr:last-child td{border-bottom:none}
+.ftab .fw{font-weight:600;color:var(--text-strong-950)}
+/* binding stats */
+.bstat{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-soft-400)}
+.bstat-n{font-weight:600;color:var(--text-strong-950)}
+
+/* ── ENTITY TYPE BADGE ── */
+.etype{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--rf);font-size:11px;font-weight:500;background:var(--primary-alpha-10);color:var(--primary-base);border:1px solid #c5b5f4;margin-bottom:4px;width:fit-content}
+.etype svg{width:12px;height:12px;flex-shrink:0}
+
+/* ── DRAWER TABS ── */
+.dtabs{display:flex;padding:0 20px;border-bottom:1px solid var(--stroke-soft-200);flex-shrink:0}
+.dtab{padding:10px 12px;font-size:13px;font-weight:500;color:var(--text-sub-600);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s,border-color .12s;white-space:nowrap;user-select:none}
+.dtab:hover{color:var(--text-strong-950)}.dtab.on{color:var(--primary-base);border-bottom-color:var(--primary-base)}
+.dpane{display:none}.dpane.on{display:flex;flex-direction:column;gap:14px}
+
+/* ── BIND LIST (in modals) ── */
+.blist{display:flex;flex-direction:column;gap:2px}
+.brow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r8);cursor:pointer;transition:background .1s}
+.brow:hover{background:var(--bg-weak-50)}.brow input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--primary-base);flex-shrink:0}
+.brn{font-size:13px;font-weight:500;color:var(--text-strong-950);flex:1}.brc{font-size:12px;color:var(--text-soft-400)}
+
+/* ── MODAL ── */
+.mov{position:fixed;inset:0;background:rgba(14,18,27,.4);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.mov.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg-white-0);border-radius:var(--r16);box-shadow:0 24px 48px rgba(14,18,27,.2);width:520px;max-width:calc(100vw - 48px);max-height:calc(100vh - 80px);overflow-y:auto;display:flex;flex-direction:column;transform:translateY(8px);transition:transform .15s}
+.mov.open .modal{transform:translateY(0)}
+.mh{padding:18px 24px 14px;border-bottom:1px solid var(--stroke-soft-200);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0}
+.mt{font-size:16px;font-weight:600}.md{font-size:13px;color:var(--text-soft-400);margin-top:3px}
+.mb{padding:18px 24px;display:flex;flex-direction:column;gap:14px}
+.mf{padding:14px 24px 18px;border-top:1px solid var(--stroke-soft-200);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.fl{font-size:13px;font-weight:500;color:var(--text-sub-600);margin-bottom:4px;display:block}
+.fr{color:var(--state-error-base)}
+.fin{height:40px;border:1px solid var(--stroke-soft-200);border-radius:var(--r10);padding:0 12px;font-size:14px;color:var(--text-strong-950);background:var(--bg-white-0);outline:none;width:100%;box-shadow:var(--sx);font-family:var(--f)}
+.fin:focus{border-color:var(--primary-base)}
+.fin::placeholder{color:var(--text-soft-400)}
+.fte{border:1px solid var(--stroke-soft-200);border-radius:var(--r10);padding:10px 12px;font-size:14px;color:var(--text-strong-950);background:var(--bg-white-0);outline:none;width:100%;box-shadow:var(--sx);height:72px;resize:none;line-height:20px;font-family:var(--f)}
+.fte:focus{border-color:var(--primary-base)}
+.ibox{padding:10px 14px;border-radius:var(--r8);background:var(--state-info-lighter);border:1px solid #c5b5f4;font-size:13px;color:#4a2da8;line-height:1.5}
+
+/* ── TOAST ── */
+#toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:500;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:#1a1a1a;color:#fff;font-size:13px;font-weight:500;padding:10px 18px;border-radius:var(--r10);box-shadow:0 4px 16px rgba(0,0,0,.22);pointer-events:none;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;white-space:nowrap}
+.toast.in{opacity:1;transform:translateY(0)}
+.toast.ok::before{content:"✓  "}
+.toast.err::before{content:"✗  ";color:#ff6b6b}
+
+/* confirm popup */
+.cpop{position:fixed;inset:0;background:rgba(14,18,27,.4);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.cpop.open{opacity:1;pointer-events:all}
+.cpanel{background:var(--bg-white-0);border-radius:var(--r16);box-shadow:0 24px 48px rgba(14,18,27,.2);width:400px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.cpanel h3{font-size:16px;font-weight:600}
+.cpanel p{font-size:14px;color:var(--text-sub-600);line-height:1.5}
+.cpanel-f{display:flex;justify-content:flex-end;gap:8px}
+</style>
+</head>
+<body>
+<div class="lay">
+
+<!-- SIDEBAR (visual only) -->
+<aside class="sb">
+  <div class="sb-top">
+    <div class="sb-brand">
+      <div class="sb-av">BI</div>
+      <div style="flex:1"><div class="sb-nm">Bitbanker</div><div class="sb-sm">Admin Panel</div></div>
+      <svg width="9" height="13" fill="currentColor" viewBox="0 0 9 13" style="color:var(--text-soft-400);flex-shrink:0"><path d="M8.621 4.31 4.311 0 .001 4.31l.982.982L4.311 1.964l3.328 3.328.982-.982ZM.001 8.418l4.31 4.31 4.31-4.31-.982-.982-3.328 3.328-3.329-3.328-.981.982Z"/></svg>
+    </div>
+  </div>
+  <div class="sb-sc">
+    <div class="sb-lbl">Рабочее место</div>
+    <div class="sbi"><span class="ic"><svg fill="currentColor" viewBox="0 0 15 13.5"><path d="M14.25 0H.75A.75.75 0 0 0 0 .75v12c0 .414.336.75.75.75h13.5A.75.75 0 0 0 15 12.75V.75A.75.75 0 0 0 14.25 0ZM6.75 7.5H1.5V12h5.25V7.5Zm6.75 0H8.25V12H13.5V7.5ZM6.75 1.5H1.5V6h5.25V1.5Zm6.75 0H8.25V6H13.5V1.5Z"/></svg></span><span class="lb">Обзор</span><span class="chv"><svg fill="currentColor" viewBox="0 0 9.5 5.8"><path d="M4.773 3.713 8.486 0l1.06 1.06-4.773 4.774L0 1.06 1.06 0l3.713 3.713Z"/></svg></span></div>
+    <div class="sbi"><span class="ic"><svg fill="currentColor" viewBox="0 0 18.8271 18.0026"><path d="M16.0515 11.794c.584-1.387.718-2.923.384-4.391-.334-1.468-1.12-2.794-2.247-3.793C13.062 2.612 11.651 1.992 10.154 1.838 8.656 1.683 7.148 2.002 5.841 2.749L4.948 1.186C6.314.405 7.861-.004 9.434 0c1.573.004 3.118.42 4.48 1.207 4.041 2.333 5.589 7.328 3.705 11.493l1.208.697-3.749 1.993-.148-4.243 1.121.647zm-13.275-5.586c-.584 1.387-.718 2.924-.384 4.391.334 1.468 1.12 2.795 2.247 3.793 1.127.998 2.538 1.618 4.036 1.773 1.497.154 3.006-.164 4.313-.912l.893 1.563C12.514 17.598 10.967 18.007 9.394 18.003c-1.573-.004-3.118-.42-4.48-1.207C.873 14.462-.675 9.468 1.209 5.302L0 4.607l3.749-1.993.148 4.243-1.12-.643zm7.911 5.339-2.548-2.545-2.545 2.545L4.322 10.274l3.819-3.818 2.546 2.545 2.546-2.545 1.273 1.273-3.819 3.818z"/></svg></span><span class="lb">Клиенты</span><span class="chv"><svg fill="currentColor" viewBox="0 0 9.5 5.8"><path d="M4.773 3.713 8.486 0l1.06 1.06-4.773 4.774L0 1.06 1.06 0l3.713 3.713Z"/></svg></span></div>
+    <div style="margin-top:4px" class="sb-lbl">Управление платформой</div>
+    <div class="sbi op"><span class="ic"><svg fill="currentColor" viewBox="0 0 16.3497 16.3497"><path d="M5.689 2.175 7.645.22a1.19 1.19 0 0 1 1.06 0l1.955 1.955h2.765c.396 0 .775.157 1.055.438.28.28.438.659.438 1.055v2.764l1.955 1.955a1.19 1.19 0 0 1 0 1.06l-1.955 1.956v2.764c0 .396-.158.775-.438 1.055a1.49 1.49 0 0 1-1.055.438h-2.765l-1.955 1.955a1.19 1.19 0 0 1-1.06 0L5.69 14.175H2.925a1.49 1.49 0 0 1-1.055-.438 1.49 1.49 0 0 1-.438-1.055v-2.764L.22 8.706a1.19 1.19 0 0 1 0-1.061l1.955-1.955V2.925c0-.396.158-.775.438-1.055.28-.281.659-.438 1.055-.438H5.69zm-2.014 1.5v2.636L1.811 8.175l1.864 1.864v2.636h2.636l1.864 1.864 1.864-1.864h2.636V10.04l1.864-1.864-1.864-1.864V3.675H10.04L8.175 1.811 6.311 3.675H3.675zm4.5 7.5a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg></span><span class="lb">Настройки</span><span class="chv dn"><svg fill="currentColor" viewBox="0 0 9.5 5.8"><path d="M4.773 3.713 8.486 0l1.06 1.06-4.773 4.774L0 1.06 1.06 0l3.713 3.713Z"/></svg></span></div>
+    <div class="snav">
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 8.1c1.194 0 2.338.474 3.182 1.318C13.026 10.262 13.5 11.407 13.5 12.6V18h-1.8v-5.4c0-.689-.263-1.351-.735-1.852-.472-.501-1.118-.803-1.806-.843L9 9.9c-.689 0-1.352.263-1.852.736-.501.472-.803 1.118-.843 1.806L6.3 12.6V18H4.5v-5.4c0-1.193.474-2.338 1.318-3.182C6.662 8.574 7.807 8.1 9 8.1zm-5.85 2.7c.251 0 .495.03.729.085-.154.458-.245.935-.271 1.417L3.6 12.6v.077a2.53 2.53 0 0 0-.43-.072L3.15 12.6c-.335 0-.659.125-.907.351-.249.225-.403.535-.426.87L1.8 13.95V18H0v-4.05c0-.835.332-1.636.923-2.227C1.513 11.132 2.315 10.8 3.15 10.8zm11.7 0c.835 0 1.636.332 2.227.923.591.591.923 1.392.923 2.227V18h-1.8v-4.05c0-.336-.125-.659-.351-.908-.225-.248-.536-.403-.87-.426L14.85 12.6c-.158 0-.309.027-.45.077V12.6c0-.599-.097-1.175-.278-1.714.233-.057.477-.086.728-.086zM3.15 5.4c.597 0 1.169.237 1.591.659C5.163 6.481 5.4 7.053 5.4 7.65s-.237 1.169-.659 1.591C4.319 9.663 3.747 9.9 3.15 9.9c-.597 0-1.169-.237-1.591-.659C1.137 8.819.9 8.247.9 7.65s.237-1.169.659-1.591C1.981 5.637 2.553 5.4 3.15 5.4zm11.7 0c.597 0 1.169.237 1.591.659.422.422.659.994.659 1.591s-.237 1.169-.659 1.591c-.422.422-.994.659-1.591.659-.597 0-1.169-.237-1.591-.659C12.837 8.819 12.6 8.247 12.6 7.65s.237-1.169.659-1.591C13.681 5.637 14.253 5.4 14.85 5.4zM3.15 7.2c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318C3.384 7.247 3.269 7.2 3.15 7.2zm11.7 0c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318-.084-.085-.199-.132-.318-.132zM9 0c.955 0 1.87.379 2.546 1.054C12.22 1.73 12.6 2.645 12.6 3.6s-.38 1.87-1.054 2.546C10.87 6.82 9.955 7.2 9 7.2c-.955 0-1.87-.38-2.546-1.054C5.778 5.47 5.4 4.555 5.4 3.6s.378-1.87 1.054-2.546C7.13.379 8.045 0 9 0zm0 1.8c-.477 0-.935.19-1.273.527C7.39 2.665 7.2 3.123 7.2 3.6c0 .477.19.935.527 1.273C8.065 5.21 8.523 5.4 9 5.4c.477 0 .935-.19 1.273-.527C10.61 4.535 10.8 4.077 10.8 3.6c0-.477-.19-.935-.527-1.273C9.935 1.99 9.477 1.8 9 1.8z"/></svg></span><span style="flex:1">Роли и права</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 12.75 18"><path d="M6.75 6.75H12.75L5.25 18V11.25H0L6.75 0V6.75ZM5.25 8.25V5.415L2.649 9.75H6.75V13.0455L9.94725 8.25H5.25Z"/></svg></span><span style="flex:1">Модули и функции</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 12.75 18"><path d="M6.75 6.75H12.75L5.25 18V11.25H0L6.75 0V6.75ZM5.25 8.25V5.415L2.649 9.75H6.75v3.296L9.947 8.25H5.25Z"/></svg></span><span style="flex:1">Интеграции</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15.75 15.75"><path d="M0 15.75c0-1.591.632-3.117 1.757-4.243C2.883 10.382 4.409 9.75 6 9.75c1.591 0 3.117.632 4.243 1.757C11.368 12.633 12 14.159 12 15.75H10.5c0-1.193-.474-2.338-1.318-3.182C8.338 11.724 7.193 11.25 6 11.25c-1.193 0-2.338.474-3.182 1.318C1.974 13.412 1.5 14.557 1.5 15.75H0zM6 9C3.514 9 1.5 6.986 1.5 4.5S3.514 0 6 0s4.5 2.014 4.5 4.5S8.486 9 6 9zm0-1.5C7.657 7.5 9 6.157 9 4.5S7.657 1.5 6 1.5 3 2.843 3 4.5 4.343 7.5 6 7.5zm6.213.777c1.054.475 1.948 1.244 2.576 2.215.627.97.961 2.102.961 3.258h-1.5c0-.867-.25-1.716-.721-2.444-.47-.729-1.141-1.306-1.932-1.662l.616-1.367zm-.516-7.277c.756.311 1.402.8 1.857 1.479.455.679.697 1.478.696 2.295-.0003 1.029-.384 2.022-1.078 2.782-.694.76-1.647 1.233-2.672 1.327V8.224c.556-.08 1.071-.336 1.471-.73.4-.395.663-.906.75-1.46.088-.555-.005-1.122-.264-1.62-.259-.498-.671-.9-1.175-1.147l.415-1.457z"/></svg></span><span style="flex:1">Правила онбординга</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.2 19.8"><path d="M8.1 0l7.395 1.643A1.8 1.8 0 0 1 16.2 3.422v8.988a6.3 6.3 0 0 1-2.405 4.993L8.1 19.8 2.405 17.403A6.3 6.3 0 0 1 0 12.41V3.422A1.8 1.8 0 0 1 1.305.813L8.1 0zm0 1.844L1.8 3.244V12.41c0 1.203.601 2.327 1.603 2.995L8.1 17.637l4.697-3.232C13.8 13.737 14.4 12.614 14.4 11.411V3.244L8.1 1.845zm4.007 4.656l1.273 1.272-5.727 5.728-3.819-3.819 1.273-1.272 2.546 2.545 4.454-4.454z"/></svg></span><span style="flex:1">Правила верификации</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 13.5 15"><path d="M12.75 15H.75A.75.75 0 0 1 0 14.25V.75A.75.75 0 0 1 .75 0h12c.414 0 .75.336.75.75v13.5a.75.75 0 0 1-.75.75zm-.75-1.5V1.5H1.5v12H12zM3.75 5.25h6V6.75h-6V5.25zm0 3h6v1.5h-6v-1.5z"/></svg></span><span style="flex:1">Правила платежей</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15 15"><path d="M7.5 15C3.358 15 0 11.642 0 7.5S3.358 0 7.5 0 15 3.358 15 7.5 11.642 15 7.5 15zm0-1.5c1.591 0 3.117-.632 4.243-1.757C12.868 10.617 13.5 9.091 13.5 7.5c0-1.591-.632-3.117-1.757-4.243C10.617 2.132 9.091 1.5 7.5 1.5c-1.591 0-3.117.632-4.243 1.757C2.132 4.383 1.5 5.909 1.5 7.5c0 1.591.632 3.117 1.757 4.243C4.383 13.368 5.909 13.5 7.5 13.5zm-3.75-.75H10.5V9.75H7.5V12L3.75 8.25zM7.5 5.25V3L11.25 6.75H4.5V5.25H7.5Z"/></svg></span><span style="flex:1">Правила обмена и торговли</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18.8271 18.0026"><path d="M16.052 11.794c.584-1.388.718-2.923.384-4.391-.334-1.468-1.12-2.794-2.247-3.793C13.062 2.612 11.651 1.992 10.154 1.838 8.656 1.683 7.148 2.002 5.841 2.75L4.948 1.186C6.314.405 7.861-.004 9.434 0c1.573.004 3.118.42 4.48 1.207 4.041 2.333 5.589 7.328 3.705 11.493l1.208.697-3.749 1.993-.148-4.243 1.122.647zm-13.275-5.585c-.584 1.387-.718 2.923-.384 4.391.334 1.468 1.12 2.794 2.247 3.793 1.127.998 2.538 1.618 4.036 1.773 1.497.154 3.006-.164 4.312-.912l.893 1.563C12.514 17.598 10.967 18.007 9.394 18.003c-1.573-.004-3.118-.42-4.48-1.207C.873 14.462-.675 9.468 1.209 5.302L0 4.607l3.749-1.993.148 4.243-1.12-.643zm7.911 5.338-2.548-2.545-2.545 2.545L4.322 10.274l3.819-3.818 2.546 2.545 2.546-2.545 1.273 1.273-3.819 3.818z"/></svg></span><span style="flex:1">Маркет-мейкинг</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 13.5 15"><path d="M12.75 15H.75A.75.75 0 0 1 0 14.25V.75A.75.75 0 0 1 .75 0h12c.414 0 .75.336.75.75v13.5a.75.75 0 0 1-.75.75zm-.75-1.5V1.5H1.5v12H12zm-8.25-9h6v1.5h-6V4.5zm0 3h6v1.5h-6v-1.5zm0 3h6v1.5h-6v-1.5z"/></svg></span><span style="flex:1">Тесты для клиентов</span><span class="nd r"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.2 18"><path d="M12.6 12.6H14.4V1.8H5.4V3.6H12.6V12.6zM12.6 14.4V17.1c0 .497-.405.9-.906.9H.906A.9.9 0 0 1 0 17.1L.003 4.5a.9.9 0 0 1 .906-.9H3.6V0.9A.9.9 0 0 1 4.5 0H15.3a.9.9 0 0 1 .9.9V13.5a.9.9 0 0 1-.9.9H12.6zm-1.8 1.8V5.4H1.803L1.8 16.2H10.8zm-7.2-3.6h4.05c.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318-.084-.085-.199-.132-.318-.132H4.95a1.8 1.8 0 0 1-1.8-1.8c0-.597.237-1.169.659-1.591C4.231 8.132 4.803 7.9 5.4 7.9H5.85V7H7.65v.9H9.45V9.6H5.4c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132H8.1a1.8 1.8 0 0 1 1.8 1.8c0 .597-.237 1.169-.659 1.591-.422.422-.994.659-1.591.659H7.2v.9H5.4v-.9H3.6V12.6z"/></svg></span><span style="flex:1">Валюты и рынки</span><span class="nd g"></span></div>
+      <div class="sni ac"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.2 16.2"><path d="M13.05 16.2c-.835 0-1.636-.332-2.227-.923C10.232 14.686 9.9 13.885 9.9 13.05s.332-1.636.923-2.227C11.414 10.232 12.215 9.9 13.05 9.9s1.636.332 2.227.923c.591.591.923 1.392.923 2.227s-.332 1.636-.923 2.227c-.591.591-1.392.923-2.227.923zm0-1.8c.358 0 .701-.142.954-.395.253-.253.396-.596.396-.955 0-.358-.143-.701-.396-.954-.253-.253-.596-.396-.954-.396-.358 0-.701.143-.955.396-.252.253-.395.596-.395.954 0 .359.143.702.395.955.254.253.597.395.955.395zM3.15 6.3C2.315 6.3 1.514 5.968.923 5.377.332 4.787 0 3.985 0 3.15S.332 1.514.923.923C1.514.332 2.315 0 3.15 0s1.636.332 2.227.923C5.968 1.514 6.3 2.315 6.3 3.15S5.968 4.787 5.377 5.377C4.786 5.968 3.985 6.3 3.15 6.3zm0-1.8c.358 0 .701-.142.954-.395.253-.253.396-.596.396-.955 0-.358-.143-.701-.396-.954C3.851 1.943 3.508 1.8 3.15 1.8c-.358 0-.701.143-.955.396C1.942 2.449 1.8 2.792 1.8 3.15c0 .359.142.702.395.955.254.253.597.395.955.395zm11.314-4.236 1.272 1.272-15 15-1.272-1.272 15-15z"/></svg></span><span style="flex:1">Тарифы и комиссии</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 8.1c1.194 0 2.338.474 3.182 1.318C13.026 10.262 13.5 11.407 13.5 12.6V18h-1.8v-5.4c0-.689-.263-1.351-.735-1.852-.472-.501-1.118-.803-1.806-.843L9 9.9c-.689 0-1.352.263-1.852.736-.501.472-.803 1.118-.843 1.806L6.3 12.6V18H4.5v-5.4c0-1.193.474-2.338 1.318-3.182C6.662 8.574 7.807 8.1 9 8.1zm-5.85 2.7c.251 0 .495.03.729.085-.154.458-.245.935-.271 1.417L3.6 12.6v.077a2.53 2.53 0 0 0-.43-.072L3.15 12.6c-.335 0-.659.125-.907.351-.249.225-.403.535-.426.87L1.8 13.95V18H0v-4.05c0-.835.332-1.636.923-2.227C1.513 11.132 2.315 10.8 3.15 10.8zm11.7 0c.835 0 1.636.332 2.227.923.591.591.923 1.392.923 2.227V18h-1.8v-4.05c0-.336-.125-.659-.351-.908-.225-.248-.536-.403-.87-.426L14.85 12.6c-.158 0-.309.027-.45.077V12.6c0-.599-.097-1.175-.278-1.714.233-.057.477-.086.728-.086zM3.15 5.4c.597 0 1.169.237 1.591.659.422.422.659.994.659 1.591s-.237 1.169-.659 1.591c-.422.422-.994.659-1.591.659-.597 0-1.169-.237-1.591-.659C1.137 8.819.9 8.247.9 7.65s.237-1.169.659-1.591C1.981 5.637 2.553 5.4 3.15 5.4zm11.7 0c.597 0 1.169.237 1.591.659.422.422.659.994.659 1.591s-.237 1.169-.659 1.591c-.422.422-.994.659-1.591.659-.597 0-1.169-.237-1.591-.659C12.837 8.819 12.6 8.247 12.6 7.65s.237-1.169.659-1.591C13.681 5.637 14.253 5.4 14.85 5.4zM3.15 7.2c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318-.084-.085-.199-.132-.318-.132zm11.7 0c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318-.084-.085-.199-.132-.318-.132zM9 0c.955 0 1.87.379 2.546 1.054C12.22 1.73 12.6 2.645 12.6 3.6s-.38 1.87-1.054 2.546C10.87 6.82 9.955 7.2 9 7.2c-.955 0-1.87-.38-2.546-1.054C5.778 5.47 5.4 4.555 5.4 3.6s.378-1.87 1.054-2.546C7.13.379 8.045 0 9 0zm0 1.8c-.477 0-.935.19-1.273.527C7.39 2.665 7.2 3.123 7.2 3.6c0 .477.19.935.527 1.273C8.065 5.21 8.523 5.4 9 5.4c.477 0 .935-.19 1.273-.527C10.61 4.535 10.8 4.077 10.8 3.6c0-.477-.19-.935-.527-1.273C9.935 1.99 9.477 1.8 9 1.8z"/></svg></span><span style="flex:1">Партнёры наличных операций</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 17.1195 16.281"><path d="M8.56 0l3.169 4.637 5.39 1.582-3.431 4.447.161 5.615-5.289-1.888-5.29 1.888.162-5.615L0 6.219l5.39-1.582L8.56 0zm0 2.658L6.326 5.926l-3.798 1.114 2.419 3.133-.115 3.956L8.56 12.8l3.727 1.33-.115-3.956 2.418-3.133-3.798-1.114L8.56 2.658zM7.06 8.625c0 .398.158.78.439 1.061.281.281.663.439 1.061.439.398 0 .78-.158 1.061-.439.281-.281.439-.663.439-1.061h1.5c0 .796-.316 1.559-.879 2.121-.562.563-1.325.879-2.121.879-.796 0-1.559-.316-2.121-.879C5.876 10.184 5.56 9.421 5.56 8.625h1.5z"/></svg></span><span style="flex:1">Реферальная программа</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15.0024 15"><path d="M9 0l4.5 4.5.001 3.195a6.015 6.015 0 0 0-1.5-.29L12 5.25H8.25V1.5H1.5V13.5H5.295a5.97 5.97 0 0 0 .613 1.5H.745a.753.753 0 0 1-.745-.744V.744C0 .371.29.049.664.005L.752 0H9zm1.875 8.25c.696 0 1.364.277 1.856.769.492.492.769 1.16.769 1.856v.077a3.012 3.012 0 0 1 1.148.907c.273.404.394.891.342 1.376a2.243 2.243 0 0 1-.617 1.272 2.243 2.243 0 0 1-1.298.465L12.938 15H8.812a2.254 2.254 0 0 1-1.425-.506 2.254 2.254 0 0 1-.756-1.313 2.254 2.254 0 0 1 .336-1.472 3.012 3.012 0 0 1 1.148-.907V10.875c0-.696.277-1.364.769-1.856C9.376 8.527 10.044 8.25 10.875 8.25zm0 1.5c-.261 0-.512.091-.713.257-.202.166-.339.397-.39.654L9.755 10.766 9.75 10.875V12.09l-1.083.305c-.125.033-.234.108-.31.213-.076.105-.113.232-.106.361.007.129.059.251.145.347.086.096.203.159.33.178l.082.007h4.133c.136-.001.267-.051.369-.141.102-.09.167-.214.185-.349.017-.135-.015-.271-.09-.378-.075-.113-.19-.195-.321-.229L12 12.09V10.875l-.005-.108a1.128 1.128 0 0 0-.364-.659 1.128 1.128 0 0 0-.756-.308z"/></svg></span><span style="flex:1">Шаблоны документов</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.2 18"><path d="M7.2 4.5H9v9H7.2V4.5zm3.6 3.6H12.6V13.5H10.8V8.1zm-7.2 1.8H5.4V13.5H3.6V9.9zm7.2-8.1H1.8V16.2H14.4V5.4H10.8V1.8zM0 .893C0 .4.402 0 .899 0H11.7l4.5 4.5v12.594a1.803 1.803 0 0 1-1.8 1.8v.001l-.008.005H.894A1.8 1.8 0 0 1 0 17.107V.893z"/></svg></span><span style="flex:1">Отчётность</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15 13.5"><path d="M3 3V.75a.75.75 0 0 1 .75-.75H8.56L10.06 1.5H14.25a.75.75 0 0 1 .75.75V9.75a.75.75 0 0 1-.75.75H12V12.75a.75.75 0 0 1-.75.75H.75A.75.75 0 0 1 0 12.75V3.75A.75.75 0 0 1 .75 3H3zm0 1.5H1.5V12H10.5V10.5H3V4.5zM4.5 1.5V9H13.5V3H9.44L7.94 1.5H4.5z"/></svg></span><span style="flex:1">Архив документов</span><span class="nd r"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.2 18"><path d="M7.2 4.5H9v9H7.2V4.5zm3.6 3.6H12.6V13.5H10.8V8.1zm-7.2 1.8H5.4V13.5H3.6V9.9zm7.2-8.1H1.8V16.2H14.4V5.4H10.8V1.8zM0 .893C0 .4.402 0 .899 0H11.7l4.5 4.5v12.594a1.803 1.803 0 0 1-1.8 1.8H.894A1.8 1.8 0 0 1 0 17.107V.893z"/></svg></span><span style="flex:1">Клиринг и сверки</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18 16.2"><path d="M.9 0H17.1A.9.9 0 0 1 18 .9V15.3a.9.9 0 0 1-.9.9H.9A.9.9 0 0 1 0 15.3V.9A.9.9 0 0 1 .9 0zm.9 1.8V14.4H16.2V1.8H1.8zm2.7 7.2H6.3V12.6H4.5V9zm3.6-5.4H9.9v9H8.1V3.6zm3.6 2.7H13.5V12.6H11.7V6.3z"/></svg></span><span style="flex:1">Data &amp; metrics layer</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.3497 16.3497"><path d="M5.689 2.175 7.645.22a1.19 1.19 0 0 1 1.06 0l1.955 1.955h2.765c.396 0 .775.157 1.055.438.28.28.438.659.438 1.055v2.764l1.955 1.955a1.19 1.19 0 0 1 0 1.06l-1.955 1.956v2.764c0 .396-.158.775-.438 1.055a1.49 1.49 0 0 1-1.055.438h-2.765l-1.955 1.955a1.19 1.19 0 0 1-1.06 0L5.69 14.175H2.925a1.49 1.49 0 0 1-1.055-.438 1.49 1.49 0 0 1-.438-1.055v-2.764L.22 8.706a1.19 1.19 0 0 1 0-1.061l1.955-1.955V2.925c0-.396.158-.775.438-1.055.28-.281.659-.438 1.055-.438H5.69zm-2.014 1.5v2.636L1.811 8.175l1.864 1.864v2.636h2.636l1.864 1.864 1.864-1.864h2.636V10.04l1.864-1.864-1.864-1.864V3.675H10.04L8.175 1.811 6.311 3.675H3.675zm4.5 7.5a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-1.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg></span><span style="flex:1">Maintenance mode</span><span class="nd r"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 13.5 15"><path d="M12.75 15H.75A.75.75 0 0 1 0 14.25V.75A.75.75 0 0 1 .75 0h12c.414 0 .75.336.75.75v13.5a.75.75 0 0 1-.75.75zm-.75-1.5V1.5H1.5v12H12zm-8.25-9h6v1.5h-6V4.5zm0 3h6v1.5h-6v-1.5zm0 3h6v1.5h-6v-1.5z"/></svg></span><span style="flex:1">Документация</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15.0024 15"><path d="M9 0l4.5 4.5.001 3.195a6.015 6.015 0 0 0-1.5-.29L12 5.25H8.25V1.5H1.5V13.5H5.295a5.97 5.97 0 0 0 .613 1.5H.745a.753.753 0 0 1-.745-.744V.744C0 .371.29.049.664.005L.752 0H9zm1.875 8.25c.696 0 1.364.277 1.856.769.492.492.769 1.16.769 1.856v.077a3.012 3.012 0 0 1 1.148.907c.273.404.394.891.342 1.376a2.243 2.243 0 0 1-.617 1.272 2.243 2.243 0 0 1-1.298.465L12.938 15H8.812a2.254 2.254 0 0 1-1.425-.506 2.254 2.254 0 0 1-.756-1.313 2.254 2.254 0 0 1 .336-1.472 3.012 3.012 0 0 1 1.148-.907V10.875c0-.696.277-1.364.769-1.856C9.376 8.527 10.044 8.25 10.875 8.25zm0 1.5c-.261 0-.512.091-.713.257-.202.166-.339.397-.39.654L9.755 10.766 9.75 10.875V12.09l-1.083.305c-.125.033-.234.108-.31.213-.076.105-.113.232-.106.361.007.129.059.251.145.347.086.096.203.159.33.178l.082.007h4.133c.136-.001.267-.051.369-.141.102-.09.167-.214.185-.349.017-.135-.015-.271-.09-.378-.075-.113-.19-.195-.321-.229L12 12.09V10.875l-.005-.108a1.128 1.128 0 0 0-.364-.659 1.128 1.128 0 0 0-.756-.308z"/></svg></span><span style="flex:1">Аудит</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 18C4.029 18 0 13.971 0 9S4.029 0 9 0s9 4.029 9 9-4.029 9-9 9zm0-1.8c1.91 0 3.741-.758 5.091-2.108C15.441 12.741 16.2 10.91 16.2 9c0-1.91-.759-3.741-2.109-5.091C12.741 2.559 10.91 1.8 9 1.8c-1.91 0-3.741.759-5.091 2.109C2.559 5.259 1.8 7.09 1.8 9c0 1.91.759 3.741 2.109 5.092C5.259 15.441 7.09 16.2 9 16.2zM8.1 11.7H9.9v1.8H8.1V11.7zm0-7.2H9.9V9.9H8.1V4.5z"/></svg></span><span style="flex:1">Инциденты</span><span class="nd g"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15 15"><path d="M7.5 0C11.642 0 15 3.358 15 7.5S11.642 15 7.5 15 0 11.642 0 7.5H1.5C1.5 10.814 4.186 13.5 7.5 13.5S13.5 10.814 13.5 7.5 10.814 1.5 7.5 1.5c-2.062 0-3.882 1.04-4.961 2.625H4.5V5.625H0V1.125H1.5V3C2.868 1.178 5.047 0 7.5 0zm.75 3.75V7.189l2.432 2.432-1.061 1.062-2.871-2.87V3.75H8.25z"/></svg></span><span style="flex:1">Релизы</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 19.4742 19.0926"><path d="M15.031 16.114c-1.583 1.004-3.42 1.535-5.294 1.532-4.853 0-8.89-3.492-9.737-8.1.387-2.096 1.441-4.011 3.006-5.459L.187 1.274 1.463 0l18.82 17.82-1.274 1.272-3.978-2.978zm-10.752-10.752c-1.223 1.112-2.075 2.573-2.441 4.185.281 1.23.845 2.377 1.648 3.35.802.973 1.821 1.746 2.975 2.256 1.153.51 2.41.744 3.67.683 1.26-.061 2.489-.416 3.588-1.035l-1.826-1.825c-.777.489-1.697.7-2.61.598-.912-.103-1.763-.512-2.412-1.161-.649-.649-1.059-1.5-1.161-2.412-.102-.913.109-1.833.598-2.61L4.28 5.362zm6.28 6.28L7.642 8.724c-.16.408-.198.853-.108 1.282.089.429.301.822.611 1.132.31.31.703.523 1.132.611.429.089.874.051 1.282-.109zm4.094-7.015-1.288-1.287c-1.54-.786-3.308-.994-4.985-.59-1.677.403-3.167 1.38-4.204 2.765l-1.42-1.42C4.23 2.69 6.46 1.446 8.91 1.446c4.853 0 8.89 3.492 9.737 8.1-.276 1.499-.895 2.914-1.81 4.133l-1.288-1.287c.601-.857 1.03-1.824 1.261-2.846-.245-1.071-.704-2.081-1.352-2.969-.647-.888-1.468-1.635-2.413-2.196zM9.488 5.504c.573-.035 1.147.052 1.684.252.537.2 1.024.516 1.43.922.406.406.721.893.925 1.43.204.537.29 1.11.255 1.683L9.487 5.504z"/></svg></span><span style="flex:1">Маскирование данных</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18.9 16.2"><path d="M18 3.6h.9V12.6H18V15.3a.9.9 0 0 1-.9.9H.9A.9.9 0 0 1 0 15.3V.9A.9.9 0 0 1 .9 0H17.1a.9.9 0 0 1 .9.9V3.6zm-1.8 9H10.8c-1.193 0-2.338-.474-3.182-1.318C6.774 10.438 6.3 9.293 6.3 8.1c0-1.193.474-2.338 1.318-3.182C8.462 4.074 9.607 3.6 10.8 3.6H16.2V1.8H1.8V14.4H16.2V12.6zm.9-1.8V5.4H10.8c-.716 0-1.403.284-1.909.791C8.384 6.697 8.1 7.384 8.1 8.1s.284 1.403.791 1.909c.506.507 1.193.791 1.909.791H17.1zm-6.3-1.8h2.7V9H10.8V7.2z"/></svg></span><span style="flex:1">Виртуальные счета (vABS)</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 8.1c1.194 0 2.338.474 3.182 1.318C13.026 10.262 13.5 11.407 13.5 12.6V18h-1.8v-5.4c0-.689-.263-1.351-.735-1.852-.472-.501-1.118-.803-1.806-.843L9 9.9c-.689 0-1.352.263-1.852.736-.501.472-.803 1.118-.843 1.806L6.3 12.6V18H4.5v-5.4c0-1.193.474-2.338 1.318-3.182C6.662 8.574 7.807 8.1 9 8.1zm-5.85 2.7c.251 0 .495.03.729.085-.154.458-.245.935-.271 1.417L3.6 12.6v.077a2.53 2.53 0 0 0-.43-.072L3.15 12.6c-.335 0-.659.125-.907.351-.249.225-.403.535-.426.87L1.8 13.95V18H0v-4.05c0-.835.332-1.636.923-2.227C1.513 11.132 2.315 10.8 3.15 10.8zm11.7 0c.835 0 1.636.332 2.227.923.591.591.923 1.392.923 2.227V18h-1.8v-4.05c0-.336-.125-.659-.351-.908-.225-.248-.536-.403-.87-.426L14.85 12.6c-.158 0-.309.027-.45.077V12.6c0-.599-.097-1.175-.278-1.714.233-.057.477-.086.728-.086zM3.15 5.4c.597 0 1.169.237 1.591.659.422.422.659.994.659 1.591s-.237 1.169-.659 1.591c-.422.422-.994.659-1.591.659-.597 0-1.169-.237-1.591-.659C1.137 8.819.9 8.247.9 7.65s.237-1.169.659-1.591C1.981 5.637 2.553 5.4 3.15 5.4zm11.7 0c.597 0 1.169.237 1.591.659.422.422.659.994.659 1.591s-.237 1.169-.659 1.591c-.422.422-.994.659-1.591.659-.597 0-1.169-.237-1.591-.659C12.837 8.819 12.6 8.247 12.6 7.65s.237-1.169.659-1.591C13.681 5.637 14.253 5.4 14.85 5.4zM3.15 7.2c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318-.084-.085-.199-.132-.318-.132zm11.7 0c-.119 0-.234.047-.318.132-.085.084-.132.199-.132.318 0 .119.047.234.132.318.084.085.199.132.318.132.119 0 .234-.047.318-.132.085-.084.132-.199.132-.318 0-.119-.047-.234-.132-.318-.084-.085-.199-.132-.318-.132zM9 0c.955 0 1.87.379 2.546 1.054C12.22 1.73 12.6 2.645 12.6 3.6s-.38 1.87-1.054 2.546C10.87 6.82 9.955 7.2 9 7.2c-.955 0-1.87-.38-2.546-1.054C5.778 5.47 5.4 4.555 5.4 3.6s.378-1.87 1.054-2.546C7.13.379 8.045 0 9 0zm0 1.8c-.477 0-.935.19-1.273.527C7.39 2.665 7.2 3.123 7.2 3.6c0 .477.19.935.527 1.273C8.065 5.21 8.523 5.4 9 5.4c.477 0 .935-.19 1.273-.527C10.61 4.535 10.8 4.077 10.8 3.6c0-.477-.19-.935-.527-1.273C9.935 1.99 9.477 1.8 9 1.8z"/></svg></span><span style="flex:1">Операторы</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 18.9 16.2"><path d="M18 3.6h.9V12.6H18V15.3a.9.9 0 0 1-.9.9H.9A.9.9 0 0 1 0 15.3V.9A.9.9 0 0 1 .9 0H17.1a.9.9 0 0 1 .9.9V3.6zm-1.8 9H10.8c-1.193 0-2.338-.474-3.182-1.318C6.774 10.438 6.3 9.293 6.3 8.1c0-1.193.474-2.338 1.318-3.182C8.462 4.074 9.607 3.6 10.8 3.6H16.2V1.8H1.8V14.4H16.2V12.6zm.9-1.8V5.4H10.8c-.716 0-1.403.284-1.909.791C8.384 6.697 8.1 7.384 8.1 8.1s.284 1.403.791 1.909c.506.507 1.193.791 1.909.791H17.1zm-6.3-1.8h2.7V9H10.8V7.2z"/></svg></span><span style="flex:1">Технические аккаунты</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 13.5 15"><path d="M12.75 15H.75A.75.75 0 0 1 0 14.25V.75A.75.75 0 0 1 .75 0h12c.414 0 .75.336.75.75v13.5a.75.75 0 0 1-.75.75zm-.75-1.5V1.5H1.5v12H12zm-8.25-6h6v1.5h-6V7.5zm0-3h6v1.5h-6V4.5z"/></svg></span><span style="flex:1">Настройки СБП</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 16.2 19.8"><path d="M8.1 0l7.395 1.643A1.8 1.8 0 0 1 16.2 3.422v8.988a6.3 6.3 0 0 1-2.405 4.993L8.1 19.8 2.405 17.403A6.3 6.3 0 0 1 0 12.41V3.422A1.8 1.8 0 0 1 1.305.813L8.1 0zm0 1.844L1.8 3.244V12.41c0 1.203.601 2.327 1.603 2.995L8.1 17.637l4.697-3.232C13.8 13.737 14.4 12.614 14.4 11.411V3.244L8.1 1.845zm4.007 4.656l1.273 1.272-5.727 5.728-3.819-3.819 1.273-1.272 2.546 2.545 4.454-4.454z"/></svg></span><span style="flex:1">Настройки AML</span><span class="nd o"></span></div>
+      <div class="sni"><span class="ni"><svg fill="currentColor" viewBox="0 0 15 15.75"><path d="M13.5 11.25H15V12.75H0V11.25H1.5V6a6 6 0 0 1 12 0v5.25zm-1.5 0V6a4.5 4.5 0 0 0-9 0v5.25H12zM5.25 14.25h4.5v1.5h-4.5v-1.5z"/></svg></span><span style="flex:1">Уведомления оператора</span><span class="nd o"></span></div>
+    </div>
+  </div>
+  <div class="sb-bot">
+    <div class="sb-col"><span class="ci"><svg fill="currentColor" viewBox="0 0 6 9.5"><path d="M3.713 4.773 0 1.06 1.06 0l4.773 4.773L1.06 9.546 0 8.486l3.713-3.713Z"/></svg></span>Свернуть</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="mn">
+  <!-- TOPBAR (visual only) -->
+  <header class="tb">
+    <label class="tb-sr"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Поиск операций, клиентов…" readonly></label>
+    <div class="sp"></div>
+    <div class="tb-lg"><svg class="flag" viewBox="0 0 24 24"><rect y="0" width="24" height="8" fill="#fff"/><rect y="8" width="24" height="8" fill="#003DA5"/><rect y="16" width="24" height="8" fill="#CC0000"/></svg>Русский<span class="chv" style="width:13px;height:13px;color:var(--text-soft-400)"><svg fill="currentColor" viewBox="0 0 9.5 5.8"><path d="M4.773 3.713 8.486 0l1.06 1.06-4.773 4.774L0 1.06 1.06 0l3.713 3.713Z"/></svg></span></div>
+    <div class="tb-bw"><div class="tb-bl"><svg fill="currentColor" viewBox="0 0 15 15.75"><path d="M13.5 11.25H15V12.75H0V11.25H1.5V6a6 6 0 0 1 12 0v5.25zm-1.5 0V6a4.5 4.5 0 0 0-9 0v5.25H12zM5.25 14.25h4.5v1.5h-4.5v-1.5z"/></svg></div><div class="tb-bg">3</div></div>
+    <div class="tb-dv"></div>
+    <div class="tb-u"><div class="tb-ua">SA</div><div><div class="tb-un">Super Admin<svg width="12" height="12" fill="var(--primary-base)" viewBox="0 0 12.5 12.5"><path d="M5.03.091A1.5 1.5 0 0 0 2.783 1.022l-.503.986a.75.75 0 0 1-.289.289l-.986.503A1.5 1.5 0 0 0 .09 4.848l.341 1.053a.75.75 0 0 1 0 .469L.09 7.423A1.5 1.5 0 0 0 1.022 9.77l.986.503c.12.06.23.156.29.29l.503.986A1.5 1.5 0 0 0 5.848 12.46l1.053-.34a.75.75 0 0 1 .469 0l1.053.34A1.5 1.5 0 0 0 10.77 11.53l.503-.986a.75.75 0 0 1 .289-.29l.986-.503A1.5 1.5 0 0 0 12.46 7.7l-.34-1.052a.75.75 0 0 1 0-.47L12.46 5.13A1.5 1.5 0 0 0 11.53 2.784l-.986-.503a.75.75 0 0 1-.29-.289L9.75 1.006A1.5 1.5 0 0 0 7.703.09L6.65.432a.75.75 0 0 1-.469 0L5.13.091H5.03ZM3.001 6.125l.884-.884 1.768 1.768 3.536-3.536.884.884-4.42 4.42-2.652-2.652Z"/></svg></div><div class="tb-ue">super-admin@admin.com</div></div><span class="chv" style="width:13px;height:13px;color:var(--text-soft-400)"><svg fill="currentColor" viewBox="0 0 9.5 5.8"><path d="M4.773 3.713 8.486 0l1.06 1.06-4.773 4.774L0 1.06 1.06 0l3.713 3.713Z"/></svg></span></div>
+  </header>
+
+  <!-- CONTENT -->
+  <div class="ct">
+    <!-- page header -->
+    <div class="ph">
+      <div class="ph-t">
+        <div><h1>Тарифы и комиссии</h1><p>Тарифные планы, операции с комиссиями и лимитами, история выполнений</p></div>
+        <div class="ph-a">
+          <button class="btn bg"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 15 15"><path d="M13.5 11.25v1.5a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1-.75-.75v-1.5M10.5 5.25 7.5.75l-3 4.5M7.5.75v9"/></svg>Экспорт</button>
+          <button class="btn bp" id="btn-create" onclick="openCreateTariff()"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Новый тариф</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- table card -->
+    <div class="card">
+      <div class="stabs">
+        <div class="stab on" data-v="plans" onclick="sv('plans')">Тарифные планы</div>
+        <div class="stab" data-v="ops" onclick="sv('ops')">Операции</div>
+        <div class="stab" data-v="comms" onclick="sv('comms')">Комиссии</div>
+        <div class="stab" data-v="limits" onclick="sv('limits')">Лимиты</div>
+        <div class="stab" data-v="restr" onclick="sv('restr')">Ограничения</div>
+        <div class="stab" data-v="hist" onclick="sv('hist')">История операций</div>
+      </div>
+
+      <!-- plans/tariffs -->
+      <div id="vw-plans">
+        <div class="toolbar">
+          <div class="sw"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" placeholder="Название, категория..." oninput="filt('tb-plans',this.value,[0,1])"></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>Название</th><th>Категория клиентов</th><th>Клиентов</th><th>Операций</th><th>Лимитов</th><th>Комиссий</th><th>Создан</th></tr></thead><tbody id="tb-plans"></tbody></table></div>
+      </div>
+
+      <!-- ops -->
+      <div id="vw-ops" style="display:none">
+        <div class="toolbar">
+          <div class="sw"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" placeholder="Название операции..." oninput="filt('tb-ops',this.value,[0])"></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>Название / ID</th><th>Описание</th><th>Тарифов</th><th>Комиссий</th><th>Лимитов</th><th>Истории</th><th>Создан</th></tr></thead><tbody id="tb-ops"></tbody></table></div>
+      </div>
+
+      <!-- comms -->
+      <div id="vw-comms" style="display:none">
+        <div class="toolbar">
+          <div class="sw"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" placeholder="Название комиссии..." oninput="filt('tb-comms',this.value,[0])"></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>Название / ID</th><th>Описание</th><th>Тикер</th><th>Клиент</th><th>Тарифов</th><th>Факторов</th><th>Операция</th><th>Создан</th></tr></thead><tbody id="tb-comms"></tbody></table></div>
+      </div>
+
+      <!-- limits -->
+      <div id="vw-limits" style="display:none">
+        <div class="toolbar">
+          <div class="sw"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" placeholder="Название лимита..." oninput="filt('tb-limits',this.value,[0])"></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>Название / ID</th><th>Описание</th><th>Тикер</th><th>День</th><th>Нед</th><th>Год</th><th>Мин / Макс</th><th>Тарифов</th><th>Операция</th><th>Рестрикшн</th></tr></thead><tbody id="tb-limits"></tbody></table></div>
+      </div>
+
+      <!-- restr / LimitRestrictions -->
+      <div id="vw-restr" style="display:none">
+        <div class="toolbar">
+          <div class="sw"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" placeholder="Название ограничения..." oninput="filt('tb-restr',this.value,[0])"></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>Название / ID</th><th>Описание</th><th>Тикер</th><th>Макс день</th><th>Макс нед</th><th>Макс мес</th><th>Макс год</th><th>Мин / Макс</th><th>Лимитов</th></tr></thead><tbody id="tb-restr"></tbody></table></div>
+      </div>
+
+      <!-- hist -->
+      <div id="vw-hist" style="display:none">
+        <div class="toolbar">
+          <div class="sw"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" placeholder="Трекер, клиент, тариф..." oninput="filt('tb-hist',this.value,[0,1,2,3])"></div>
+          <select class="fs"><option>Статус: Все</option><option>SUCCESSFUL</option><option>PENDING</option><option>REJECTED</option></select>
+        </div>
+        <div class="tw"><table><thead><tr><th>ID / Дата</th><th>Трекер</th><th>Клиент</th><th>Тариф</th><th>Операция</th><th>Сумма / Тикер</th><th>Статус</th></tr></thead><tbody id="tb-hist"></tbody></table></div>
+      </div>
+
+      <div class="pag"><span class="pag-i" id="pgi">Строк: 0</span><div class="pag-p"><button class="pc ar" disabled><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><button class="pc on">1</button><button class="pc ar"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button></div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- DRAWER: TARIFF -->
+<div class="bdrop" id="bdp" onclick="cD('drp','bdp')"></div>
+<div class="drawer" id="drp">
+  <div class="dh"><div><div class="etype"><svg fill="currentColor" viewBox="0 0 16.2 16.2"><path d="M13.05 16.2c-.835 0-1.636-.332-2.227-.923C10.232 14.686 9.9 13.885 9.9 13.05s.332-1.636.923-2.227C11.414 10.232 12.215 9.9 13.05 9.9s1.636.332 2.227.923c.591.591.923 1.392.923 2.227s-.332 1.636-.923 2.227c-.591.591-1.392.923-2.227.923zm0-1.8c.358 0 .701-.142.954-.395.253-.253.396-.596.396-.955 0-.358-.143-.701-.396-.954-.253-.253-.596-.396-.954-.396-.358 0-.701.143-.955.396-.252.253-.395.596-.395.954 0 .359.143.702.395.955.254.253.597.395.955.395zM3.15 6.3C2.315 6.3 1.514 5.968.923 5.377.332 4.787 0 3.985 0 3.15S.332 1.514.923.923C1.514.332 2.315 0 3.15 0s1.636.332 2.227.923C5.968 1.514 6.3 2.315 6.3 3.15S5.968 4.787 5.377 5.377C4.786 5.968 3.985 6.3 3.15 6.3zm0-1.8c.358 0 .701-.142.954-.395.253-.253.396-.596.396-.955 0-.358-.143-.701-.396-.954C3.851 1.943 3.508 1.8 3.15 1.8c-.358 0-.701.143-.955.396C1.942 2.449 1.8 2.792 1.8 3.15c0 .359.142.702.395.955.254.253.597.395.955.395zm11.314-4.236 1.272 1.272-15 15-1.272-1.272 15-15z"/></svg>Тарифный план</div><div class="dt" id="dp-n"></div><div class="ds" id="dp-s"></div></div><button class="ib" onclick="cD('drp','bdp')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="db">
+    <div class="sec"><div class="sec-t">Параметры</div><div class="rows" id="dp-par"></div></div>
+    <div class="sec"><div class="sec-t">Операции <span id="dp-oc" style="font-weight:400;color:var(--text-soft-400)"></span></div><div class="ilist" id="dp-ops"></div><button class="addbtn" onclick="openBindOpToTariff()"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Привязать операцию</button></div>
+    <div class="sec"><div class="sec-t">Комиссии <span id="dp-commc" style="font-weight:400;color:var(--text-soft-400)"></span></div><div class="ilist" id="dp-comms"></div></div>
+    <div class="sec"><div class="sec-t">Лимиты <span id="dp-limc" style="font-weight:400;color:var(--text-soft-400)"></span></div><div class="ilist" id="dp-limits"></div></div>
+    <div class="sec"><div class="sec-t">Клиенты</div><div class="rows" id="dp-cl"></div></div>
+  </div>
+  <div class="df"><button class="btn bg" onclick="openEditPlan()">Редактировать</button><button class="btn bg" onclick="openDupPlan()">Дублировать</button><button class="btn bd" onclick="askDel('тарифный план','drp','bdp')">Удалить</button></div>
+</div>
+
+<!-- DRAWER: OPERATION -->
+<div class="bdrop" id="bdo" onclick="cD('dro','bdo')"></div>
+<div class="drawer" id="dro">
+  <div class="dh"><div><div class="etype"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 16.2A7.2 7.2 0 1 1 9 1.8 7.2 7.2 0 0 1 9 16.2zm0 1.8A9 9 0 1 0 9 0a9 9 0 0 0 0 18zm.9-9.9h3.6L9 13.5 5.4 8.1H9V4.5l4.5 6.3H9.9V8.1z"/></svg>Операция</div><div class="dt" id="do-n"></div><div class="ds" id="do-s"></div></div><button class="ib" onclick="cD('dro','bdo')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="db">
+    <div class="sec"><div class="sec-t">Параметры</div><div class="rows" id="do-par"></div></div>
+    <div class="sec"><div class="sec-t">Привязанные тарифы <span class="bstat">(<span class="bstat-n" id="do-tc"></span>)</span></div><div class="ilist" id="do-t"></div><button class="addbtn" onclick="openBindOp()"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Привязать к тарифу</button></div>
+    <div class="sec"><div class="sec-t">Комиссии <span class="bstat">(<span class="bstat-n" id="do-cb"></span>)</span></div><div class="ilist" id="do-cm"></div></div>
+    <div class="sec"><div class="sec-t">Лимиты <span class="bstat">(<span class="bstat-n" id="do-lb"></span>)</span></div><div class="ilist" id="do-lm"></div></div>
+    <div class="sec"><div class="sec-t">История операций</div><div class="rows" id="do-st"></div></div>
+  </div>
+  <div class="df"><button class="btn bg" onclick="openEditOp()">Редактировать</button><button class="btn bd" onclick="askDel('операцию','dro','bdo')">Удалить</button></div>
+</div>
+
+<!-- DRAWER: COMMISSION -->
+<div class="bdrop" id="bdc" onclick="cD('drc','bdc')"></div>
+<div class="drawer" id="drc">
+  <div class="dh"><div><div class="etype"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 18A9 9 0 1 1 9 0a9 9 0 0 1 0 18zm0-1.8A7.2 7.2 0 1 0 9 1.8a7.2 7.2 0 0 0 0 14.4zm.9-9.45H12.6V9H9.9v2.7H8.1V9H5.4V7.2h2.7V4.5h1.8v2.7h.9V6.75zm-2.7 4.5V9.9H5.4v1.35h1.8v.9H5.4V13.5H7.2v.9h1.8V13.5H10.8v-1.8H9V9.9z"/></svg>Комиссия</div><div class="dt" id="dc-n"></div><div class="ds" id="dc-s"></div></div><button class="ib" onclick="cD('drc','bdc')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="db">
+    <div class="sec"><div class="sec-t">Параметры</div><div class="rows" id="dc-par"></div></div>
+    <div class="sec"><div class="sec-t">Привязанные тарифы <span class="bstat">(<span class="bstat-n" id="dc-bn"></span>)</span></div><div class="ilist" id="dc-u"></div></div>
+    <div class="sec"><div class="sec-t">Факторы комиссии <span class="bstat">(<span class="bstat-n" id="dc-fc"></span>)</span></div><div id="dc-f"></div><button class="addbtn" onclick="openMov('m-create-factor')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Создать фактор</button></div>
+  </div>
+  <div class="df"><button class="btn bg" onclick="openEditComm()">Редактировать</button><button class="btn bd" onclick="askDel('комиссию','drc','bdc')">Удалить</button></div>
+</div>
+
+<!-- DRAWER: LIMIT -->
+<div class="bdrop" id="bdl" onclick="cD('drl','bdl')"></div>
+<div class="drawer" id="drl">
+  <div class="dh"><div><div class="etype"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M9 0a9 9 0 1 1 0 18A9 9 0 0 1 9 0zm0 1.8a7.2 7.2 0 1 0 0 14.4A7.2 7.2 0 0 0 9 1.8zm.9 3.6v5.4l3.15 1.89-.9 1.485L8.1 11.7V5.4H9.9z"/></svg>Лимит</div><div class="dt" id="dl-n"></div><div class="ds" id="dl-s"></div></div><button class="ib" onclick="cD('drl','bdl')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="db">
+    <div class="sec"><div class="sec-t">Параметры</div><div class="rows" id="dl-v"></div></div>
+    <div class="sec"><div class="sec-t">Ограничение (LimitRestriction)</div><div class="rows" id="dl-r"></div></div>
+    <div class="sec"><div class="sec-t">Привязка тариф-операция <span class="bstat">(<span class="bstat-n" id="dl-bn"></span>)</span></div><div class="ilist" id="dl-b"></div><button class="addbtn" onclick="openBindLim()"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Привязать к тариф-операции</button></div>
+  </div>
+  <div class="df"><button class="btn bg" onclick="openEditLim()">Редактировать</button><button class="btn bg" onclick="openUnbindLim()">Отвязать</button><button class="btn bd" onclick="askDel('лимит','drl','bdl')">Удалить</button></div>
+</div>
+
+<!-- DRAWER: RESTRICTION -->
+<div class="bdrop" id="bdr" onclick="cD('drr','bdr')"></div>
+<div class="drawer" id="drr">
+  <div class="dh"><div><div class="etype"><svg fill="currentColor" viewBox="0 0 18 18"><path d="M16.2 9A7.2 7.2 0 1 1 1.8 9 7.2 7.2 0 0 1 16.2 9zm1.8 0A9 9 0 1 0 0 9a9 9 0 0 0 18 0zM9 4.5h1.8v4.5H9V4.5zm0 6.3h1.8V12.6H9v-1.8z"/></svg>Ограничение лимита</div><div class="dt" id="dr-n"></div><div class="ds" id="dr-s"></div></div><button class="ib" onclick="cD('drr','bdr')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="db">
+    <div class="sec"><div class="sec-t">Параметры</div><div class="rows" id="dr-par"></div></div>
+    <div class="sec"><div class="sec-t">Потолки</div><div class="rows" id="dr-caps"></div></div>
+    <div class="sec"><div class="sec-t">Привязанные лимиты <span class="bstat">(<span class="bstat-n" id="dr-lc"></span>)</span></div><div class="ilist" id="dr-lims"></div></div>
+  </div>
+  <div class="df"><button class="btn bg" onclick="openEditRestr()">Редактировать</button><button class="btn bd" onclick="askDel('ограничение','drr','bdr')">Удалить</button></div>
+</div>
+
+<!-- MODAL: CREATE TARIFF -->
+<div class="mov" id="m-create-tariff" onclick="if(event.target===this)closeMov('m-create-tariff')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Создать тарифный план</div><div class="md">createTariff · bb2 tariffs service</div></div><button class="ib" onclick="closeMov('m-create-tariff')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="ct-name" placeholder="Например: Базовый KYC-3"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="ct-desc" placeholder="Описание назначения тарифного плана"></textarea></div>
+      <div><label class="fl">Категория клиентов (clientCategory) <span class="fr">*</span></label><input class="fin" id="ct-cat" placeholder="retail_kyc0"><span style="font-size:12px;color:var(--text-soft-400);display:block;margin-top:4px">Свободная строка для фильтрации и привязки клиентов</span></div>
+      <div><label class="fl">Операции (опционально)</label><div class="sw" style="width:100%;margin-bottom:6px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" style="width:100%" placeholder="Поиск операций..." oninput="filtBind('blist-ct-op',this.value)"></div><div class="blist" id="blist-ct-op"></div></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-create-tariff')">Отмена</button><button class="btn bp" onclick="confirmCreateTariff()">Создать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: CREATE OPERATION -->
+<div class="mov" id="m-create-op" onclick="if(event.target===this)closeMov('m-create-op')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Создать операцию</div><div class="md">Привязывается к тарифу через bindOperationToTariff</div></div><button class="ib" onclick="closeMov('m-create-op')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="co-name" placeholder="Например: Вывод USDT ERC-20"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="co-desc" placeholder="Что делает операция"></textarea></div>
+      <div><label class="fl">Тариф (опционально)</label><select class="fin" id="co-tariff" style="height:40px"><option value="">— не выбрано —</option></select><span style="font-size:12px;color:var(--text-soft-400);display:block;margin-top:4px">Если выбран — будет выполнен bindOperationToTariff</span></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-create-op')">Отмена</button><button class="btn bp" onclick="confirmCreateOp()">Создать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: CREATE COMMISSION -->
+<div class="mov" id="m-create-comm" onclick="if(event.target===this)closeMov('m-create-comm')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Создать комиссию</div><div class="md">createTariffCommission · требует тарифы и операцию</div></div><button class="ib" onclick="closeMov('m-create-comm')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="cc-name" placeholder="Например: Стандартная 0.5%"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="cc-desc" placeholder="Для каких операций и клиентов"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Тикер валюты <span class="fr">*</span></label><input class="fin" id="cc-ticker" placeholder="RUB"></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><label class="fl" style="margin-bottom:0">Базовая валюта</label><label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer"><input type="checkbox" id="cc-base" style="width:16px;height:16px;accent-color:var(--primary-base)"><span style="font-size:14px">isBaseCurrency</span></label></div>
+      </div>
+      <div><label class="fl">Тарифы <span class="fr">*</span></label><div class="blist" id="blist-cc-tariff" style="max-height:120px;overflow-y:auto;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);padding:4px"></div></div>
+      <div><label class="fl">Операция <span class="fr">*</span></label><select class="fin" id="cc-op" style="height:40px"><option value="">— выберите операцию —</option></select></div>
+      <div><label class="fl">Клиент (опционально)</label><input class="fin" id="cc-client" placeholder="ID клиента или пусто"></div>
+      <div class="ibox" style="font-size:12px">Факторы можно добавить после создания через дравер комиссии → «Создать фактор»</div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-create-comm')">Отмена</button><button class="btn bp" onclick="confirmCreateComm()">Создать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: CREATE COMMISSION FACTOR -->
+<div class="mov" id="m-create-factor" onclick="if(event.target===this)closeMov('m-create-factor')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Создать фактор комиссии</div><div class="md">createTariffCommissionFactor</div></div><button class="ib" onclick="closeMov('m-create-factor')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="cf-name" placeholder="Например: Базовый процент"></div>
+      <div><label class="fl">Описание</label><input class="fin" id="cf-desc" placeholder="Краткое описание"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Тип <span class="fr">*</span></label><select class="fin" id="cf-type" style="height:40px"><option value="PERCENT">PERCENT</option><option value="FIXED">FIXED</option><option value="PERCENT_FIXED">PERCENT_FIXED</option><option value="FORMULA">FORMULA</option></select></div>
+        <div><label class="fl">Порядок <span class="fr">*</span></label><input class="fin" id="cf-order" type="number" min="1" value="1"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Процент (%)</label><input class="fin" id="cf-pct" type="number" step="0.0001" placeholder="0.5000"></div>
+        <div><label class="fl">Фиксированная</label><input class="fin" id="cf-fix" type="number" placeholder="0"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">От суммы (amountFrom) <span class="fr">*</span></label><input class="fin" id="cf-from" type="number" placeholder="0"></div>
+        <div><label class="fl">До суммы (amountTo) <span class="fr">*</span></label><input class="fin" id="cf-to" type="number" placeholder="оставьте пусто = ∞"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Минимум</label><input class="fin" id="cf-mn" type="number" placeholder="0"></div>
+        <div><label class="fl">Максимум</label><input class="fin" id="cf-mx" type="number" placeholder=""></div>
+      </div>
+      <div><label class="fl">Формула</label><input class="fin" id="cf-formula" placeholder="Например: amount * 0.005 + 30" style="font-family:ui-monospace,monospace;font-size:13px"></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-create-factor')">Отмена</button><button class="btn bp" onclick="confirmCreateFactor()">Создать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: CREATE LIMIT -->
+<div class="mov" id="m-create-lim" onclick="if(event.target===this)closeMov('m-create-lim')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Создать лимит</div><div class="md">createTariffLimit · требует тарифы и операцию</div></div><button class="ib" onclick="closeMov('m-create-lim')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название</label><input class="fin" id="cl-name" placeholder="Например: Стандартный суточный"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="cl-desc" placeholder="Для чего этот лимит"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Тикер валюты <span class="fr">*</span></label><input class="fin" id="cl-ticker" placeholder="RUB"></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><label class="fl" style="margin-bottom:0">Базовая валюта</label><label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer"><input type="checkbox" id="cl-base" style="width:16px;height:16px;accent-color:var(--primary-base)"><span style="font-size:14px">isBaseCurrency</span></label></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Суточный <span class="fr">*</span></label><input class="fin" id="cl-daily" type="number" placeholder="50000"></div>
+        <div><label class="fl">Недельный <span class="fr">*</span></label><input class="fin" id="cl-weekly" type="number" placeholder="200000"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Месячный <span class="fr">*</span></label><input class="fin" id="cl-monthly" type="number" placeholder="500000"></div>
+        <div><label class="fl">Годовой <span class="fr">*</span></label><input class="fin" id="cl-annual" type="number" placeholder="3000000"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Минимум операции</label><input class="fin" id="cl-mn" type="number" placeholder="100"></div>
+        <div><label class="fl">Максимум операции</label><input class="fin" id="cl-mx" type="number" placeholder="30000"></div>
+      </div>
+      <div><label class="fl">Тарифы <span class="fr">*</span></label><div class="blist" id="blist-cl-tariff" style="max-height:120px;overflow-y:auto;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);padding:4px"></div></div>
+      <div><label class="fl">Операция <span class="fr">*</span></label><select class="fin" id="cl-op" style="height:40px"><option value="">— выберите операцию —</option></select></div>
+      <div><label class="fl">Клиент (опционально)</label><input class="fin" id="cl-client" placeholder="ID клиента (если персональный лимит)"></div>
+      <div><label class="fl">Ограничение (LimitRestriction, опционально)</label><select class="fin" id="cl-restr" style="height:40px"><option value="">— без ограничения —</option></select></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-create-lim')">Отмена</button><button class="btn bp" onclick="confirmCreateLim()">Создать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: CREATE LIMIT RESTRICTION -->
+<div class="mov" id="m-create-restr" onclick="if(event.target===this)closeMov('m-create-restr')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Создать ограничение лимита</div><div class="md">createTariffLimitRestriction · потолки для персональных лимитов</div></div><button class="ib" onclick="closeMov('m-create-restr')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название</label><input class="fin" id="cr-name" placeholder="Например: Ограничение KYC-2"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="cr-desc" placeholder="Для каких тарифов и клиентов"></textarea></div>
+      <div><label class="fl">Тикер валюты <span class="fr">*</span></label><input class="fin" id="cr-ticker" placeholder="RUB"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Макс. суточный <span class="fr">*</span></label><input class="fin" id="cr-day" type="number" placeholder="100000"></div>
+        <div><label class="fl">Макс. недельный <span class="fr">*</span></label><input class="fin" id="cr-week" type="number" placeholder="400000"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Макс. месячный <span class="fr">*</span></label><input class="fin" id="cr-mon" type="number" placeholder="1000000"></div>
+        <div><label class="fl">Макс. годовой <span class="fr">*</span></label><input class="fin" id="cr-ann" type="number" placeholder="5000000"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Мин. операции</label><input class="fin" id="cr-mn" type="number" placeholder="100"></div>
+        <div><label class="fl">Макс. операции</label><input class="fin" id="cr-mx" type="number" placeholder="50000"></div>
+      </div>
+      <div><label class="fl">Привязать лимиты (опционально)</label><div class="blist" id="blist-cr-lim" style="max-height:120px;overflow-y:auto;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);padding:4px"></div></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-create-restr')">Отмена</button><button class="btn bp" onclick="confirmCreateRestr()">Создать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: BIND OP TO TARIFF -->
+<div class="mov" id="m-bind-op" onclick="if(event.target===this)closeMov('m-bind-op')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Привязать операцию к тарифу</div><div class="md">bindOperationToTariff · создаёт TariffOperationEntity</div></div><button class="ib" onclick="closeMov('m-bind-op')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb" style="gap:10px">
+      <div class="sw" style="width:100%"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input class="si" style="width:100%" placeholder="Поиск операций..." oninput="filtBind('blist-op',this.value)"></div>
+      <div class="blist" id="blist-op"></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-bind-op')">Отмена</button><button class="btn bp" onclick="confirmBindOp()">Привязать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: BIND LIMIT TO TARIFF-OP -->
+<div class="mov" id="m-bind-lim" onclick="if(event.target===this)closeMov('m-bind-lim')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Привязать к тариф-операции</div><div class="md">bindLimitToTariffOperation(limitId, tariffId, operationId)</div></div><button class="ib" onclick="closeMov('m-bind-lim')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Тариф <span class="fr">*</span></label><select class="fin" id="bl-tariff" style="height:40px"></select></div>
+      <div><label class="fl">Операция <span class="fr">*</span></label><select class="fin" id="bl-op" style="height:40px"></select></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-bind-lim')">Отмена</button><button class="btn bp" onclick="confirmBindLim()">Привязать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: UNBIND LIMIT -->
+<div class="mov" id="m-unbind-lim" onclick="if(event.target===this)closeMov('m-unbind-lim')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Отвязать лимит</div><div class="md">unbindLimitFromTariffOperation</div></div><button class="ib" onclick="closeMov('m-unbind-lim')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb"><div class="blist" id="blist-unbind"></div></div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-unbind-lim')">Отмена</button><button class="btn bd" onclick="confirmUnbind()">Отвязать</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT TARIFF -->
+<div class="mov" id="m-edit-plan" onclick="if(event.target===this)closeMov('m-edit-plan')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Редактировать тариф</div><div class="md">updateTariff · доступно: name, description</div></div><button class="ib" onclick="closeMov('m-edit-plan')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="ep-name"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="ep-desc" placeholder="Описание тарифного плана"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-edit-plan')">Отмена</button><button class="btn bp" onclick="confirmEditPlan()">Сохранить</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT OPERATION -->
+<div class="mov" id="m-edit-op" onclick="if(event.target===this)closeMov('m-edit-op')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Редактировать операцию</div></div><button class="ib" onclick="closeMov('m-edit-op')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="eo-name"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="eo-desc"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-edit-op')">Отмена</button><button class="btn bp" onclick="confirmEditOp()">Сохранить</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT COMMISSION -->
+<div class="mov" id="m-edit-comm" onclick="if(event.target===this)closeMov('m-edit-comm')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Редактировать комиссию</div><div class="md">updateTariffCommission · только name, description</div></div><button class="ib" onclick="closeMov('m-edit-comm')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название <span class="fr">*</span></label><input class="fin" id="ec-name"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="ec-desc" placeholder="Описание комиссии"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-edit-comm')">Отмена</button><button class="btn bp" onclick="confirmEditComm()">Сохранить</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT LIMIT -->
+<div class="mov" id="m-edit-lim" onclick="if(event.target===this)closeMov('m-edit-lim')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Редактировать лимит</div><div class="md">updateTariffLimit · name, description, daily, weekly, monthly, annual, min, max</div></div><button class="ib" onclick="closeMov('m-edit-lim')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название</label><input class="fin" id="el-name"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="el-desc"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Суточный <span class="fr">*</span></label><input class="fin" id="el-daily" type="number"></div>
+        <div><label class="fl">Недельный <span class="fr">*</span></label><input class="fin" id="el-weekly" type="number"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Месячный <span class="fr">*</span></label><input class="fin" id="el-monthly" type="number"></div>
+        <div><label class="fl">Годовой <span class="fr">*</span></label><input class="fin" id="el-annual" type="number"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Минимум операции</label><input class="fin" id="el-mn" type="number"></div>
+        <div><label class="fl">Максимум операции</label><input class="fin" id="el-mx" type="number"></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-edit-lim')">Отмена</button><button class="btn bp" onclick="confirmEditLim()">Сохранить</button></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT RESTRICTION -->
+<div class="mov" id="m-edit-restr" onclick="if(event.target===this)closeMov('m-edit-restr')">
+  <div class="modal">
+    <div class="mh"><div><div class="mt">Редактировать ограничение</div><div class="md">updateTariffLimitRestriction</div></div><button class="ib" onclick="closeMov('m-edit-restr')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название</label><input class="fin" id="er-name"></div>
+      <div><label class="fl">Описание</label><textarea class="fte" id="er-desc"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Макс. суточный</label><input class="fin" id="er-day" type="number"></div>
+        <div><label class="fl">Макс. недельный</label><input class="fin" id="er-week" type="number"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Макс. месячный</label><input class="fin" id="er-mon" type="number"></div>
+        <div><label class="fl">Макс. годовой</label><input class="fin" id="er-ann" type="number"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Минимум</label><input class="fin" id="er-mn" type="number"></div>
+        <div><label class="fl">Максимум</label><input class="fin" id="er-mx" type="number"></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-edit-restr')">Отмена</button><button class="btn bp" onclick="confirmEditRestr()">Сохранить</button></div>
+  </div>
+</div>
+
+<!-- MODAL: DUP TARIFF -->
+<div class="mov" id="m-dup" onclick="if(event.target===this)closeMov('m-dup')">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div><div class="mt">Дублировать тарифный план</div><div class="md">Новый план как копия с теми же операциями</div></div><button class="ib" onclick="closeMov('m-dup')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="mb">
+      <div><label class="fl">Название копии <span class="fr">*</span></label><input class="fin" id="dup-name" placeholder="Базовый KYC-2 (копия)"></div>
+      <div><label class="fl">Категория клиентов <span class="fr">*</span></label><input class="fin" id="dup-cat" placeholder="retail_kyc2_copy"></div>
+    </div>
+    <div class="mf"><button class="btn bg" onclick="closeMov('m-dup')">Отмена</button><button class="btn bp" onclick="confirmDup()">Дублировать</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-wrap"></div>
+
+<!-- CONFIRM DELETE -->
+<div class="cpop" id="cdel" onclick="if(event.target===this)closeDel()">
+  <div class="cpanel">
+    <h3>Удалить?</h3>
+    <p id="cdel-txt">Это действие необратимо.</p>
+    <div class="cpanel-f"><button class="btn bg" onclick="closeDel()">Отмена</button><button class="btn bd" onclick="confirmDel()">Удалить</button></div>
+  </div>
+</div>
+
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const tariffs=[
+  {id:'TRF-001',name:'Базовый KYC-0',desc:'Тариф для новых клиентов без верификации',cat:'retail_kyc0',clients:1204,opsCount:2,limCount:2,commCount:1,created:'12.01.2026',updated:'12.01.2026'},
+  {id:'TRF-002',name:'Базовый KYC-1',desc:'Тариф для клиентов с базовой верификацией',cat:'retail_kyc1',clients:3891,opsCount:4,limCount:4,commCount:3,created:'12.01.2026',updated:'15.03.2026'},
+  {id:'TRF-003',name:'Базовый KYC-2',desc:'Тариф для полностью верифицированных клиентов',cat:'retail_kyc2',clients:847,opsCount:5,limCount:4,commCount:4,created:'12.01.2026',updated:'20.05.2026'},
+  {id:'TRF-004',name:'Партнёр: ООО Каскад',desc:'Индивидуальный партнёрский тариф',cat:'partner_b2b',clients:1,opsCount:3,limCount:2,commCount:2,created:'05.03.2026',updated:'05.03.2026'},
+  {id:'TRF-005',name:'VIP-клиент #88214',desc:'Персональный VIP-тариф',cat:'vip_individual',clients:1,opsCount:2,limCount:1,commCount:1,created:'01.07.2026',updated:'01.07.2026'},
+];
+
+const operations=[
+  {id:'OP-001',name:'Обмен крипта-крипта',desc:'Обмен между криптоактивами внутри платформы',tariffs:3,comms:3,lims:1,hist:8420,created:'12.01.2026',updated:'12.01.2026'},
+  {id:'OP-002',name:'Вывод фиата (СБП)',desc:'Вывод рублей через Систему быстрых платежей',tariffs:2,comms:1,lims:2,hist:3140,created:'12.01.2026',updated:'20.04.2026'},
+  {id:'OP-003',name:'Пополнение по СБП',desc:'Пополнение счёта через СБП',tariffs:3,comms:1,lims:1,hist:5230,created:'12.01.2026',updated:'12.01.2026'},
+  {id:'OP-004',name:'Обмен крипта-фиат',desc:'Конвертация криптовалюты в рубли',tariffs:3,comms:2,lims:1,hist:1980,created:'12.01.2026',updated:'01.06.2026'},
+  {id:'OP-005',name:'Вывод USDT TRC-20',desc:'Вывод USDT в сеть Tron',tariffs:1,comms:1,lims:1,hist:670,created:'15.02.2026',updated:'15.02.2026'},
+];
+
+const commissions=[
+  {id:'COM-001',name:'Розничная 0.5%',desc:'Стандартная комиссия за обмен',ticker:'RUB',baseCurr:true,clientId:null,tariffs:3,factorsCount:1,opName:'Обмен крипта-крипта',created:'12.01.2026',updated:'12.01.2026',
+   factors:[{id:'CF-001',name:'Базовый процент',type:'PERCENT',percent:0.5,fixed:null,amountFrom:0,amountTo:null,min:10,max:50000,formula:null,order:1}]},
+  {id:'COM-002',name:'Вывод 1%+30R',desc:'Комиссия за вывод фиата',ticker:'RUB',baseCurr:true,clientId:null,tariffs:2,factorsCount:1,opName:'Вывод фиата (СБП)',created:'12.01.2026',updated:'12.01.2026',
+   factors:[{id:'CF-002',name:'Процент плюс фикс',type:'PERCENT_FIXED',percent:1.0,fixed:30,amountFrom:0,amountTo:null,min:30,max:15000,formula:null,order:1}]},
+  {id:'COM-003',name:'Партнёрская 0.3%',desc:'Пониженная комиссия для партнёров',ticker:'RUB',baseCurr:true,clientId:null,tariffs:1,factorsCount:1,opName:'Обмен крипта-крипта',created:'05.03.2026',updated:'05.03.2026',
+   factors:[{id:'CF-003',name:'Партнёрский процент',type:'PERCENT',percent:0.3,fixed:null,amountFrom:0,amountTo:null,min:5,max:200000,formula:null,order:1}]},
+  {id:'COM-004',name:'VIP ступенчатая',desc:'Ступенчатая комиссия для VIP',ticker:'RUB',baseCurr:true,clientId:null,tariffs:1,factorsCount:3,opName:'Обмен крипта-фиат',created:'01.07.2026',updated:'01.07.2026',
+   factors:[
+     {id:'CF-004',name:'Ступень до 100к',type:'PERCENT',percent:0.3,fixed:null,amountFrom:0,amountTo:100000,min:null,max:null,formula:null,order:1},
+     {id:'CF-005',name:'Ступень 100к-500к',type:'PERCENT',percent:0.2,fixed:null,amountFrom:100000,amountTo:500000,min:null,max:null,formula:null,order:2},
+     {id:'CF-006',name:'Ступень от 500к',type:'PERCENT',percent:0.1,fixed:null,amountFrom:500000,amountTo:null,min:null,max:null,formula:null,order:3},
+   ]},
+  {id:'COM-005',name:'Нулевая комиссия',desc:'Без комиссии за пополнение',ticker:'RUB',baseCurr:true,clientId:null,tariffs:3,factorsCount:1,opName:'Пополнение по СБП',created:'12.01.2026',updated:'12.01.2026',
+   factors:[{id:'CF-007',name:'Ноль',type:'FIXED',percent:null,fixed:0,amountFrom:0,amountTo:null,min:null,max:null,formula:null,order:1}]},
+];
+
+const limits=[
+  {id:'LIM-001',name:'Стандарт KYC-2',desc:'Стандартный лимит для сегмента KYC-2',ticker:'RUB',baseCurr:true,daily:50000,weekly:200000,monthly:500000,annual:3000000,min:100,max:30000,tariffs:4,opName:'Обмен крипта-крипта',restrName:'Ограничение KYC-2',restrId:'RST-001',clientId:null,created:'12.01.2026',updated:'15.03.2026'},
+  {id:'LIM-002',name:'Партнёрский',desc:'Повышенный лимит для b2b-партнёров',ticker:'RUB',baseCurr:true,daily:200000,weekly:800000,monthly:2000000,annual:10000000,min:null,max:null,tariffs:1,opName:'Обмен крипта-крипта',restrName:null,restrId:null,clientId:null,created:'05.03.2026',updated:'05.03.2026'},
+  {id:'LIM-003',name:'Лимит на вывод KYC-1',desc:'Лимит вывода для KYC-1',ticker:'RUB',baseCurr:true,daily:100000,weekly:350000,monthly:300000,annual:1500000,min:500,max:50000,tariffs:2,opName:'Вывод фиата (СБП)',restrName:'Ограничение KYC-1',restrId:'RST-002',clientId:null,created:'12.01.2026',updated:'12.01.2026'},
+  {id:'LIM-004',name:'Начальный KYC-0',desc:'Минимальные лимиты для новых клиентов',ticker:'RUB',baseCurr:true,daily:10000,weekly:40000,monthly:50000,annual:300000,min:100,max:5000,tariffs:1,opName:'Вывод фиата (СБП)',restrName:null,restrId:null,clientId:null,created:'12.01.2026',updated:'12.01.2026'},
+];
+
+const restrictions=[
+  {id:'RST-001',name:'Ограничение KYC-2',desc:'Потолок персональных лимитов для KYC-2',ticker:'RUB',maxDaily:100000,maxWeekly:400000,maxMonthly:1000000,maxAnnual:5000000,min:100,max:50000,limitsCount:2,created:'12.01.2026',updated:'12.01.2026'},
+  {id:'RST-002',name:'Ограничение KYC-1',desc:'Потолок персональных лимитов для KYC-1',ticker:'RUB',maxDaily:150000,maxWeekly:500000,maxMonthly:500000,maxAnnual:2000000,min:500,max:50000,limitsCount:1,created:'12.01.2026',updated:'12.01.2026'},
+  {id:'RST-003',name:'Ограничение USDT',desc:'Потолок для операций в USDT',ticker:'USDT',maxDaily:5000,maxWeekly:20000,maxMonthly:50000,maxAnnual:300000,min:10,max:2000,limitsCount:0,created:'15.02.2026',updated:'15.02.2026'},
+];
+
+const operHist=[
+  {id:'OH-8420',dt:'08.07.2026 14:33',trackerId:'TRK-9921',status:'SUCCESSFUL',clientId:'#1042',clientName:'Иван Петров',tariff:'Базовый KYC-2',op:'Обмен крипта-крипта',amount:10000,ticker:'RUB'},
+  {id:'OH-8419',dt:'08.07.2026 13:11',trackerId:'TRK-9920',status:'SUCCESSFUL',clientId:'#0998',clientName:'Тимур Хасанов',tariff:'Базовый KYC-1',op:'Вывод фиата (СБП)',amount:5000,ticker:'RUB'},
+  {id:'OH-8418',dt:'08.07.2026 12:17',trackerId:'TRK-9919',status:'PENDING',clientId:'#1039',clientName:'Мария Сидорова',tariff:'Базовый KYC-2',op:'Пополнение по СБП',amount:20000,ticker:'RUB'},
+  {id:'OH-8417',dt:'08.07.2026 11:05',trackerId:'TRK-9918',status:'REJECTED',clientId:'#1028',clientName:'John Smith',tariff:'Базовый KYC-1',op:'Обмен крипта-крипта',amount:50000,ticker:'RUB'},
+  {id:'OH-8416',dt:'08.07.2026 09:42',trackerId:'TRK-9917',status:'SUCCESSFUL',clientId:'#1004',clientName:'ООО Каскад',tariff:'Партнёр: ООО Каскад',op:'Обмен крипта-фиат',amount:500000,ticker:'RUB'},
+  {id:'OH-8415',dt:'07.07.2026 18:55',trackerId:'TRK-9916',status:'SUCCESSFUL',clientId:'#0881',clientName:'Аня Волкова',tariff:'Базовый KYC-2',op:'Вывод USDT TRC-20',amount:1500,ticker:'USDT'},
+];
+
+// ── CONTEXT ───────────────────────────────────────────────────────
+let _curTariffIdx=0,_curOpIdx=0,_curCommIdx=0,_curLimIdx=0,_curRestrIdx=0;
+
+// ── STATUS BADGE ──────────────────────────────────────────────────
+function statusBadge(s){
+  const map={SUCCESSFUL:{label:'Успешно',color:'var(--state-success-base)'},PENDING:{label:'В обработке',color:'var(--state-warning-base)'},REJECTED:{label:'Отклонено',color:'var(--state-error-base)'}};
+  const m=map[s]||{label:s,color:'var(--text-soft-400)'};
+  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:${m.color}"><span style="width:6px;height:6px;border-radius:50%;background:${m.color};display:inline-block"></span>${m.label}</span>`;
+}
+function fmt(n){return n!=null?Number(n).toLocaleString('ru'):'-'}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function rPlans(){
+  document.getElementById('tb-plans').innerHTML=tariffs.map((p,i)=>`<tr onclick="oPlan(${i})"><td><div class="cm">${p.name}</div><div class="cs">${p.id}</div></td><td><span class="tag">${p.cat}</span></td><td>${fmt(p.clients)}</td><td>${p.opsCount}</td><td>${p.limCount}</td><td>${p.commCount}</td><td style="color:var(--text-soft-400)">${p.created}</td></tr>`).join('');
+  spi(tariffs.length);
+}
+function rOps(){
+  document.getElementById('tb-ops').innerHTML=operations.map((o,i)=>`<tr onclick="oOp(${i})"><td><div class="cm">${o.name}</div><div class="cs">${o.id}</div></td><td style="color:var(--text-soft-400);font-size:13px">${o.desc}</td><td>${o.tariffs}</td><td>${o.comms}</td><td>${o.lims}</td><td>${fmt(o.hist)}</td><td>${o.comms}</td><td style="color:var(--text-soft-400)">${o.created}</td></tr>`).join('');
+}
+function rComms(){
+  document.getElementById('tb-comms').innerHTML=commissions.map((c,i)=>`<tr onclick="oComm(${i})"><td><div class="cm">${c.name}</div><div class="cs">${c.id}</div></td><td style="color:var(--text-soft-400);font-size:13px">${c.desc}</td><td><span class="tag">${c.ticker}</span></td><td>${c.clientId||'—'}</td><td>${c.tariffs}</td><td>${c.factorsCount}</td><td style="color:var(--text-soft-400)">${c.opName}</td><td style="color:var(--text-soft-400)">${c.created}</td></tr>`).join('');
+}
+function rLimits(){
+  document.getElementById('tb-limits').innerHTML=limits.map((l,i)=>`<tr onclick="oLim(${i})"><td><div class="cm">${l.name}</div><div class="cs">${l.id}</div></td><td style="color:var(--text-soft-400);font-size:13px">${l.desc}</td><td><span class="tag">${l.ticker}</span></td><td style="font-variant-numeric:tabular-nums">${fmt(l.daily)}</td><td style="font-variant-numeric:tabular-nums">${fmt(l.weekly)}</td><td style="font-variant-numeric:tabular-nums">${fmt(l.annual)}</td><td style="font-variant-numeric:tabular-nums;font-size:12px">${fmt(l.min)} / ${fmt(l.max)}</td><td>${l.tariffs}</td><td style="color:var(--text-soft-400)">${l.opName}</td><td style="color:var(--text-soft-400)">${l.restrName||'—'}</td></tr>`).join('');
+}
+function rRestr(){
+  document.getElementById('tb-restr').innerHTML=restrictions.map((r,i)=>`<tr onclick="oRestr(${i})"><td><div class="cm">${r.name}</div><div class="cs">${r.id}</div></td><td style="color:var(--text-soft-400);font-size:13px">${r.desc}</td><td><span class="tag">${r.ticker}</span></td><td style="font-variant-numeric:tabular-nums">${fmt(r.maxDaily)}</td><td style="font-variant-numeric:tabular-nums">${fmt(r.maxWeekly)}</td><td style="font-variant-numeric:tabular-nums">${fmt(r.maxMonthly)}</td><td style="font-variant-numeric:tabular-nums">${fmt(r.maxAnnual)}</td><td style="font-variant-numeric:tabular-nums;font-size:12px">${fmt(r.min)} / ${fmt(r.max)}</td><td>${r.limitsCount}</td></tr>`).join('');
+}
+function rHist(){
+  const histFilter=document.getElementById('hist-status-filter');
+  const statusVal=histFilter?histFilter.value:'';
+  const rows=statusVal?operHist.filter(h=>h.status===statusVal):operHist;
+  document.getElementById('tb-hist').innerHTML=rows.map(h=>`<tr style="cursor:pointer" onclick="toast('Переход на страницу операции '+h.id+'...')"><td><div class="cm tl" style="color:var(--primary-base);cursor:pointer" onclick="event.stopPropagation();toast('История ${h.id} — открывается на отдельной странице')">${h.id}</div><div class="cs">${h.dt}</div></td><td style="font-size:13px;color:var(--text-soft-400)">${h.trackerId}</td><td style="font-size:13px">${h.clientId} ${h.clientName}</td><td style="font-size:13px">${h.tariff}</td><td style="font-size:13px">${h.op}</td><td style="font-variant-numeric:tabular-nums;font-size:13px">${fmt(h.amount)} ${h.ticker}</td><td>${statusBadge(h.status)}</td></tr>`).join('');
+}
+
+// ── PLAN DRAWER ───────────────────────────────────────────────────
+function oPlan(i){
+  _curTariffIdx=i;
+  const p=tariffs[i];
+  document.getElementById('dp-n').textContent=p.name;
+  document.getElementById('dp-s').textContent=p.id+' · '+p.cat;
+  document.getElementById('dp-par').innerHTML=
+    `<div class="row"><span class="rl">ID</span><span class="rv mono">${p.id}</span></div>`+
+    `<div class="row"><span class="rl">Категория клиентов</span><span class="rv"><span class="tag">${p.cat}</span></span></div>`+
+    `<div class="row"><span class="rl">Описание</span><span class="rv" style="color:var(--text-soft-400)">${p.desc}</span></div>`+
+    `<div class="row"><span class="rl">Клиентов</span><span class="rv">${fmt(p.clients)}</span></div>`+
+    `<div class="row"><span class="rl">Операций</span><span class="rv">${p.opsCount}</span></div>`+
+    `<div class="row"><span class="rl">Лимитов</span><span class="rv">${p.limCount}</span></div>`+
+    `<div class="row"><span class="rl">Комиссий</span><span class="rv">${p.commCount}</span></div>`+
+    `<div class="row"><span class="rl">Создан</span><span class="rv">${p.created}</span></div>`+
+    `<div class="row"><span class="rl">Обновлён</span><span class="rv">${p.updated}</span></div>`;
+  document.getElementById('dp-oc').textContent='('+p.opsCount+')';
+  const boundOps=operations.slice(0,p.opsCount);
+  document.getElementById('dp-ops').innerHTML=boundOps.map((o,j)=>`<div class="irow" onclick="event.stopPropagation();oOp(${j})"><span class="irn">${o.name}</span><span class="irm">${o.id} →</span></div>`).join('');
+  document.getElementById('dp-commc').textContent='('+p.commCount+')';
+  const boundComms=commissions.slice(0,p.commCount);
+  document.getElementById('dp-comms').innerHTML=boundComms.length
+    ?boundComms.map((c,j)=>`<div class="irow" onclick="event.stopPropagation();oComm(${j})"><span class="irn">${c.name}</span><span class="irm">${c.opName} · <span class="tag">${c.ticker}</span></span></div>`).join('')
+    :'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет комиссий</div>';
+  document.getElementById('dp-limc').textContent='('+p.limCount+')';
+  const boundLims=limits.slice(0,p.limCount);
+  document.getElementById('dp-limits').innerHTML=boundLims.length
+    ?boundLims.map((l,j)=>`<div class="irow" onclick="event.stopPropagation();oLim(${j})"><span class="irn">${l.name}</span><span class="irm">${fmt(l.daily)} / мес ${fmt(l.monthly)} ${l.ticker}</span></div>`).join('')
+    :'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет лимитов</div>';
+  document.getElementById('dp-cl').innerHTML=
+    `<div class="row"><span class="rl">Клиентов на тарифе</span><span class="rv">${fmt(p.clients)}</span></div>`+
+    `<div class="row"><span class="rl">Перейти к клиентам</span><span class="rvl" onclick="toast('Клиенты тарифа — переход в модуль клиентов')">Клиенты →</span></div>`;
+  oD('drp','bdp');
+}
+
+// ── OP DRAWER ────────────────────────────────────────────────────
+function oOp(i){
+  _curOpIdx=i;
+  const o=operations[i];
+  document.getElementById('do-n').textContent=o.name;
+  document.getElementById('do-s').textContent=o.id;
+  document.getElementById('do-tc').textContent=o.tariffs;
+  document.getElementById('do-cb').textContent=o.comms;
+  document.getElementById('do-lb').textContent=o.lims;
+  document.getElementById('do-par').innerHTML=
+    `<div class="row"><span class="rl">ID</span><span class="rv mono">${o.id}</span></div>`+
+    `<div class="row"><span class="rl">Описание</span><span class="rv" style="color:var(--text-soft-400)">${o.desc}</span></div>`+
+    `<div class="row"><span class="rl">Тарифов</span><span class="rv">${o.tariffs}</span></div>`+
+    `<div class="row"><span class="rl">Комиссий</span><span class="rv">${o.comms}</span></div>`+
+    `<div class="row"><span class="rl">Лимитов</span><span class="rv">${o.lims}</span></div>`+
+    `<div class="row"><span class="rl">Записей истории</span><span class="rv">${fmt(o.hist)}</span></div>`+
+    `<div class="row"><span class="rl">Создан</span><span class="rv">${o.created}</span></div>`+
+    `<div class="row"><span class="rl">Обновлён</span><span class="rv">${o.updated}</span></div>`;
+  document.getElementById('do-t').innerHTML=tariffs.slice(0,o.tariffs).map((p,j)=>`<div class="irow" onclick="event.stopPropagation();oPlan(${j})"><span class="irn">${p.name}</span><span class="irm"><span class="tag">${p.cat}</span> →</span></div>`).join('');
+  document.getElementById('do-cm').innerHTML=commissions.filter(c=>c.opName===o.name).slice(0,o.comms).map((c,j)=>`<div class="irow" onclick="event.stopPropagation();oComm(${j})"><span class="irn">${c.name}</span><span class="irm">${c.ticker} →</span></div>`).join('')||'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет комиссий</div>';
+  document.getElementById('do-lm').innerHTML=limits.filter(l=>l.opName===o.name).slice(0,o.lims).map((l,j)=>`<div class="irow" onclick="event.stopPropagation();oLim(${j})"><span class="irn">${l.name}</span><span class="irm">${fmt(l.daily)}/${fmt(l.monthly)} ${l.ticker} →</span></div>`).join('')||'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет лимитов</div>';
+  document.getElementById('do-st').innerHTML=operHist.filter(h=>h.op===o.name).map(h=>`<div class="irow"><span class="irn">${h.id}</span><span class="irm">${statusBadge(h.status)}</span></div>`).join('')||`<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Всего записей: ${fmt(o.hist)}</div>`;
+  cD('drp','bdp'); oD('dro','bdo');
+}
+
+// ── COMM DRAWER ──────────────────────────────────────────────────
+function oComm(i){
+  _curCommIdx=i;
+  const c=commissions[i];
+  document.getElementById('dc-n').textContent=c.name;
+  document.getElementById('dc-s').textContent=c.id+' · '+c.opName;
+  document.getElementById('dc-bn').textContent=c.tariffs;
+  document.getElementById('dc-fc').textContent='('+c.factorsCount+')';
+  document.getElementById('dc-par').innerHTML=
+    `<div class="row"><span class="rl">ID</span><span class="rv mono">${c.id}</span></div>`+
+    `<div class="row"><span class="rl">Описание</span><span class="rv" style="color:var(--text-soft-400)">${c.desc}</span></div>`+
+    `<div class="row"><span class="rl">Тикер</span><span class="rv"><span class="tag">${c.ticker}</span></span></div>`+
+    `<div class="row"><span class="rl">Базовая валюта</span><span class="rv">${c.baseCurr?'Да':'Нет'}</span></div>`+
+    `<div class="row"><span class="rl">Клиент</span><span class="rv">${c.clientId||'— (общая)'}</span></div>`+
+    `<div class="row"><span class="rl">Операция</span><span class="rv">${c.opName}</span></div>`+
+    `<div class="row"><span class="rl">Тарифов</span><span class="rv">${c.tariffs}</span></div>`+
+    `<div class="row"><span class="rl">Создан</span><span class="rv">${c.created}</span></div>`+
+    `<div class="row"><span class="rl">Обновлён</span><span class="rv">${c.updated}</span></div>`;
+  document.getElementById('dc-u').innerHTML=tariffs.slice(0,c.tariffs).map(p=>`<div class="irow"><span class="irn">${p.name}</span><span class="irm"><span class="tag">${p.cat}</span></span></div>`).join('')||'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет тарифов</div>';
+  document.getElementById('dc-f').innerHTML=c.factors.map(f=>{
+    const pct=f.percent!=null?`<div class="row"><span class="rl">Процент</span><span class="rv">${f.percent}%</span></div>`:'';
+    const fix=f.fixed!=null?`<div class="row"><span class="rl">Фиксированная</span><span class="rv">${fmt(f.fixed)} ${c.ticker}</span></div>`:'';
+    const range=`<div class="row"><span class="rl">Диапазон суммы</span><span class="rv">${fmt(f.amountFrom)} – ${f.amountTo!=null?fmt(f.amountTo):'∞'}</span></div>`;
+    const mn=f.min!=null?`<div class="row"><span class="rl">Минимум</span><span class="rv">${fmt(f.min)} ${c.ticker}</span></div>`:'';
+    const mx=f.max!=null?`<div class="row"><span class="rl">Максимум</span><span class="rv">${fmt(f.max)} ${c.ticker}</span></div>`:'';
+    const fm=f.formula?`<div class="row"><span class="rl">Формула</span><span class="rv mono">${f.formula}</span></div>`:'';
+    return `<div style="border:1px solid var(--stroke-soft-200);border-radius:var(--r8);padding:8px 12px;margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:var(--text-soft-400);margin-bottom:6px">#${f.order} · ${f.type} · ${f.name}</div><div class="rows">${pct}${fix}${range}${mn}${mx}${fm}</div></div>`;
+  }).join('');
+  cD('dro','bdo'); oD('drc','bdc');
+}
+
+// ── LIM DRAWER ───────────────────────────────────────────────────
+function oLim(i){
+  _curLimIdx=i;
+  const l=limits[i];
+  document.getElementById('dl-n').textContent=l.name;
+  document.getElementById('dl-s').textContent=l.id;
+  document.getElementById('dl-bn').textContent=l.tariffs;
+  document.getElementById('dl-v').innerHTML=
+    `<div class="row"><span class="rl">ID</span><span class="rv mono">${l.id}</span></div>`+
+    `<div class="row"><span class="rl">Описание</span><span class="rv" style="color:var(--text-soft-400)">${l.desc}</span></div>`+
+    `<div class="row"><span class="rl">Тикер</span><span class="rv"><span class="tag">${l.ticker}</span></span></div>`+
+    `<div class="row"><span class="rl">Базовая валюта</span><span class="rv">${l.baseCurr?'Да':'Нет'}</span></div>`+
+    `<div class="row"><span class="rl">Клиент</span><span class="rv">${l.clientId||'— (общий)'}</span></div>`+
+    `<div class="row"><span class="rl">Суточный</span><span class="rv">${fmt(l.daily)} ${l.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Недельный</span><span class="rv">${fmt(l.weekly)} ${l.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Месячный</span><span class="rv">${fmt(l.monthly)} ${l.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Годовой</span><span class="rv">${fmt(l.annual)} ${l.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Мин. операция</span><span class="rv">${l.min!=null?fmt(l.min)+' '+l.ticker:'—'}</span></div>`+
+    `<div class="row"><span class="rl">Макс. операция</span><span class="rv">${l.max!=null?fmt(l.max)+' '+l.ticker:'—'}</span></div>`+
+    `<div class="row"><span class="rl">Операция</span><span class="rv">${l.opName}</span></div>`+
+    `<div class="row"><span class="rl">Создан</span><span class="rv">${l.created}</span></div>`+
+    `<div class="row"><span class="rl">Обновлён</span><span class="rv">${l.updated}</span></div>`;
+  document.getElementById('dl-r').innerHTML=l.restrId
+    ?`<div class="irow" onclick="event.stopPropagation();oRestr(restrictions.findIndex(r=>r.id==='${l.restrId}'))"><span class="irn">${l.restrName}</span><span class="irm">${l.restrId} →</span></div>`
+    :'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Без ограничения</div>';
+  document.getElementById('dl-b').innerHTML=tariffs.slice(0,l.tariffs).map((p,j)=>`<div class="irow"><span class="irn">${p.name}</span><span class="irm">→ ${l.opName}</span></div>`).join('')||'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет привязки</div>';
+  oD('drl','bdl');
+}
+
+// ── RESTR DRAWER ─────────────────────────────────────────────────
+function oRestr(i){
+  _curRestrIdx=i;
+  const r=restrictions[i];
+  document.getElementById('dr-n').textContent=r.name;
+  document.getElementById('dr-s').textContent=r.id+' · '+r.ticker;
+  document.getElementById('dr-par').innerHTML=
+    `<div class="row"><span class="rl">ID</span><span class="rv mono">${r.id}</span></div>`+
+    `<div class="row"><span class="rl">Описание</span><span class="rv" style="color:var(--text-soft-400)">${r.desc}</span></div>`+
+    `<div class="row"><span class="rl">Тикер</span><span class="rv"><span class="tag">${r.ticker}</span></span></div>`+
+    `<div class="row"><span class="rl">Создан</span><span class="rv">${r.created}</span></div>`+
+    `<div class="row"><span class="rl">Обновлён</span><span class="rv">${r.updated}</span></div>`;
+  document.getElementById('dr-caps').innerHTML=
+    `<div class="row"><span class="rl">Макс. суточный</span><span class="rv">${fmt(r.maxDaily)} ${r.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Макс. недельный</span><span class="rv">${fmt(r.maxWeekly)} ${r.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Макс. месячный</span><span class="rv">${fmt(r.maxMonthly)} ${r.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Макс. годовой</span><span class="rv">${fmt(r.maxAnnual)} ${r.ticker}</span></div>`+
+    `<div class="row"><span class="rl">Мин. операция</span><span class="rv">${r.min!=null?fmt(r.min)+' '+r.ticker:'—'}</span></div>`+
+    `<div class="row"><span class="rl">Макс. операция</span><span class="rv">${r.max!=null?fmt(r.max)+' '+r.ticker:'—'}</span></div>`;
+  document.getElementById('dr-lc').textContent=r.limitsCount;
+  const boundLims=limits.filter(l=>l.restrId===r.id);
+  document.getElementById('dr-lims').innerHTML=boundLims.length
+    ?boundLims.map((l,j)=>`<div class="irow" onclick="event.stopPropagation();oLim(limits.indexOf(l))"><span class="irn">${l.name}</span><span class="irm">${fmt(l.daily)}/${fmt(l.monthly)} ${l.ticker} →</span></div>`).join('')
+    :'<div style="padding:8px 12px;font-size:13px;color:var(--text-soft-400)">Нет привязанных лимитов</div>';
+  oD('drr','bdr');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function oD(id,bd){document.getElementById(bd).classList.add('open');document.getElementById(id).classList.add('open')}
+function cD(id,bd){document.getElementById(id).classList.remove('open');document.getElementById(bd).classList.remove('open')}
+function openMov(id){document.getElementById(id).classList.add('open')}
+function closeMov(id){document.getElementById(id).classList.remove('open')}
+function spi(n){document.getElementById('pgi').textContent='Строк: '+n}
+
+const VS=['plans','ops','comms','limits','restr','hist'];
+const VC={plans:tariffs.length,ops:operations.length,comms:commissions.length,limits:limits.length,restr:restrictions.length,hist:operHist.length};
+const VCR={
+  plans:{label:'Новый тариф',fn:'openCreateTariff()'},
+  ops:{label:'Новая операция',fn:'openCreateOp()'},
+  comms:{label:'Новая комиссия',fn:'openCreateComm()'},
+  limits:{label:'Новый лимит',fn:'openCreateLim()'},
+  restr:{label:'Новое ограничение',fn:'openCreateRestr()'},
+  hist:{label:null}
+};
+function sv(v){
+  VS.forEach(id=>{document.getElementById('vw-'+id).style.display=id===v?'':'none'});
+  document.querySelectorAll('.stab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
+  spi(VC[v]);
+  ['p','o','c','l','r'].forEach(x=>cD('dr'+x,'bd'+x));
+  const cb=document.getElementById('btn-create');
+  const cfg=VCR[v];
+  if(cfg&&cfg.label){cb.style.display='';cb.lastChild.textContent=cfg.label;cb.setAttribute('onclick',cfg.fn)}
+  else{cb.style.display='none'}
+}
+function filt(tbid,q,cols){
+  const ql=q.toLowerCase();
+  document.getElementById(tbid).querySelectorAll('tr').forEach(tr=>{
+    const t=cols.map(c=>tr.cells[c]?tr.cells[c].textContent:'').join(' ').toLowerCase();
+    tr.style.display=t.includes(ql)?'':'none';
+  });
+}
+function filtBind(listId,q){
+  const ql=q.toLowerCase();
+  document.getElementById(listId).querySelectorAll('.brow').forEach(r=>{
+    r.style.display=r.textContent.toLowerCase().includes(ql)?'':'none';
+  });
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    ['p','o','c','l','r'].forEach(x=>cD('dr'+x,'bd'+x));
+    document.querySelectorAll('.mov.open').forEach(m=>m.classList.remove('open'));
+    closeDel();
+  }
+});
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg,type){
+  const w=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;
+  w.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('in')));
+  setTimeout(()=>{t.classList.remove('in');setTimeout(()=>t.remove(),220)},2200);
+}
+
+// ── CONFIRM DELETE ─────────────────────────────────────────────────
+let _delCtx={};
+function askDel(label,drawerId,dropId){
+  _delCtx={drawerId,dropId};
+  document.getElementById('cdel-txt').textContent='Вы удалите '+label+'. Это действие необратимо.';
+  document.getElementById('cdel').classList.add('open');
+}
+function closeDel(){document.getElementById('cdel').classList.remove('open')}
+function confirmDel(){
+  closeDel();
+  if(_delCtx.drawerId){cD(_delCtx.drawerId,_delCtx.dropId||_delCtx.drawerId.replace('dr','bd'))}
+  toast('Удалено','ok');
+}
+
+// ── CREATE HANDLERS (прототип — toast) ────────────────────────────
+function _populateSelect(selId,data,labelFn,valFn){
+  const sel=document.getElementById(selId);
+  if(!sel)return;
+  const cur=sel.value;
+  while(sel.options.length>1)sel.remove(1);
+  data.forEach(d=>{const o=document.createElement('option');o.value=valFn(d);o.textContent=labelFn(d);sel.appendChild(o);});
+  sel.value=cur;
+}
+function _populateCheckList(listId,data,labelFn,valFn){
+  const el=document.getElementById(listId);
+  if(!el)return;
+  el.innerHTML=data.map((d,i)=>`<label class="brow"><input type="checkbox" data-i="${i}" value="${valFn(d)}"><span class="brn">${labelFn(d)}</span><span class="brc">${valFn(d)}</span></label>`).join('');
+}
+
+function openCreateTariff(){
+  _populateCheckList('blist-ct-op',operations,o=>o.name,o=>o.id);
+  openMov('m-create-tariff');
+}
+function confirmCreateTariff(){
+  const name=document.getElementById('ct-name').value.trim();
+  const cat=document.getElementById('ct-cat').value.trim();
+  if(!name||!cat){toast('Заполните обязательные поля','err');return}
+  const checked=[...document.getElementById('blist-ct-op').querySelectorAll('input:checked')];
+  closeMov('m-create-tariff');
+  toast(`Тариф «${name}» создан`+(checked.length?`, привязано ${checked.length} операций`:''),'ok');
+}
+
+function openCreateOp(){
+  _populateSelect('co-tariff',tariffs,p=>p.name+' ('+p.cat+')',p=>p.id);
+  openMov('m-create-op');
+}
+function confirmCreateOp(){
+  const name=document.getElementById('co-name').value.trim();
+  if(!name){toast('Укажите название операции','err');return}
+  closeMov('m-create-op');
+  toast(`Операция «${name}» создана`,'ok');
+}
+
+function openCreateComm(){
+  _populateCheckList('blist-cc-tariff',tariffs,p=>p.name,p=>p.id);
+  _populateSelect('cc-op',operations,o=>o.name,o=>o.id);
+  openMov('m-create-comm');
+}
+function confirmCreateComm(){
+  const name=document.getElementById('cc-name').value.trim();
+  const ticker=document.getElementById('cc-ticker').value.trim();
+  const op=document.getElementById('cc-op').value;
+  if(!name||!ticker||!op){toast('Заполните обязательные поля','err');return}
+  const checked=[...document.getElementById('blist-cc-tariff').querySelectorAll('input:checked')];
+  if(!checked.length){toast('Выберите хотя бы один тариф','err');return}
+  closeMov('m-create-comm');
+  toast(`Комиссия «${name}» создана, привязана к ${checked.length} тарифам`,'ok');
+}
+
+function confirmCreateFactor(){
+  const name=document.getElementById('cf-name').value.trim();
+  const type=document.getElementById('cf-type').value;
+  const order=document.getElementById('cf-order').value;
+  if(!name||!order){toast('Заполните обязательные поля','err');return}
+  closeMov('m-create-factor');
+  toast(`Фактор «${name}» (${type}) создан`,'ok');
+}
+
+function openCreateLim(){
+  _populateCheckList('blist-cl-tariff',tariffs,p=>p.name,p=>p.id);
+  _populateSelect('cl-op',operations,o=>o.name,o=>o.id);
+  _populateSelect('cl-restr',restrictions,r=>r.name+' ('+r.ticker+')',r=>r.id);
+  openMov('m-create-lim');
+}
+function confirmCreateLim(){
+  const daily=document.getElementById('cl-daily').value;
+  const weekly=document.getElementById('cl-weekly').value;
+  const monthly=document.getElementById('cl-monthly').value;
+  const annual=document.getElementById('cl-annual').value;
+  const ticker=document.getElementById('cl-ticker').value.trim();
+  const op=document.getElementById('cl-op').value;
+  if(!daily||!weekly||!monthly||!annual||!ticker||!op){toast('Заполните обязательные поля','err');return}
+  const checked=[...document.getElementById('blist-cl-tariff').querySelectorAll('input:checked')];
+  if(!checked.length){toast('Выберите хотя бы один тариф','err');return}
+  closeMov('m-create-lim');
+  toast('Лимит создан, привязан к '+checked.length+' тарифам','ok');
+}
+
+function openCreateRestr(){
+  _populateCheckList('blist-cr-lim',limits,l=>l.name,l=>l.id);
+  openMov('m-create-restr');
+}
+function confirmCreateRestr(){
+  const ticker=document.getElementById('cr-ticker').value.trim();
+  const maxDay=document.getElementById('cr-day').value;
+  const maxWeek=document.getElementById('cr-week').value;
+  const maxMon=document.getElementById('cr-mon').value;
+  const maxAnn=document.getElementById('cr-ann').value;
+  if(!ticker||!maxDay||!maxWeek||!maxMon||!maxAnn){toast('Заполните обязательные поля','err');return}
+  closeMov('m-create-restr');
+  toast('Ограничение создано','ok');
+}
+
+// ── BIND OP TO TARIFF (FROM TARIFF DRAWER — выбираем операцию) ────
+function openBindOpToTariff(){
+  document.getElementById('blist-op').innerHTML=operations.map((o,i)=>`<label class="brow"><input type="checkbox" data-i="${i}"><span class="brn">${o.name}</span><span class="brc">${o.id}</span></label>`).join('');
+  openMov('m-bind-op');
+}
+// ── BIND TARIFF TO OP (FROM OPERATION DRAWER — выбираем тариф) ────
+function openBindOp(){
+  document.getElementById('blist-op').innerHTML=tariffs.map((p,i)=>`<label class="brow"><input type="checkbox" data-i="${i}"><span class="brn">${p.name}</span><span class="brc"><span class="tag">${p.cat}</span></span></label>`).join('');
+  openMov('m-bind-op');
+}
+function confirmBindOp(){
+  const checked=[...document.getElementById('blist-op').querySelectorAll('input:checked')];
+  if(!checked.length){toast('Выберите хотя бы один элемент','err');return}
+  closeMov('m-bind-op');
+  toast('Привязано · bindOperationToTariff','ok');
+}
+
+// ── BIND LIMIT TO TARIFF-OPERATION ────────────────────────────────
+function openBindLim(){
+  _populateSelect('bl-tariff',tariffs,p=>p.name,p=>p.id);
+  _populateSelect('bl-op',operations,o=>o.name,o=>o.id);
+  openMov('m-bind-lim');
+}
+function confirmBindLim(){
+  const t=document.getElementById('bl-tariff').value;
+  const o=document.getElementById('bl-op').value;
+  if(!t||!o){toast('Выберите тариф и операцию','err');return}
+  closeMov('m-bind-lim');
+  toast('Лимит привязан · bindLimitToTariffOperation','ok');
+}
+
+// ── UNBIND LIMIT ──────────────────────────────────────────────────
+function openUnbindLim(){
+  const l=limits[_curLimIdx];
+  document.getElementById('blist-unbind').innerHTML=tariffs.slice(0,l.tariffs).map((p,j)=>`<label class="brow"><input type="checkbox" data-i="${j}"><span class="brn">${p.name}</span><span class="brc">→ ${l.opName}</span></label>`).join('');
+  openMov('m-unbind-lim');
+}
+function confirmUnbind(){
+  const checked=[...document.getElementById('blist-unbind').querySelectorAll('input:checked')];
+  if(!checked.length){toast('Выберите тариф-операцию','err');return}
+  closeMov('m-unbind-lim');
+  toast('Лимит отвязан · unbindLimitFromTariffOperation','ok');
+}
+
+// ── EDIT HANDLERS ─────────────────────────────────────────────────
+function openEditPlan(){
+  const p=tariffs[_curTariffIdx];
+  document.getElementById('ep-name').value=p.name;
+  document.getElementById('ep-desc').value=p.desc;
+  openMov('m-edit-plan');
+}
+function confirmEditPlan(){
+  const name=document.getElementById('ep-name').value.trim();
+  if(!name){toast('Укажите название','err');return}
+  tariffs[_curTariffIdx].name=name;
+  tariffs[_curTariffIdx].desc=document.getElementById('ep-desc').value.trim();
+  closeMov('m-edit-plan');
+  rPlans();
+  document.getElementById('dp-n').textContent=name;
+  toast('Тарифный план обновлён','ok');
+}
+
+function openDupPlan(){
+  const p=tariffs[_curTariffIdx];
+  document.getElementById('dup-name').value=p.name+' (копия)';
+  document.getElementById('dup-cat').value=p.cat+'_copy';
+  openMov('m-dup');
+}
+function confirmDup(){
+  const name=document.getElementById('dup-name').value.trim();
+  const cat=document.getElementById('dup-cat').value.trim();
+  if(!name||!cat){toast('Укажите название и категорию','err');return}
+  const src=tariffs[_curTariffIdx];
+  const now=new Date().toLocaleDateString('ru');
+  tariffs.push({id:'TRF-00'+(tariffs.length+1),name,desc:src.desc+' (копия)',cat,clients:0,opsCount:src.opsCount,limCount:src.limCount,commCount:src.commCount,created:now,updated:now});
+  closeMov('m-dup');
+  rPlans();
+  toast('Тарифный план дублирован: '+name,'ok');
+}
+
+function openEditOp(){
+  const o=operations[_curOpIdx];
+  document.getElementById('eo-name').value=o.name;
+  document.getElementById('eo-desc').value=o.desc;
+  openMov('m-edit-op');
+}
+function confirmEditOp(){
+  const name=document.getElementById('eo-name').value.trim();
+  if(!name){toast('Укажите название','err');return}
+  operations[_curOpIdx].name=name;
+  operations[_curOpIdx].desc=document.getElementById('eo-desc').value.trim();
+  closeMov('m-edit-op');
+  rOps();
+  document.getElementById('do-n').textContent=name;
+  toast('Операция обновлена','ok');
+}
+
+function openEditComm(){
+  const c=commissions[_curCommIdx];
+  document.getElementById('ec-name').value=c.name;
+  document.getElementById('ec-desc').value=c.desc;
+  openMov('m-edit-comm');
+}
+function confirmEditComm(){
+  const name=document.getElementById('ec-name').value.trim();
+  if(!name){toast('Укажите название','err');return}
+  commissions[_curCommIdx].name=name;
+  commissions[_curCommIdx].desc=document.getElementById('ec-desc').value.trim();
+  closeMov('m-edit-comm');
+  rComms();
+  document.getElementById('dc-n').textContent=name;
+  toast('Комиссия обновлена','ok');
+}
+
+function openEditLim(){
+  const l=limits[_curLimIdx];
+  document.getElementById('el-name').value=l.name||'';
+  document.getElementById('el-desc').value=l.desc||'';
+  document.getElementById('el-daily').value=l.daily||'';
+  document.getElementById('el-weekly').value=l.weekly||'';
+  document.getElementById('el-monthly').value=l.monthly||'';
+  document.getElementById('el-annual').value=l.annual||'';
+  document.getElementById('el-mn').value=l.min!=null?l.min:'';
+  document.getElementById('el-mx').value=l.max!=null?l.max:'';
+  openMov('m-edit-lim');
+}
+function confirmEditLim(){
+  const daily=document.getElementById('el-daily').value;
+  const weekly=document.getElementById('el-weekly').value;
+  const monthly=document.getElementById('el-monthly').value;
+  const annual=document.getElementById('el-annual').value;
+  if(!daily||!weekly||!monthly||!annual){toast('Заполните обязательные поля','err');return}
+  limits[_curLimIdx].name=document.getElementById('el-name').value.trim()||limits[_curLimIdx].name;
+  limits[_curLimIdx].daily=Number(daily);
+  limits[_curLimIdx].weekly=Number(weekly);
+  limits[_curLimIdx].monthly=Number(monthly);
+  limits[_curLimIdx].annual=Number(annual);
+  limits[_curLimIdx].min=document.getElementById('el-mn').value?Number(document.getElementById('el-mn').value):null;
+  limits[_curLimIdx].max=document.getElementById('el-mx').value?Number(document.getElementById('el-mx').value):null;
+  closeMov('m-edit-lim');
+  rLimits();
+  document.getElementById('dl-n').textContent=limits[_curLimIdx].name;
+  toast('Лимит обновлён','ok');
+}
+
+function openEditRestr(){
+  const r=restrictions[_curRestrIdx];
+  document.getElementById('er-name').value=r.name||'';
+  document.getElementById('er-desc').value=r.desc||'';
+  document.getElementById('er-day').value=r.maxDaily||'';
+  document.getElementById('er-week').value=r.maxWeekly||'';
+  document.getElementById('er-mon').value=r.maxMonthly||'';
+  document.getElementById('er-ann').value=r.maxAnnual||'';
+  document.getElementById('er-mn').value=r.min!=null?r.min:'';
+  document.getElementById('er-mx').value=r.max!=null?r.max:'';
+  openMov('m-edit-restr');
+}
+function confirmEditRestr(){
+  const r=restrictions[_curRestrIdx];
+  const name=document.getElementById('er-name').value.trim();
+  r.name=name||r.name;
+  r.desc=document.getElementById('er-desc').value.trim();
+  r.maxDaily=Number(document.getElementById('er-day').value)||r.maxDaily;
+  r.maxWeekly=Number(document.getElementById('er-week').value)||r.maxWeekly;
+  r.maxMonthly=Number(document.getElementById('er-mon').value)||r.maxMonthly;
+  r.maxAnnual=Number(document.getElementById('er-ann').value)||r.maxAnnual;
+  r.min=document.getElementById('er-mn').value?Number(document.getElementById('er-mn').value):r.min;
+  r.max=document.getElementById('er-mx').value?Number(document.getElementById('er-mx').value):r.max;
+  closeMov('m-edit-restr');
+  rRestr();
+  document.getElementById('dr-n').textContent=r.name;
+  toast('Ограничение обновлено','ok');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+rPlans();rOps();rComms();rLimits();rRestr();rHist();
+</script>
+</body>
+</html>
