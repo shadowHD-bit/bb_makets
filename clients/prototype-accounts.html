@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Аккаунты — Bitbanker Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;border:0}
+:root{
+  --bg-weak-50:#f7f7f7;--bg-white-0:#fff;--bg-soft-200:#ebebeb;
+  --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;
+  --primary-base:#7246e6;--primary-alpha-10:#7246e61a;
+  --stroke-soft-200:#ebebeb;
+  --state-success-base:#1fc16b;--state-success-light:#c2f5da;
+  --state-error-base:#fb3748;--state-error-light:#ffc0c5;
+  --state-warning-base:#fa7319;--state-warning-light:#ffd9c0;
+  --state-info-base:#7246e6;--state-info-light:#d0c5f8;
+  --state-faded-base:#7b7b7b;--state-faded-light:#ebebeb;
+  --yellow-200:#fde68a;
+  --shadow-xs:0 1px 2px 0 #0a0d1408;
+  --shadow-toggle:0 2px 4px 0 #0e121b08,0 6px 10px 0 #0e121b0f;
+  --shadow-drawer:-24px 0 48px 0 #0e121b2e;
+  --shadow-popover:0 12px 24px 0 #0e121b1a,0 1px 2px 0 #0e121b0a;
+  --shadow-md:0 16px 32px -12px #0e121b1a;
+  --r6:6px;--r8:8px;--r10:10px;--r12:12px;--r16:16px;--rFull:9999px;
+  --ease:cubic-bezier(.4,0,.2,1);--fast:.12s;--base:.15s;
+}
+html,body,#app{height:100%;font-family:ui-sans-serif,system-ui,sans-serif;color:var(--text-strong-950);background:var(--bg-weak-50);-webkit-font-smoothing:antialiased}
+.app{display:flex;height:100%;overflow:hidden}
+
+/* ── SIDEBAR ─────────────────────────────────────────── */
+.sb{width:280px;height:100%;display:flex;flex-direction:column;flex-shrink:0;background:var(--bg-white-0);border-right:1px solid var(--stroke-soft-200);overflow:hidden;pointer-events:none;user-select:none}
+.sb-logo{display:flex;align-items:center;height:72px;padding:0 12px;flex-shrink:0}
+.sb-logo-btn{display:flex;width:100%;align-items:center;gap:12px;border-radius:var(--r10);padding:8px}
+.sb-logo-circle{display:flex;width:36px;height:36px;align-items:center;justify-content:center;border-radius:50%;background:linear-gradient(135deg,var(--primary-base),#9B7BF0);font-size:13px;font-weight:600;color:#fff;flex-shrink:0}
+.sb-logo-text p:first-child{font-size:14px;font-weight:500;line-height:20px;color:var(--text-strong-950)}
+.sb-logo-text p:last-child{font-size:12px;line-height:16px;color:var(--text-soft-400)}
+.sb-nav{display:flex;flex-direction:column;gap:12px;overflow-y:auto;padding:4px 12px 16px;flex:1;min-height:0}
+.sb-section-label{padding:4px 8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-soft-400)}
+.sb-items{display:flex;flex-direction:column;gap:2px}
+.sb-item{display:flex;width:100%;align-items:center;gap:8px;border-radius:var(--r8);padding:8px 10px;font-size:14px;font-weight:500;line-height:20px;color:var(--text-sub-600)}
+.sb-item.open{color:var(--primary-base)}
+.sb-icon{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;flex-shrink:0;color:inherit}
+.sb-icon svg{width:75%;height:75%;display:block;color:inherit}
+.sb-arrow{display:inline-flex;width:10px;height:10px;margin-left:auto;color:var(--text-soft-400)}
+.sb-arrow.down{color:var(--primary-base)}
+.sb-arrow svg{width:100%;height:100%;display:block}
+.sb-sub{display:flex;flex-direction:column;gap:2px;padding-bottom:4px;padding-left:12px}
+.sb-sub-item{display:flex;width:100%;align-items:center;gap:8px;border-radius:var(--r8);padding:6px 8px 6px 12px;font-size:13px;line-height:20px;color:var(--text-sub-600)}
+.sb-sub-item.active{background:var(--bg-weak-50);box-shadow:inset 2px 0 0 0 var(--primary-base);font-weight:500;color:var(--primary-base)}
+.sb-sub-icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex-shrink:0;color:inherit}
+.sb-sub-icon svg{width:75%;height:75%;display:block}
+.sb-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0}
+
+/* ── RIGHT COLUMN ─────────────────────────────────────── */
+.right-col{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* ── TOP HEADER ──────────────────────────────────────── */
+.top-hdr{display:flex;align-items:center;gap:12px;height:72px;padding:0 24px;background:var(--bg-white-0);border-bottom:1px solid var(--stroke-soft-200);flex-shrink:0;pointer-events:none;user-select:none}
+.hdr-search{display:flex;width:340px;height:38px;align-items:center;gap:8px;border-radius:var(--r10);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);box-shadow:var(--shadow-xs);padding:0 12px;flex-shrink:0}
+.hdr-search svg{width:16px;height:16px;display:block;color:var(--text-soft-400);flex-shrink:0}
+.hdr-search input{background:transparent;outline:none;font-size:14px;color:var(--text-strong-950);flex:1;min-width:0}
+.hdr-search input::placeholder{color:var(--text-soft-400)}
+.hdr-spacer{flex:1}
+.hdr-btn{display:flex;align-items:center;gap:6px;border-radius:var(--r10);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);box-shadow:var(--shadow-xs);padding:6px 10px;font-size:14px;font-weight:500;color:var(--text-sub-600);cursor:default;flex-shrink:0}
+.hdr-icon-btn{display:flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:var(--r10);background:var(--bg-white-0);cursor:default;position:relative;flex-shrink:0}
+.hdr-badge{position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:var(--rFull);background:var(--state-error-base);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:16px}
+.hdr-divider{width:1px;height:28px;background:var(--stroke-soft-200);flex-shrink:0;margin:0 4px}
+.hdr-user{display:flex;align-items:center;gap:10px;border-radius:var(--r10);padding:6px 8px 6px 6px;cursor:default;flex-shrink:0}
+.hdr-avatar{width:36px;height:36px;border-radius:50%;background:var(--yellow-200);color:var(--text-strong-950);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hdr-uname{font-size:13px;font-weight:500;color:var(--text-strong-950);display:flex;align-items:center;gap:4px}
+.hdr-uemail{font-size:12px;color:var(--text-soft-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+
+/* ── MAIN ─────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.scroll{flex:1;overflow-y:auto;padding:24px}
+.page-card{border-radius:var(--r16);background:var(--bg-white-0);box-shadow:var(--shadow-xs);margin-bottom:16px}
+
+.ph{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px}
+.ph h1{font-size:18px;font-weight:500;line-height:24px;letter-spacing:-.27px}
+.ph p{font-size:14px;line-height:20px;color:var(--text-sub-600);letter-spacing:-.084px;margin-top:4px}
+.ph-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+.btn-p{display:inline-flex;align-items:center;gap:8px;border-radius:var(--r10);padding:8px 12px;font-size:14px;font-weight:500;background:var(--primary-base);color:#fff;cursor:pointer;transition:filter var(--fast)}
+.btn-p:hover:not(:disabled){filter:brightness(1.08)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-s{display:inline-flex;align-items:center;gap:8px;border-radius:var(--r10);padding:8px 12px;font-size:14px;font-weight:500;background:var(--bg-white-0);color:var(--text-sub-600);border:1px solid var(--stroke-soft-200);box-shadow:var(--shadow-xs);cursor:pointer;transition:background var(--fast),color var(--fast)}
+.btn-s:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+.btn-xs{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r8);padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;transition:filter var(--fast),background var(--fast)}
+.btn-xs.p{background:var(--primary-base);color:#fff}.btn-xs.p:hover{filter:brightness(1.08)}
+.btn-xs.s{background:var(--bg-white-0);color:var(--text-sub-600);border:1px solid var(--stroke-soft-200);box-shadow:var(--shadow-xs)}.btn-xs.s:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+.btn-xs.d{background:var(--state-error-base);color:#fff}.btn-xs.d:hover{filter:brightness(1.08)}
+
+.fb{display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-top:1px solid var(--stroke-soft-200);padding:12px 20px;min-height:60px}
+.sb-search{display:flex;height:36px;align-items:center;gap:6px;border-radius:var(--r8);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);padding:0 10px;flex:1;max-width:360px;transition:border-color var(--fast)}
+.sb-search:focus-within{border-color:var(--primary-base)}
+.sb-search svg{width:14px;height:14px;display:block;color:var(--text-soft-400);flex-shrink:0}
+.sb-search input{background:transparent;outline:none;font-size:13px;color:var(--text-strong-950);flex:1;min-width:0}
+.sb-search input::placeholder{color:var(--text-soft-400)}
+.filter-select{height:36px;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);padding:0 28px 0 10px;font-size:13px;color:var(--text-strong-950);background:var(--bg-white-0);box-shadow:var(--shadow-xs);appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 3.71L8.49 0L9.55 1.06L5 5.83L.45 1.06 1.51 0 5 3.71z' fill='%23a3a3a3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.filter-select:focus{outline:none;border-color:var(--primary-base)}
+
+.thead{display:flex;align-items:center;border-bottom:1px solid var(--stroke-soft-200);padding:0 16px;height:36px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-soft-400)}
+.tr{display:flex;align-items:center;padding:0 16px;height:48px;border-bottom:1px solid var(--stroke-soft-200);cursor:pointer;transition:background var(--fast)}
+.tr:last-child{border-bottom:none}
+.tr:hover{background:var(--bg-weak-50)}
+.tr.sel{background:var(--primary-alpha-10)}
+.c-date{flex:0 0 110px;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-client{flex:1 1 0;min-width:130px;padding-right:12px;overflow:hidden}
+.c-email{flex:0 0 180px;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-kyc{flex:0 0 80px;padding-right:12px;white-space:nowrap}
+.c-status{flex:0 0 120px;padding-right:12px}
+.c-2fa{flex:0 0 64px;padding-right:12px}
+.c-bal{flex:0 0 120px;padding-right:12px;white-space:nowrap}
+.cname{display:block;font-size:14px;color:var(--primary-base);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cid{display:block;font-size:11px;font-variant-numeric:tabular-nums;color:var(--text-soft-400)}
+.sub{font-size:13px;color:var(--text-sub-600)}
+.num{font-size:12px;font-variant-numeric:tabular-nums;color:var(--text-strong-950)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:var(--rFull);padding:2px 8px;font-size:12px;font-weight:500}
+.pill-ok{color:var(--state-success-base);background:var(--state-success-light)}
+.pill-ok .dot{background:var(--state-success-base)}
+.pill-err{color:var(--state-error-base);background:var(--state-error-light)}
+.pill-err .dot{background:var(--state-error-base)}
+.pill-warn{color:var(--state-warning-base);background:var(--state-warning-light)}
+.pill-info{color:var(--state-info-base);background:var(--state-info-light)}
+.pill-faded{color:var(--state-faded-base);background:var(--state-faded-light)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+.pg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--stroke-soft-200)}
+.pg-info{font-size:13px;color:var(--text-sub-600)}
+.pg-btns{display:flex;gap:4px}
+.pgc{border-radius:var(--r8);min-width:28px;height:28px;font-size:13px;font-weight:500;color:var(--text-sub-600);background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;transition:background var(--fast)}
+.pgc:hover:not(:disabled){background:var(--bg-weak-50)}
+.pgc.on{background:var(--bg-soft-200);color:var(--text-strong-950)}
+.pgc:disabled{cursor:default;opacity:.45}
+.pgc.arr{background:transparent;border-color:transparent}
+select.pg-sel{height:32px;border:1px solid var(--stroke-soft-200);border-radius:var(--r10);padding:0 28px 0 10px;font-size:13px;color:var(--text-strong-950);background:var(--bg-white-0);appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 3.71L8.49 0L9.55 1.06L5 5.83L.45 1.06 1.51 0 5 3.71z' fill='%23a3a3a3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+
+/* ── DRAWER ──────────────────────────────────────────── */
+.ov{position:fixed;inset:0;background:#0e121b1a;z-index:50;opacity:0;pointer-events:none;transition:opacity var(--base) var(--ease)}
+.ov.on{opacity:1;pointer-events:auto}
+.dr{position:fixed;top:0;right:0;bottom:0;width:520px;background:var(--bg-white-0);box-shadow:var(--shadow-drawer);z-index:51;display:flex;flex-direction:column;transform:translateX(100%);transition:transform var(--base) var(--ease)}
+.dr.on{transform:translateX(0)}
+.dr-head{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--stroke-soft-200);flex-shrink:0;background:var(--bg-white-0)}
+.dr-title{flex:1;min-width:0}
+.dr-name{font-size:15px;font-weight:500;color:var(--text-strong-950)}
+.dr-meta{font-size:11px;font-variant-numeric:tabular-nums;color:var(--text-soft-400);margin-top:2px}
+.dr-close{display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:var(--r8);cursor:pointer;color:var(--text-soft-400);flex-shrink:0;transition:background var(--fast)}
+.dr-close:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+.dr-body{flex:1;overflow-y:auto}
+
+.dr-sec{background:var(--bg-white-0)}
+.dr-sec+.dr-sec{border-top:1px solid var(--stroke-soft-200)}
+.dr-sec-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 20px 8px;background:var(--bg-weak-50);border-bottom:1px solid var(--stroke-soft-200)}
+.dr-sec-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-soft-400)}
+.dr-sec-body{padding:14px 20px}
+.dr-sub-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-soft-400);margin:12px 0 8px}
+.dr-sub-label:first-child{margin-top:0}
+
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.info-item{display:flex;flex-direction:column;gap:3px}
+.ik{font-size:11px;color:var(--text-soft-400)}
+.iv{font-size:13px;font-weight:500;color:var(--text-strong-950)}
+.iv.mono{font-variant-numeric:tabular-nums}
+
+.offer-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:var(--r8);background:var(--bg-weak-50);margin-top:12px}
+
+.kyc-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--stroke-soft-200)}
+.kyc-row:last-child{border-bottom:none}
+.kyc-level{font-size:13px;font-weight:500;min-width:76px}
+.kyc-date{font-size:11px;font-variant-numeric:tabular-nums;color:var(--text-soft-400);white-space:nowrap;margin-left:auto}
+
+/* Account cards */
+.acc-tabs{display:flex;gap:0;border-bottom:1px solid var(--stroke-soft-200);margin:-14px -20px 14px;padding:0 20px}
+.acc-tab{padding:9px 14px;font-size:13px;font-weight:500;color:var(--text-soft-400);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--fast)}
+.acc-tab.on{color:var(--primary-base);border-bottom-color:var(--primary-base)}
+.acc-tab:not(.on):hover{color:var(--text-strong-950)}
+.acc-pane{display:none}.acc-pane.on{display:block}
+
+.acc-card{border:1px solid var(--stroke-soft-200);border-radius:var(--r8);margin-bottom:8px;overflow:hidden}
+.acc-card:last-child{margin-bottom:0}
+.acc-card-hd{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-weak-50);border-bottom:1px solid var(--stroke-soft-200)}
+.acc-card-id{font-size:12px;font-variant-numeric:tabular-nums;color:var(--primary-base);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-card-htype{font-size:11px;color:var(--text-soft-400);flex-shrink:0}
+.acc-card-prov{font-size:11px;color:var(--text-soft-400);flex-shrink:0}
+.acc-card-bd{padding:6px 10px}
+.acc-bal-row{display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--stroke-soft-200)}
+.acc-bal-row:last-child{border-bottom:none}
+.acc-curr-tag{display:inline-flex;min-width:36px;height:18px;align-items:center;justify-content:center;border-radius:4px;background:var(--bg-soft-200);padding:0 5px;font-size:10px;font-weight:700;color:var(--text-sub-600);letter-spacing:.04em;flex-shrink:0}
+.acc-bal-val{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--text-strong-950)}
+
+.acc-total{display:flex;align-items:center;justify-content:space-between;padding:10px 8px 2px;border-top:1px solid var(--stroke-soft-200);margin-top:8px}
+.acc-total-label{font-size:12px;color:var(--text-sub-600)}
+.acc-total-val{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* Unified section link style */
+.sect-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--primary-base);cursor:pointer;background:none}
+.sect-link:hover{text-decoration:underline}
+.sect-link svg{width:8px;height:8px;display:block;flex-shrink:0}
+
+.action-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0}
+.action-row+.action-row{border-top:1px solid var(--stroke-soft-200);padding-top:10px;margin-top:2px}
+.action-label{font-size:14px;font-weight:500;color:var(--text-strong-950)}
+.action-sub{font-size:12px;color:var(--text-sub-600);margin-top:3px;line-height:1.5}
+.action-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+.tog{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog-track{position:absolute;inset:0;border-radius:var(--rFull);background:var(--stroke-soft-200);transition:background var(--base)}
+.tog input:checked~.tog-track{background:var(--primary-base)}
+.tog-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0004;transition:transform var(--base)}
+.tog input:checked~.tog-thumb{transform:translateX(16px)}
+.tog-danger input:checked~.tog-track{background:var(--state-error-base)}
+
+/* Modals */
+.moo{position:fixed;inset:0;background:#0e121b28;z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity var(--fast)}
+.moo.on{opacity:1;pointer-events:auto}
+.mo{background:var(--bg-white-0);border-radius:var(--r16);box-shadow:var(--shadow-md);padding:24px;width:380px;max-width:calc(100vw - 40px)}
+.mo-wide{width:440px}
+.mo-title{font-size:15px;font-weight:500;margin-bottom:8px}
+.mo-desc{font-size:14px;color:var(--text-sub-600);line-height:1.6;margin-bottom:20px;white-space:pre-line}
+.mo-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.form-field:last-child{margin-bottom:0}
+.form-label{font-size:12px;font-weight:500;color:var(--text-sub-600)}
+.form-input{height:36px;border:1px solid var(--stroke-soft-200);border-radius:var(--r8);padding:0 10px;font-size:13px;color:var(--text-strong-950);background:var(--bg-white-0);outline:none;transition:border-color var(--fast);font-family:inherit;width:100%}
+.form-input:focus{border-color:var(--primary-base)}
+
+.c-act{flex:0 0 40px;display:flex;justify-content:flex-end}
+.row-menu-wrap{position:relative}
+.row-menu-btn{display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:var(--r6);color:var(--text-soft-400);cursor:pointer;transition:background var(--fast)}
+.row-menu-btn:hover,.row-menu-btn.open{background:var(--bg-soft-200);color:var(--text-strong-950)}
+.row-menu-dd{position:absolute;right:0;top:calc(100% + 4px);background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--r10);box-shadow:var(--shadow-popover);z-index:20;min-width:230px;padding:4px;display:none}
+.row-menu-dd.on{display:block}
+.row-menu-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r6);font-size:13px;color:var(--text-sub-600);cursor:pointer;white-space:nowrap;transition:background var(--fast)}
+.row-menu-item:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+.row-menu-item svg{width:14px;height:14px;display:block;flex-shrink:0;color:inherit}
+.row-menu-sep{height:1px;background:var(--stroke-soft-200);margin:3px 0}
+.form-err{display:block;font-size:11px;color:var(--state-error-base);margin-top:4px;min-height:14px}
+.form-input.err{border-color:var(--state-error-base)}
+.toasts{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--text-strong-950);color:#fff;border-radius:var(--r10);padding:10px 16px;font-size:13px;font-weight:500;box-shadow:var(--shadow-popover);animation:tIn .2s var(--ease) both}
+@keyframes tIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="app">
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="sb-logo-btn">
+      <div class="sb-logo-circle">BI</div>
+      <div class="sb-logo-text"><p>Bitbanker</p><p>Admin Panel</p></div>
+      <svg width="20" height="20" viewBox="0 0 8.62 12.73" fill="none" style="color:var(--text-soft-400);flex-shrink:0"><path d="M8.621 4.31L4.311 0 0 4.31.982 5.293 4.311 1.964l3.328 3.328L8.621 4.31zM0 8.418l4.311 4.31 4.31-4.31-.982-.981L4.31 10.764.982 7.437 0 8.418z" fill="currentColor"/></svg>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div>
+      <div class="sb-section-label">Рабочее место</div>
+      <div class="sb-items">
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 15 13.5" fill="none"><path d="M14.25 0a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75H.75A.75.75 0 0 1 0 12.75V.75A.75.75 0 0 1 .75 0h13.5zM6.75 7.5H1.5V12h5.25V7.5zm6.75 0H8.25V12H13.5V7.5zm-6.75-6H1.5V6h5.25V1.5zm6.75 0H8.25V6H13.5V1.5z" fill="currentColor"/></svg></span><span style="flex:1">Обзор</span><span class="sb-arrow"><svg viewBox="0 0 9.55 5.83" fill="none" style="transform:rotate(-90deg)"><path d="M4.773 3.713L8.486 0l1.06 1.06-4.773 4.773L0 1.06 1.06 0l3.713 3.713z" fill="currentColor"/></svg></span></div>
+        <div class="sb-item open"><span class="sb-icon"><svg viewBox="0 0 18 18" fill="none"><path d="M9 8.1c1.194 0 2.338.474 3.182 1.318.844.844 1.318 1.988 1.318 3.182V18h-1.8v-5.4a2.7 2.7 0 0 0-2.7-2.7A2.7 2.7 0 0 0 6.3 12.6V18H4.5v-5.4c0-1.194.474-2.338 1.318-3.182A4.495 4.495 0 0 1 9 8.1zm-5.85 2.7c.251 0 .495.03.729.085a5.282 5.282 0 0 0-.258 1.702v.077a1.35 1.35 0 0 0-.471-.085 1.35 1.35 0 0 0-1.35 1.35V18H0v-4.05A3.15 3.15 0 0 1 3.15 10.8zm11.7 0A3.15 3.15 0 0 1 18 13.95V18h-1.8v-4.05a1.35 1.35 0 0 0-1.35-1.35 1.35 1.35 0 0 0-.471.085v-.077c0-.6-.09-1.18-.257-1.723A3.14 3.14 0 0 1 14.85 10.8zM3.15 5.4a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zm11.7 0a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zM9 0a3.6 3.6 0 1 1 0 7.2A3.6 3.6 0 0 1 9 0zm0 1.8a1.8 1.8 0 1 0 0 3.6A1.8 1.8 0 0 0 9 1.8z" fill="currentColor"/></svg></span><span style="flex:1">Клиенты</span><span class="sb-arrow down"><svg viewBox="0 0 9.55 5.83" fill="none"><path d="M4.773 3.713L8.486 0l1.06 1.06-4.773 4.773L0 1.06 1.06 0l3.713 3.713z" fill="currentColor"/></svg></span></div>
+        <div class="sb-sub">
+          <div class="sb-sub-item active"><span class="sb-sub-icon"><svg viewBox="0 0 18 18" fill="none"><path d="M9 8.1c1.194 0 2.338.474 3.182 1.318.844.844 1.318 1.988 1.318 3.182V18h-1.8v-5.4a2.7 2.7 0 0 0-5.4 0V18H4.5V13.4A4.5 4.5 0 0 1 9 8.1zm-5.85 2.7c.251 0 .495.03.729.085A5.282 5.282 0 0 0 3.6 12.6v.077a1.35 1.35 0 0 0-1.8 1.273V18H0v-4.05A3.15 3.15 0 0 1 3.15 10.8zm11.7 0A3.15 3.15 0 0 1 18 13.95V18h-1.8v-4.05a1.35 1.35 0 0 0-1.8-1.273V12.6c0-.6-.09-1.18-.257-1.723A3.14 3.14 0 0 1 14.85 10.8zM3.15 5.4a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zm11.7 0a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5zM9 0a3.6 3.6 0 1 1 0 7.2A3.6 3.6 0 0 1 9 0zm0 1.8a1.8 1.8 0 1 0 0 3.6A1.8 1.8 0 0 0 9 1.8z" fill="currentColor"/></svg></span><span style="flex:1">Аккаунты</span><span class="sb-dot" style="background:var(--state-success-base)"></span></div>
+          <div class="sb-sub-item"><span class="sb-sub-icon"><svg viewBox="0 0 15 13.5" fill="none"><path d="M3 3V.75A.75.75 0 0 1 3.75 0H8.56L10.06 1.5H14.25a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-.75.75H12v2.25a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1-.75-.75V3.75a.75.75 0 0 1 .75-.75H3zm0 1.5H1.5V12H10.5v-1.5H3V4.5zm1.5-3V9H13.5V3H9.44L7.94 1.5H4.5z" fill="currentColor"/></svg></span><span style="flex:1">Внешние клиенты</span></div>
+          <div class="sb-sub-item"><span class="sb-sub-icon"><svg viewBox="0 0 18.9 16.2" fill="none"><path d="M18 3.6h.9v9H18v2.7a.9.9 0 0 1-.9.9H.9a.9.9 0 0 1-.9-.9V.9A.9.9 0 0 1 .9 0h16.2a.9.9 0 0 1 .9.9V3.6zm-1.8 9H10.8a4.5 4.5 0 0 1 0-9h5.4V1.8H1.8V14.4h14.4V12.6zm1.8-1.8V5.4H10.8a2.7 2.7 0 0 0 0 5.4H18zm-7.2-2.7h2.7V9H10.8V8.1z" fill="currentColor"/></svg></span><span style="flex:1">Депозитарий</span></div>
+          <div class="sb-sub-item"><span class="sb-sub-icon"><svg viewBox="0 0 15 15" fill="none"><path d="M9 0l4.5 4.5v3.2a4.5 4.5 0 1 0-3.8 6.3H.75A.75.75 0 0 1 0 13.3V.75A.75.75 0 0 1 .75 0H9z" fill="currentColor"/></svg></span><span style="flex:1">Документы</span></div>
+        </div>
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 18 16.2" fill="none"><path d="M.9 0h16.2a.9.9 0 0 1 .9.9v14.4a.9.9 0 0 1-.9.9H.9a.9.9 0 0 1-.9-.9V.9A.9.9 0 0 1 .9 0zm.9 1.8V14.4h14.4V1.8H1.8zm2.7 7.2h1.8V12H4.5V9zm3.6-5.4h1.8V12H8.1V3.6zm3.6 2.7h1.8V12h-1.8V6.3z" fill="currentColor"/></svg></span><span style="flex:1">Аналитика</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="sb-section-label">Финансовые продукты</div>
+      <div class="sb-items">
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 15 13.5" fill="none"><path d="M.75 0h13.5a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75H.75A.75.75 0 0 1 0 12.75V.75A.75.75 0 0 1 .75 0zm12.75 6H1.5v6h12V6zm0-4.5H1.5V4.5h12V1.5zM9 9h3v1.5H9V9z" fill="currentColor"/></svg></span><span style="flex:1">ОПС / PSP</span></div>
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 18.9 16.2" fill="none"><path d="M18 3.6h.9v9H18v2.7a.9.9 0 0 1-.9.9H.9a.9.9 0 0 1-.9-.9V.9A.9.9 0 0 1 .9 0h16.2a.9.9 0 0 1 .9.9V3.6zm-1.8 9H10.8a4.5 4.5 0 0 1 0-9h5.4V1.8H1.8V14.4h14.4V12.6zm1.8-1.8V5.4H10.8a2.7 2.7 0 0 0 0 5.4H18zm-7.2-2.7h2.7V9H10.8V8.1z" fill="currentColor"/></svg></span><span style="flex:1">Депозитарий</span></div>
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 16.84 16.2" fill="none"><path d="M1.8 0v14.4H16.2V16.2H0V0h1.8zm13.764 2.964l1.272 1.272-5.136 5.136-2.7-2.699-3.864 3.864L3.864 9.264 9 4.127l2.7 2.699 3.864-3.862z" fill="currentColor"/></svg></span><span style="flex:1">Биржа</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="sb-section-label">Управление платформой</div>
+      <div class="sb-items">
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 16.35 16.35" fill="none"><path d="M5.69 2.175L7.645.22A.75.75 0 0 1 8.175 0c.199 0 .39.079.53.22l1.955 1.955H13.4a.75.75 0 0 1 .75.75v2.7l1.955 1.955a.75.75 0 0 1 0 1.06l-1.955 1.956v2.7a.75.75 0 0 1-.75.75H9.655l-1.48 1.48a.75.75 0 0 1-1.06 0l-1.48-1.48H2.925a.75.75 0 0 1-.75-.75v-2.7L.22 8.705a.75.75 0 0 1 0-1.06L2.175 5.69v-2.7a.75.75 0 0 1 .75-.75H5.69zm.915 1.5H3.675v2.13L1.94 7.54v.27l1.734 1.736v2.129h2.93l1.572 1.571h.27l1.57-1.57h2.068V9.546l1.734-1.736V7.54l-1.734-1.735V3.675H9.03L7.46 2.104h-.27L5.604 3.675zm1.57 1.5a3.15 3.15 0 1 1 0 6.3 3.15 3.15 0 0 1 0-6.3zm0 1.5a1.65 1.65 0 1 0 0 3.3 1.65 1.65 0 0 0 0-3.3z" fill="currentColor"/></svg></span><span style="flex:1">Настройки</span></div>
+        <div class="sb-item"><span class="sb-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M4 7h8M4 9.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span><span style="flex:1">Логи и события</span></div>
+      </div>
+    </div>
+  </nav>
+</aside>
+
+<!-- ═══════════════ RIGHT COLUMN ═══════════════ -->
+<div class="right-col">
+
+<!-- TOP HEADER (non-clickable) -->
+<header class="top-hdr">
+  <label class="hdr-search">
+    <svg viewBox="0 0 15.24 15.24" fill="none"><path d="M6.75 0a6.75 6.75 0 1 0 0 13.5A6.75 6.75 0 0 0 6.75 0zm0 12a5.25 5.25 0 1 1 0-10.5A5.25 5.25 0 0 1 6.75 12zm6.364.053 2.121 2.121-1.06 1.061-2.122-2.121 1.061-1.061z" fill="currentColor"/></svg>
+    <input type="text" placeholder="Поиск операций, клиентов…" readonly>
+  </label>
+  <div class="hdr-spacer"></div>
+  <div class="hdr-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><defs><clipPath id="cp1"><circle cx="12" cy="12" r="12"/></clipPath></defs><g clip-path="url(#cp1)"><rect x="0" y="0" width="24" height="8" fill="#fff"/><rect x="0" y="8" width="24" height="8" fill="#0039a6"/><rect x="0" y="16" width="24" height="8" fill="#d52b1e"/></g><circle cx="12" cy="12" r="11.5" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/></svg>
+    Русский
+    <svg width="13" height="13" viewBox="0 0 9.55 5.83" fill="none"><path d="M4.773 3.713L8.486 0l1.06 1.06-4.773 4.773L0 1.06 1.06 0l3.713 3.713z" fill="currentColor"/></svg>
+  </div>
+  <div class="hdr-icon-btn">
+    <svg width="20" height="20" viewBox="0 0 15 15.75" fill="none"><path d="M13.5 11.25H15V12.75H0V11.25H1.5V6C1.5 4.4087 2.13214 2.88258 3.25736 1.75736C4.38258.632141 5.9087 0 7.5 0C9.0913 0 10.6174.632141 11.7426 1.75736C12.8679 2.88258 13.5 4.4087 13.5 6V11.25ZM12 11.25V6C12 4.80653 11.5259 3.66193 10.682 2.81802C9.83807 1.97411 8.69347 1.5 7.5 1.5C6.30653 1.5 5.16193 1.97411 4.31802 2.81802C3.47411 3.66193 3 4.80653 3 6V11.25H12ZM5.25 14.25H9.75V15.75H5.25V14.25Z" fill="currentColor" style="color:var(--text-sub-600)"/></svg>
+    <span class="hdr-badge">3</span>
+  </div>
+  <div class="hdr-divider"></div>
+  <div class="hdr-user">
+    <div class="hdr-avatar">SA</div>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      <div class="hdr-uname">Super Admin
+        <svg width="14" height="14" viewBox="0 0 12.55 12.55" fill="none"><path d="M5.03.09C4.15-.19 3.2.2 2.78 1.02L2.28 2.01C2.22 2.13 2.13 2.22 2.01 2.28L1.02 2.78C.2 3.2-.19 4.15.09 5.03L.43 6.08C.47 6.21.47 6.34.43 6.47L.09 7.52C-.19 8.4.2 9.35 1.02 9.77L2.01 10.27C2.13 10.33 2.22 10.43 2.28 10.55L2.78 11.53C3.2 12.35 4.15 12.75 5.03 12.46L6.08 12.12C6.21 12.08 6.34 12.08 6.47 12.12L7.52 12.46C8.4 12.75 9.35 12.35 9.77 11.53L10.27 10.55C10.33 10.43 10.43 10.33 10.55 10.27L11.53 9.77C12.35 9.35 12.75 8.4 12.46 7.52L12.12 6.47C12.08 6.34 12.08 6.21 12.12 6.08L12.46 5.03C12.75 4.15 12.35 3.2 11.53 2.78L10.55 2.28C10.43 2.22 10.33 2.13 10.27 2.01L9.77 1.02C9.35.2 8.4-.19 7.52.09L6.47.43C6.34.47 6.21.47 6.08.43L5.03.09ZM3 6.12L3.89 5.24 5.65 7.01 9.19 3.47 10.07 4.36 5.65 8.78 3 6.12Z" fill="var(--primary-base)"/></svg>
+      </div>
+      <div class="hdr-uemail">super-admin@admin.com</div>
+    </div>
+    <svg width="13" height="13" viewBox="0 0 9.55 5.83" fill="none" style="color:var(--text-soft-400)"><path d="M4.773 3.713L8.486 0l1.06 1.06-4.773 4.773L0 1.06 1.06 0l3.713 3.713z" fill="currentColor"/></svg>
+  </div>
+</header>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+  <div class="scroll">
+    <div class="page-card">
+      <div class="ph">
+        <div>
+          <h1>Аккаунты — реестр физических лиц</h1>
+          <p>Клиенты-физлица, зарегистрированные на платформе</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn-s" onclick="doImport()">
+            <svg width="14" height="14" viewBox="0 0 13.5 15" fill="none"><path d="M12.75 15H.75A.75.75 0 0 1 0 14.25V.75A.75.75 0 0 1 .75 0h12a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75zM12 13.5V1.5H1.5v12H12zM3.75 3.75h6V5.25h-6V3.75zm0 3h6V8.25h-6V6.75zm0 3h6V11.25h-6V9.75z" fill="currentColor"/></svg>
+            Импорт санкц. листа
+          </button>
+        </div>
+      </div>
+      <div class="fb">
+        <label class="sb-search">
+          <svg viewBox="0 0 15.24 15.24" fill="none"><path d="M6.75 0a6.75 6.75 0 1 0 0 13.5A6.75 6.75 0 0 0 6.75 0zm0 12a5.25 5.25 0 1 1 0-10.5A5.25 5.25 0 0 1 6.75 12zm6.364.053 2.121 2.121-1.06 1.061-2.122-2.121 1.061-1.061z" fill="currentColor"/></svg>
+          <input type="text" placeholder="ФИО · email · телефон · Client ID" oninput="renderList()" id="searchInput">
+        </label>
+        <select class="filter-select" id="statusFilter" onchange="renderList()">
+          <option value="">Все статусы</option>
+          <option value="active">Активен</option>
+          <option value="blocked">Заблокирован</option>
+        </select>
+        <select class="filter-select" id="kycFilter" onchange="renderList()">
+          <option value="">Все KYC</option>
+          <option value="0">KYC-0</option>
+          <option value="1">KYC-1</option>
+          <option value="2">KYC-2</option>
+          <option value="3">KYC-3</option>
+        </select>
+      </div>
+      <div class="thead">
+        <div class="c-date">Дата рег.</div>
+        <div class="c-client">Клиент</div>
+        <div class="c-email">Email</div>
+        <div class="c-kyc">KYC</div>
+        <div class="c-status">Статус</div>
+        <div class="c-bal">Баланс</div>
+        <div class="c-act"></div>
+      </div>
+      <div id="list"></div>
+      <div class="pg">
+        <span class="pg-info" id="pgInfo">Стр. 1 из 1</span>
+        <div class="pg-btns">
+          <button class="pgc arr" disabled>«</button>
+          <button class="pgc arr" disabled>‹</button>
+          <button class="pgc on">1</button>
+          <button class="pgc arr" disabled>›</button>
+          <button class="pgc arr" disabled>»</button>
+        </div>
+        <select class="pg-sel"><option selected>10 / стр.</option><option>20 / стр.</option><option>50 / стр.</option></select>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</div>
+
+<!-- DRAWER -->
+<div class="ov" id="ov" onclick="closeDrawer()"></div>
+<div class="dr" id="dr">
+  <div class="dr-head">
+    <div class="dr-title">
+      <div class="dr-name" id="drName">—</div>
+      <div class="dr-meta" id="drMeta">—</div>
+    </div>
+    <button class="dr-close" onclick="closeDrawer()">
+      <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M11 1 1 11M1 1l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="dr-body" id="drBody"></div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="moo" id="moo">
+  <div class="mo">
+    <div class="mo-title" id="moTitle"></div>
+    <div class="mo-desc" id="moDesc"></div>
+    <div class="mo-acts">
+      <button class="btn-s" style="padding:8px 16px;font-size:13px" onclick="closeMo()">Отмена</button>
+      <button class="btn-xs p" id="moConfirm" style="padding:8px 16px;font-size:13px">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<!-- DATE PICKER MODAL -->
+<div class="moo" id="dtMoo">
+  <div class="mo">
+    <div class="mo-title">Снять защитную блокировку</div>
+    <div class="mo-desc" style="margin-bottom:16px">Укажите дату, до которой блокировка будет снята. После этой даты ограничение вернётся автоматически.</div>
+    <div class="form-field">
+      <label class="form-label">Снять до</label>
+      <input type="date" class="form-input" id="dtInput">
+    </div>
+    <div class="mo-acts">
+      <button class="btn-s" style="padding:8px 16px;font-size:13px" onclick="closeDtMo()">Отмена</button>
+      <button class="btn-xs p" id="dtConfirm" style="padding:8px 16px;font-size:13px">Применить</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="moo" id="editMoo">
+  <div class="mo" style="width:500px;max-width:calc(100vw - 40px)">
+    <div class="mo-title">Редактировать профиль</div>
+    <div class="form-grid2" style="margin-bottom:12px">
+      <div class="form-field" style="margin:0"><label class="form-label">Имя</label><input type="text" class="form-input" id="ef-first"></div>
+      <div class="form-field" style="margin:0"><label class="form-label">Фамилия</label><input type="text" class="form-input" id="ef-last"></div>
+    </div>
+    <div class="form-field"><label class="form-label">Отчество</label><input type="text" class="form-input" id="ef-middle" placeholder="Не указано"></div>
+    <div class="form-field">
+      <label class="form-label">Пол</label>
+      <select class="form-input" id="ef-gender" style="cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,%3Csvg width=\'10\' height=\'6\' viewBox=\'0 0 10 6\' fill=\'none\'%3E%3Cpath d=\'M5 3.71L8.49 0L9.55 1.06L5 5.83L.45 1.06 1.51 0 5 3.71z\' fill=\'%23a3a3a3\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center">
+        <option value="—">— Не указан</option>
+        <option value="M">Мужской</option>
+        <option value="F">Женский</option>
+      </select>
+    </div>
+    <div class="form-field"><label class="form-label">Email</label><input type="email" class="form-input" id="ef-email"></div>
+    <div class="form-field"><label class="form-label">Телефон</label><input type="tel" class="form-input" id="ef-phone"></div>
+    <div class="mo-acts">
+      <button class="btn-s" style="padding:8px 16px;font-size:13px" onclick="closeEditMo()">Отмена</button>
+      <button class="btn-xs p" onclick="saveEdit()" style="padding:8px 16px;font-size:13px">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const ARROW_SVG='<svg viewBox="0 0 5.83 9.55" fill="none" style="width:8px;height:8px;display:inline-block;vertical-align:middle;flex-shrink:0"><path d="M3.713 4.773L0 8.486l1.06 1.06 4.773-4.773L1.06 0 0 1.06l3.713 3.713z" fill="currentColor"/></svg>';
+
+const CLIENTS=[
+  {
+    id:'C-10001',name:'Александр Петров',firstName:'Александр',lastName:'Петров',middleName:'Сергеевич',gender:'M',
+    email:'petrov@mail.ru',phone:'+7 900 123-45-67',
+    kyc:'KYC-2',kycLevel:2,status:'active',date:'15.01.2025',
+    country:'Россия',iin:'780115234511',nationality:'RU',
+    tariff:{id:'24cece5b-7cd3-4ed8-97be-e35100a6f5b2',description:'—',clientCategory:'INDIVIDUAL',createdAt:'15.01.25 09:00',updatedAt:'15.01.25 09:00',billingPeriod:'15.01.25',name:'BANXE_PLUS'},
+    kycs:[{lvl:'Level 1',st:'SUCCESSFUL',country:'Россия',date:'16.01.2025'},{lvl:'Level 2',st:'SUCCESSFUL',country:'Россия',date:'18.01.2025'}],
+    virtual:[{id:'a019b...9eb98',holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'BTC',balance:'0.3412'},{curr:'USDT',balance:'8 240'},{curr:'ETH',balance:'2.15'}]}],
+    real:[{id:'r001a...b23c',holderType:'INDIVIDUAL',provider:'Сбербанк',status:'active',balances:[{curr:'RUB',balance:'420 000'}]}],
+    totalUSD:'35 040 USD',
+    hasOffer:true,offerDate:'19.01.2025',sbp:true,otc:false,opsLocked:false,secLock:false
+  },
+  {
+    id:'C-10048',name:'Мария Сидорова',firstName:'Мария',lastName:'Сидорова',middleName:'—',gender:'F',
+    email:'sidorova@gmail.com',phone:'+7 900 000-00-03',
+    kyc:'KYC-1',kycLevel:1,status:'active',date:'22.03.2025',
+    country:'—',iin:'—',nationality:'—',
+    tariff:{id:'31ab12cd-4ef5-6789-ab01-cd23ef456789',description:'—',clientCategory:'INDIVIDUAL',createdAt:'22.03.25 14:32',updatedAt:'22.03.25 14:32',billingPeriod:'22.03.25',name:'BANXE_PLUS'},
+    kycs:[{lvl:'Level 1',st:'SUCCESSFUL',country:'—',date:'22.03.2025'}],
+    virtual:[{id:'c3d1e...f0a2b',holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'USDT',balance:'340'},{curr:'BTC',balance:'0.0000'}]}],
+    real:[],
+    totalUSD:'340 USD',
+    hasOffer:false,sbp:true,otc:false,opsLocked:false,secLock:false
+  },
+  {
+    id:'C-10099',name:'Дмитрий Козлов',firstName:'Дмитрий',lastName:'Козлов',middleName:'Андреевич',gender:'M',
+    email:'kozlov@corp.io',phone:'+7 900 777-88-99',
+    kyc:'KYC-3',kycLevel:3,status:'active',date:'05.06.2024',
+    country:'Казахстан',iin:'880512345678',nationality:'KZ',
+    tariff:{id:'7fa23bce-891d-0ef1-2345-6789abcdef01',description:'Premium tier',clientCategory:'INDIVIDUAL',createdAt:'05.06.24 10:15',updatedAt:'10.06.24 18:40',billingPeriod:'05.06.24',name:'BANXE_PLUS'},
+    kycs:[{lvl:'Level 1',st:'SUCCESSFUL',country:'Казахстан',date:'05.06.2024'},{lvl:'Level 2',st:'SUCCESSFUL',country:'Казахстан',date:'07.06.2024'},{lvl:'Level 3',st:'SUCCESSFUL',country:'Казахстан',date:'10.06.2024'}],
+    virtual:[{id:'d9e2f...a8b3c',holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'BTC',balance:'1.8201'},{curr:'ETH',balance:'12.44'},{curr:'USDT',balance:'42 000'},{curr:'TRX',balance:'10 500'}]}],
+    real:[],
+    totalUSD:'218 300 USD',
+    hasOffer:true,offerDate:'08.06.2024',sbp:true,otc:true,opsLocked:false,secLock:false
+  },
+  {
+    id:'C-10203',name:'Анна Волкова',firstName:'Анна',lastName:'Волкова',middleName:'—',gender:'F',
+    email:'volkova@yandex.ru',phone:'+7 900 111-00-22',
+    kyc:'KYC-0',kycLevel:0,status:'active',date:'17.07.2025',
+    country:'—',iin:'—',nationality:'—',
+    tariff:{id:'9bc34def-012a-3456-7890-bcdef0123456',description:'—',clientCategory:'INDIVIDUAL',createdAt:'17.07.25 11:20',updatedAt:'17.07.25 11:20',billingPeriod:'17.07.25',name:'BANXE_PLUS'},
+    kycs:[{lvl:'Level 1',st:'PROCESSING',country:'—',date:'17.07.2025'}],
+    virtual:[{id:'a1b2c...3d4e5',holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'USDT',balance:'50'}]}],
+    real:[],
+    totalUSD:'50 USD',
+    hasOffer:false,sbp:false,otc:false,opsLocked:false,secLock:true
+  },
+  {
+    id:'C-10318',name:'Сергей Новиков',firstName:'Сергей',lastName:'Новиков',middleName:'Игоревич',gender:'M',
+    email:'novikov@email.ru',phone:'+7 912 345-67-89',
+    kyc:'KYC-2',kycLevel:2,status:'blocked',date:'11.11.2024',
+    country:'Россия',iin:'741023678901',nationality:'RU',
+    tariff:{id:'2cd45ef6-7890-1234-5678-9abcdef01234',description:'—',clientCategory:'INDIVIDUAL',createdAt:'11.11.24 08:55',updatedAt:'11.11.24 08:55',billingPeriod:'11.11.24',name:'BANXE_PLUS'},
+    kycs:[{lvl:'Level 1',st:'SUCCESSFUL',country:'Россия',date:'12.11.2024'},{lvl:'Level 2',st:'SUCCESSFUL',country:'Россия',date:'15.11.2024'}],
+    virtual:[{id:'b5c6d...7e8f9',holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'USDT',balance:'5 100'},{curr:'BTC',balance:'0.025'},{curr:'ETH',balance:'1.2'}]}],
+    real:[{id:'r003c...d45e',holderType:'INDIVIDUAL',provider:'Альфа-Банк',status:'active',balances:[{curr:'RUB',balance:'90 000'}]}],
+    totalUSD:'6 100 USD',
+    hasOffer:true,offerDate:'15.11.2024',sbp:false,otc:false,opsLocked:false,secLock:false
+  },
+  {
+    id:'C-10401',name:'Екатерина Смирнова',firstName:'Екатерина',lastName:'Смирнова',middleName:'Владимировна',gender:'F',
+    email:'smirnova@inbox.ru',phone:'+7 903 222-44-66',
+    kyc:'KYC-1',kycLevel:1,status:'active',date:'02.01.2025',
+    country:'Россия',iin:'550818901234',nationality:'RU',
+    tariff:{id:'5ef67890-1234-5678-9abc-def012345678',description:'—',clientCategory:'INDIVIDUAL',createdAt:'02.01.25 16:45',updatedAt:'02.01.25 16:45',billingPeriod:'02.01.25',name:'BANXE_PLUS'},
+    kycs:[{lvl:'Level 1',st:'SUCCESSFUL',country:'Россия',date:'03.01.2025'}],
+    virtual:[{id:'e2f3a...4b5c6',holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'USDT',balance:'1 800'},{curr:'BTC',balance:'0.0210'},{curr:'ETH',balance:'0.00'}]}],
+    real:[],
+    totalUSD:'3 165 USD',
+    hasOffer:false,sbp:true,otc:false,opsLocked:false,secLock:false
+  },
+];
+
+let state=JSON.parse(JSON.stringify(CLIENTS));
+let activeId=null;
+let _editId=null;
+let _cb=null;
+
+function statusPill(c){
+  if(c.status==='blocked')return'<span class="pill pill-err"><span class="dot"></span>Заблокирован</span>';
+  return'<span class="pill pill-ok"><span class="dot"></span>Активен</span>';
+}
+function kycPill(s){
+  const m={SUCCESSFUL:'pill-ok',PROCESSING:'pill-info',REJECTED:'pill-err'};
+  const t={SUCCESSFUL:'Пройден',PROCESSING:'В обработке',REJECTED:'Отклонён'};
+  return`<span class="pill ${m[s]||'pill-faded'}">${t[s]||s}</span>`;
+}
+function accStatusPill(s){
+  if(s==='active')return'<span class="pill pill-ok" style="padding:1px 6px;font-size:10px">ACTIVE</span>';
+  if(s==='frozen')return'<span class="pill pill-info" style="padding:1px 6px;font-size:10px">FROZEN</span>';
+  return'<span class="pill pill-faded" style="padding:1px 6px;font-size:10px">'+s.toUpperCase()+'</span>';
+}
+
+function renderList(){
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  const statusF=document.getElementById('statusFilter').value;
+  const kycF=document.getElementById('kycFilter').value;
+  const rows=state.filter(c=>{
+    if(q&&![c.name,c.email,c.id,c.phone].some(v=>v.toLowerCase().includes(q)))return false;
+    if(statusF&&c.status!==statusF)return false;
+    if(kycF&&c.kycLevel!==parseInt(kycF))return false;
+    return true;
+  });
+  document.getElementById('pgInfo').textContent=`Стр. 1 из 1 · ${rows.length} клиентов`;
+  if(!rows.length){document.getElementById('list').innerHTML='<div style="padding:32px;text-align:center;font-size:14px;color:var(--text-soft-400)">Ничего не найдено</div>';return;}
+  document.getElementById('list').innerHTML=rows.map(c=>`
+    <div class="tr${activeId===c.id?' sel':''}" onclick="openDrawer('${c.id}')">
+      <div class="c-date"><span style="font-size:12px;font-variant-numeric:tabular-nums;color:var(--text-sub-600)">${c.date}</span></div>
+      <div class="c-client"><span class="cname">${c.name}</span><span class="cid">${c.id}</span></div>
+      <div class="c-email"><span class="sub" style="font-size:12px">${c.email}</span></div>
+      <div class="c-kyc"><span class="num">${c.kyc}</span></div>
+      <div class="c-status">${statusPill(c)}</div>
+      <div class="c-bal"><span class="num">${c.totalUSD}</span></div>
+      <div class="c-act" onclick="event.stopPropagation()">
+        <div class="row-menu-wrap">
+          <div class="row-menu-btn" id="rmb-${c.id}" onclick="toggleRowMenu('${c.id}')">
+            <svg viewBox="0 0 16 4" fill="none"><circle cx="2" cy="2" r="1.5" fill="currentColor"/><circle cx="8" cy="2" r="1.5" fill="currentColor"/><circle cx="14" cy="2" r="1.5" fill="currentColor"/></svg>
+          </div>
+          <div class="row-menu-dd" id="rmd-${c.id}">
+            <div class="row-menu-item" onclick="openEdit('${c.id}');closeAllMenus()">
+              <svg viewBox="0 0 15 15" fill="none"><path d="M11.47.97a3.3 3.3 0 0 1 4.66 4.67l-.9.9-4.66-4.67.9-.9zM9.27 3.18 0 12.44V16h3.56L12.83 6.74 9.27 3.18z" fill="currentColor"/></svg>
+              Редактировать данные
+            </div>
+            <div class="row-menu-item" onclick="toast('Операции клиента ${c.id}');closeAllMenus()">
+              <svg viewBox="0 0 15 13.5" fill="none"><path d="M.75 0h13.5a.75.75 0 0 1 .75.75v12a.75.75 0 0 1-.75.75H.75A.75.75 0 0 1 0 12.75V.75A.75.75 0 0 1 .75 0zm12.75 6H1.5v6h12V6zm0-4.5H1.5V4.5h12V1.5zM9 9h3v1.5H9V9z" fill="currentColor"/></svg>
+              Все операции клиента
+            </div>
+            <div class="row-menu-item" onclick="toast('KYC/KYB верификация ${c.id}');closeAllMenus()">
+              <svg viewBox="0 0 15 15" fill="none"><path d="M9 0l4.5 4.5v3.2a4.5 4.5 0 1 0-3.8 6.3H.75A.75.75 0 0 1 0 13.3V.75A.75.75 0 0 1 .75 0H9zM7.5 1.5H1.5v12H5.4A4.5 4.5 0 0 1 7.5 1.5zm3.375 6.75a2.625 2.625 0 1 1 0 5.25 2.625 2.625 0 0 1 0-5.25zm0 1.5a1.125 1.125 0 1 0 0 2.25 1.125 1.125 0 0 0 0-2.25z" fill="currentColor"/></svg>
+              Перейти в верификацию (KYC/KYB)
+            </div>
+            <div class="row-menu-sep"></div>
+            <div class="row-menu-item" onclick="copyClientId('${c.id}')">
+              <svg viewBox="0 0 13.5 15" fill="none"><path d="M3 3V.75A.75.75 0 0 1 3.75 0h9a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-.75.75H10.5V15a.75.75 0 0 1-.75.75H.75A.75.75 0 0 1 0 15V3.75A.75.75 0 0 1 .75 3H3zm1.5 0h5.25a.75.75 0 0 1 .75.75V10.5h1.5V1.5h-7.5V3zM1.5 4.5V13.5H9V4.5H1.5z" fill="currentColor"/></svg>
+              Скопировать ID
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function buildAccounts(c){
+  const renderAcc=(acc)=>`
+    <div class="acc-card">
+      <div class="acc-card-hd">
+        <div class="acc-card-id">${acc.id}</div>
+        <div class="acc-card-htype">${acc.holderType}</div>
+        <div class="acc-card-prov" style="margin-left:4px">${acc.provider!=='—'?acc.provider:''}</div>
+        <div style="margin-left:auto">${accStatusPill(acc.status)}</div>
+      </div>
+      <div class="acc-card-bd">
+        ${acc.balances.map(b=>`
+          <div class="acc-bal-row">
+            <span class="acc-curr-tag">${b.curr}</span>
+            <span class="acc-bal-val">${b.balance} ${b.curr}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  const vHTML=c.virtual.length?c.virtual.map(renderAcc).join(''):'<div style="font-size:13px;color:var(--text-soft-400);padding:4px 0">Виртуальных счетов нет</div>';
+  const rHTML=c.real.length?c.real.map(renderAcc).join(''):'<div style="font-size:13px;color:var(--text-soft-400);padding:4px 0">Реальных счетов нет</div>';
+
+  return`<div class="acc-tabs">
+    <div class="acc-tab on" onclick="switchAccTab(this,'av-${c.id}')">Виртуальные (${c.virtual.length})</div>
+    <div class="acc-tab" onclick="switchAccTab(this,'ar-${c.id}')">Реальные (${c.real.length})</div>
+  </div>
+  <div id="av-${c.id}" class="acc-pane on">${vHTML}</div>
+  <div id="ar-${c.id}" class="acc-pane">${rHTML}</div>
+  <div class="acc-total"><span class="acc-total-label">Общий баланс</span><span class="acc-total-val">${c.totalUSD}</span></div>
+  <div style="margin-top:10px">
+    <span class="sect-link" onclick="toast('Переход: Депозитарий → Цифровые счета')">
+      <svg viewBox="0 0 18.9 16.2" fill="none" style="width:12px;height:12px"><path d="M18 3.6h.9v9H18v2.7a.9.9 0 0 1-.9.9H.9a.9.9 0 0 1-.9-.9V.9A.9.9 0 0 1 .9 0h16.2a.9.9 0 0 1 .9.9V3.6zm-1.8 9H10.8a4.5 4.5 0 0 1 0-9h5.4V1.8H1.8V14.4h14.4V12.6zm1.8-1.8V5.4H10.8a2.7 2.7 0 0 0 0 5.4H18zm-7.2-2.7h2.7V9H10.8V8.1z" fill="currentColor"/></svg>
+      Депозитарий — Цифровые счета
+      ${ARROW_SVG}
+    </span>
+  </div>`;
+}
+
+function buildDrawer(c){
+  const t=c.tariff;
+  return`
+    <!-- ПРОФИЛЬ -->
+    <div class="dr-sec">
+      <div class="dr-sec-hd">
+        <span class="dr-sec-label">Профиль</span>
+        <button class="btn-xs s" onclick="openEdit('${c.id}')">Изменить</button>
+      </div>
+      <div class="dr-sec-body">
+        <div class="info-grid-3" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--stroke-soft-200)">
+          <div class="info-item"><span class="ik">Имя</span><span class="iv">${c.firstName||'—'}</span></div>
+          <div class="info-item"><span class="ik">Фамилия</span><span class="iv">${c.lastName||'—'}</span></div>
+          <div class="info-item"><span class="ik">Отчество</span><span class="iv">${c.middleName||'—'}</span></div>
+        </div>
+        <div class="info-grid" style="margin-bottom:10px">
+          <div class="info-item"><span class="ik">Пол</span><span class="iv">${c.gender==='M'?'Мужской':c.gender==='F'?'Женский':'—'}</span></div>
+          <div class="info-item"><span class="ik">Дата регистрации</span><span class="iv mono">${c.date}</span></div>
+          <div class="info-item"><span class="ik">Email</span><span class="iv">${c.email}</span></div>
+          <div class="info-item"><span class="ik">Телефон</span><span class="iv">${c.phone}</span></div>
+          <div class="info-item"><span class="ik">Уровень KYC</span><span class="iv">${c.kyc}</span></div>
+          <div class="info-item"><span class="ik">Статус</span><div style="margin-top:3px">${statusPill(c)}</div></div>
+          <div class="info-item"><span class="ik">Client ID</span><span class="iv mono" style="font-size:11px">${c.id}</span></div>
+        </div>
+        ${c.hasOffer&&c.kycLevel>=2?`
+        <div class="offer-row" style="margin-top:12px">
+          <div>
+            <div style="font-size:13px;font-weight:500">Оферта</div>
+            <div style="font-size:12px;color:var(--text-soft-400);margin-top:2px">Пользовательское соглашение</div>
+          </div>
+          <button class="btn-xs s" onclick="toast('Скачивание оферты...')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 8.5 2 4.5h2.5V0h3v4.5H10L6 8.5zM1 10h10v1.5H1V10z" fill="currentColor"/></svg>
+            Скачать
+          </button>
+        </div>`:``}
+      </div>
+    </div>
+
+    <!-- ТАРИФ -->
+    <div class="dr-sec">
+      <div class="dr-sec-hd">
+        <span class="dr-sec-label">Тариф</span>
+      </div>
+      <div class="dr-sec-body">
+        <div class="info-item" style="margin-bottom:10px">
+          <span class="ik">Описание</span>
+          <span class="iv">${t.description==='—'?'Базовый тарифный план':t.description}</span>
+        </div>
+        <div class="info-item">
+          <span class="ik">Название тарифа</span>
+          <span class="sect-link" style="margin-top:3px;font-size:13px" onclick="toast('Переход к тарифу ${t.name}')">${t.name} ${ARROW_SVG}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ВЕРИФИКАЦИЯ -->
+    <div class="dr-sec">
+      <div class="dr-sec-hd">
+        <span class="dr-sec-label">Верификация</span>
+        <span class="sect-link" onclick="toast('Переход в раздел Верификации')">Раздел верификации ${ARROW_SVG}</span>
+      </div>
+      <div class="dr-sec-body">
+        <div class="info-grid-3" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--stroke-soft-200)">
+          <div class="info-item"><span class="ik">Страна</span><span class="iv">${c.country}</span></div>
+          <div class="info-item"><span class="ik">ИИН / ИНН</span><span class="iv mono">${c.iin}</span></div>
+          <div class="info-item"><span class="ik">Гражданство</span><span class="iv">${c.nationality}</span></div>
+        </div>
+        ${c.kycs.length?c.kycs.map(k=>`
+          <div class="kyc-row">
+            <div class="kyc-level">${k.lvl}</div>
+            <div style="flex:1">${kycPill(k.st)}</div>
+            <div style="font-size:12px;color:var(--text-sub-600)">${k.country}</div>
+            <div class="kyc-date">${k.date}</div>
+          </div>`).join(''):'<div style="font-size:13px;color:var(--text-soft-400)">Нет данных</div>'}
+      </div>
+    </div>
+
+    <!-- СЧЕТА -->
+    <div class="dr-sec">
+      <div class="dr-sec-hd">
+        <span class="dr-sec-label">Счета</span>
+      </div>
+      <div class="dr-sec-body">${buildAccounts(c)}</div>
+    </div>
+
+    <!-- БЕЗОПАСНОСТЬ -->
+    <div class="dr-sec">
+      <div class="dr-sec-hd"><span class="dr-sec-label">Безопасность</span></div>
+      <div class="dr-sec-body">
+        <div class="action-row">
+          <div>
+            <div class="action-label">Защитная блокировка вывода</div>
+            <div class="action-sub">${c.secLock
+              ?'Активна — вывод заблокирован бессрочно'
+              :c.secLockUntil
+                ?`Снята до ${c.secLockUntil} — затем вернётся автоматически`
+                :'Не активна'}</div>
+          </div>
+          <div class="action-right">
+            ${c.secLock
+              ?`<span class="pill pill-warn">Активна</span><button class="btn-xs s" onclick="doSecDate('${c.id}')">Снять до даты...</button>`
+              :c.secLockUntil
+                ?`<span class="pill pill-faded">Снята до ${c.secLockUntil}</span><button class="btn-xs s" onclick="doSecRelock('${c.id}')">Активировать</button>`
+                :`<span class="pill pill-ok" style="padding:2px 8px">Нет</span><button class="btn-xs s" onclick="doSecRelock('${c.id}')">Активировать</button>`}
+          </div>
+        </div>
+
+        <div class="dr-sub-label" style="margin-top:16px">Доступ к сервисам</div>
+        <div class="action-row">
+          <div>
+            <div class="action-label">СБП — Система быстрых платежей</div>
+            <div class="action-sub">${c.sbp?'Разрешено':'Запрещено'}</div>
+          </div>
+          <div class="action-right">
+            <label class="tog" onclick="doSbpToggle('${c.id}',event)">
+              <input type="checkbox" ${c.sbp?'checked':''} style="pointer-events:none">
+              <span class="tog-track"></span><span class="tog-thumb"></span>
+            </label>
+          </div>
+        </div>
+        <div class="action-row">
+          <div>
+            <div class="action-label">ОТС — внебиржевые сделки</div>
+            <div class="action-sub">${c.otc?'Разрешено':'Запрещено'}</div>
+          </div>
+          <div class="action-right">
+            <label class="tog" onclick="doOtcToggle('${c.id}',event)">
+              <input type="checkbox" ${c.otc?'checked':''} style="pointer-events:none">
+              <span class="tog-track"></span><span class="tog-thumb"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="dr-sub-label" style="margin-top:16px">Блокировка операций</div>
+        <div class="action-row">
+          <div>
+            <div class="action-label">Операции ${c.opsLocked?'заблокированы':'активны'}</div>
+            <div class="action-sub">${c.opsLocked?'Все транзакции отклоняются':'Транзакции проходят в обычном режиме'}</div>
+          </div>
+          <div class="action-right">
+            <label class="tog tog-danger" onclick="doOpsToggle('${c.id}',event)">
+              <input type="checkbox" ${c.opsLocked?'checked':''} style="pointer-events:none">
+              <span class="tog-track"></span><span class="tog-thumb"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function drawerDisplayName(c){
+  return (c.middleName&&c.middleName!=='—')
+    ?`${c.lastName} ${c.firstName} ${c.middleName}`
+    :c.name;
+}
+function openDrawer(id){
+  activeId=id;
+  const c=state.find(x=>x.id===id);
+  document.getElementById('drName').textContent=drawerDisplayName(c);
+  document.getElementById('drMeta').textContent=c.id+' · '+c.kyc;
+  document.getElementById('drBody').innerHTML=buildDrawer(c);
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('dr').classList.add('on');
+  renderList();
+}
+function closeDrawer(){activeId=null;document.getElementById('ov').classList.remove('on');document.getElementById('dr').classList.remove('on');renderList();}
+function refreshDrawer(id){const c=state.find(x=>x.id===id);document.getElementById('drBody').innerHTML=buildDrawer(c);}
+
+function switchAccTab(el,paneId){
+  const parent=el.closest('.dr-sec-body');
+  parent.querySelectorAll('.acc-tab').forEach(t=>t.classList.remove('on'));
+  parent.querySelectorAll('.acc-pane').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById(paneId).classList.add('on');
+}
+
+let _dtCb=null;
+function doSecDate(id){
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  document.getElementById('dtInput').min=tomorrow.toISOString().slice(0,10);
+  document.getElementById('dtInput').value='';
+  _dtCb=()=>{
+    const v=document.getElementById('dtInput').value;
+    if(!v){toast('Выберите дату');return;}
+    const[y,m,d]=v.split('-');
+    const c=state.find(x=>x.id===id);
+    c.secLock=false;c.secLockUntil=`${d}.${m}.${y}`;
+    closeDtMo();refreshDrawer(id);toast(`Блокировка снята до ${d}.${m}.${y}`);
+  };
+  document.getElementById('dtMoo').classList.add('on');
+}
+function doSecRelock(id){
+  openMo('Активировать защитную блокировку','Клиент не сможет выводить средства. Блокировка действует бессрочно до ручного снятия.','btn-xs d',()=>{
+    const c=state.find(x=>x.id===id);c.secLock=true;c.secLockUntil=null;refreshDrawer(id);toast('Блокировка активирована');
+  });
+}
+function closeDtMo(){document.getElementById('dtMoo').classList.remove('on');_dtCb=null;}
+document.getElementById('dtConfirm').onclick=()=>{if(_dtCb)_dtCb();};
+
+function openEdit(id){
+  if(activeId!==id)openDrawer(id);
+  _editId=id;
+  const c=state.find(x=>x.id===id);
+  document.getElementById('ef-first').value=c.firstName||'';
+  document.getElementById('ef-last').value=c.lastName||'';
+  document.getElementById('ef-middle').value=c.middleName==='—'?'':c.middleName||'';
+  document.getElementById('ef-gender').value=c.gender||'—';
+  document.getElementById('ef-email').value=c.email;
+  document.getElementById('ef-phone').value=c.phone;
+  document.getElementById('editMoo').classList.add('on');
+}
+function closeEditMo(){document.getElementById('editMoo').classList.remove('on');_editId=null;}
+function saveEdit(){
+  if(!_editId)return;
+  const c=state.find(x=>x.id===_editId);
+  const first=document.getElementById('ef-first').value.trim();
+  const last=document.getElementById('ef-last').value.trim();
+  if(!first){toast('Введите имя');return;}
+  c.firstName=first;
+  c.lastName=last||'';
+  c.middleName=document.getElementById('ef-middle').value.trim()||'—';
+  c.gender=document.getElementById('ef-gender').value;
+  c.name=[first,last].filter(Boolean).join(' ');
+  c.email=document.getElementById('ef-email').value.trim()||c.email;
+  c.phone=document.getElementById('ef-phone').value.trim()||c.phone;
+  document.getElementById('drName').textContent=drawerDisplayName(c);
+  closeEditMo();refreshDrawer(_editId);renderList();toast('Профиль обновлён');
+}
+
+function doSbpToggle(id,e){e.preventDefault();const c=state.find(x=>x.id===id),nv=!c.sbp;openMo(nv?'Разрешить СБП':'Запретить СБП',nv?'Клиент сможет отправлять платежи через СБП.':'Клиент лишится доступа к платежам по СБП.','btn-xs p',()=>{c.sbp=nv;refreshDrawer(id);toast('СБП '+(nv?'разрешён':'запрещён'));});}
+function doOtcToggle(id,e){e.preventDefault();const c=state.find(x=>x.id===id),nv=!c.otc;openMo(nv?'Разрешить ОТС':'Запретить ОТС',nv?'Клиент сможет совершать внебиржевые сделки.':'Клиент лишится доступа к OTC-сделкам.','btn-xs p',()=>{c.otc=nv;refreshDrawer(id);toast('ОТС '+(nv?'разрешён':'запрещён'));});}
+function doOpsToggle(id,e){e.preventDefault();const c=state.find(x=>x.id===id),nv=!c.opsLocked;openMo(nv?'Заблокировать операции':'Разблокировать операции',nv?'Все транзакции клиента будут отклоняться до снятия блокировки.':'Транзакции клиента снова будут проходить в обычном режиме.','btn-xs '+(nv?'d':'p'),()=>{c.opsLocked=nv;refreshDrawer(id);renderList();toast('Операции '+(nv?'заблокированы':'разблокированы'));});}
+
+function openMo(title,desc,btnCls,cb){document.getElementById('moTitle').textContent=title;document.getElementById('moDesc').textContent=desc;document.getElementById('moConfirm').className='btn-xs '+btnCls;_cb=cb;document.getElementById('moo').classList.add('on');}
+function closeMo(){document.getElementById('moo').classList.remove('on');_cb=null;}
+document.getElementById('moConfirm').onclick=()=>{if(_cb){_cb();_cb=null;}closeMo();}
+
+/* Create client */
+function openCreate(){
+  ['cf-first','cf-last','cf-middle','cf-email','cf-phone'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.value='';
+    el.classList.remove('err');
+  });
+  ['cf-first-err','cf-last-err','cf-email-err','cf-phone-err'].forEach(id=>{
+    document.getElementById(id).textContent='';
+  });
+  document.getElementById('cf-gender').value='—';
+  document.getElementById('createMoo').classList.add('on');
+}
+function closeCreate(){document.getElementById('createMoo').classList.remove('on');}
+function submitCreate(){
+  let ok=true;
+  const setErr=(fieldId,errId,msg)=>{
+    const el=document.getElementById(fieldId);
+    el.classList.add('err');
+    document.getElementById(errId).textContent=msg;
+    ok=false;
+  };
+  const clr=(fieldId,errId)=>{
+    document.getElementById(fieldId).classList.remove('err');
+    document.getElementById(errId).textContent='';
+  };
+
+  const first=document.getElementById('cf-first').value.trim();
+  const last=document.getElementById('cf-last').value.trim();
+  const email=document.getElementById('cf-email').value.trim();
+  const phone=document.getElementById('cf-phone').value.trim();
+
+  first?clr('cf-first','cf-first-err'):setErr('cf-first','cf-first-err','Введите имя');
+  last?clr('cf-last','cf-last-err'):setErr('cf-last','cf-last-err','Введите фамилию');
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?clr('cf-email','cf-email-err'):setErr('cf-email','cf-email-err','Некорректный email');
+  phone.length>=7?clr('cf-phone','cf-phone-err'):setErr('cf-phone','cf-phone-err','Введите телефон');
+
+  if(!ok)return;
+
+  const lastId=state.reduce((max,c)=>Math.max(max,parseInt(c.id.replace('C-',''))),0);
+  const newId='C-'+(lastId+1);
+  const today=new Date();
+  const dd=String(today.getDate()).padStart(2,'0');
+  const mm=String(today.getMonth()+1).padStart(2,'0');
+  const yyyy=today.getFullYear();
+  const dateStr=`${dd}.${mm}.${yyyy}`;
+
+  const middle=document.getElementById('cf-middle').value.trim()||'—';
+  const gender=document.getElementById('cf-gender').value;
+
+  const newClient={
+    id:newId,name:`${first} ${last}`,firstName:first,lastName:last,middleName:middle,gender,email,phone,
+    country:'—',iin:'—',nationality:'—',
+    kyc:'KYC-0',kycLevel:0,status:'active',date:dateStr,twofa:'—',
+    country,iin,nationality:nat,
+    tariff:{id:crypto.randomUUID?crypto.randomUUID():'new-tariff-id',description:'—',clientCategory:'INDIVIDUAL',createdAt:dateStr.replace(/\./g,'.').slice(0,8)+' '+today.getHours()+':'+String(today.getMinutes()).padStart(2,'0'),updatedAt:dateStr,billingPeriod:dateStr,name:'BANXE_PLUS'},
+    kycs:[],
+    virtual:[{id:'new...'+Math.random().toString(36).slice(2,7),holderType:'INDIVIDUAL',provider:'—',status:'active',balances:[{curr:'USDT',balance:'0'}]}],
+    real:[],
+    totalUSD:'0 USD',
+    hasOffer:false,sbp:false,otc:false,opsLocked:false,secLock:false
+  };
+
+  state.unshift(newClient);
+  closeCreate();
+  renderList();
+  openDrawer(newId);
+  toast(`Клиент ${first} ${last} успешно создан`);
+}
+
+function toggleRowMenu(id){
+  const dd=document.getElementById('rmd-'+id);
+  const btn=document.getElementById('rmb-'+id);
+  const wasOpen=dd.classList.contains('on');
+  closeAllMenus();
+  if(!wasOpen){dd.classList.add('on');btn.classList.add('open');}
+}
+function closeAllMenus(){
+  document.querySelectorAll('.row-menu-dd.on').forEach(m=>m.classList.remove('on'));
+  document.querySelectorAll('.row-menu-btn.open').forEach(b=>b.classList.remove('open'));
+}
+document.addEventListener('click',closeAllMenus);
+
+function copyClientId(id){
+  navigator.clipboard.writeText(id).then(()=>toast('ID скопирован: '+id)).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=id;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('ID скопирован: '+id);
+  });
+  closeAllMenus();
+}
+
+function doImport(){toast('Импорт санкционного листа — выбор CSV файла');}
+function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.getElementById('toasts').appendChild(el);setTimeout(()=>el.remove(),3000);}
+
+renderList();
+</script>
+</body>
+</html>
