@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Back office · Настройки · Группы</title>
+<style>
+  :root{
+    --primary-base:#7246E6;--primary-hover:#7d55ed;--primary-alpha-10:#f4f0fe;--primary-alpha-16:#ece5ff;
+    --static-white:#fff;--bg-weak-50:#f7f7f7;--bg-soft-200:#f2f2f3;
+    --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;--text-white-0:#fff;
+    --stroke-soft-200:#ebebeb;--divider:#ebebeb;
+    --success-base:#1fc16b;--success-lighter:#e3f7ec;
+    --warning-base:#fa7319;--warning-lighter:#fff3eb;
+    --error-base:#fb3748;--error-lighter:#ffebec;
+    --radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--sidebar-w:280px;
+    --shadow-small:0 1px 2px rgba(14,18,27,.05),0 6px 10px rgba(14,18,27,.06);
+    --shadow-x-small:0 1px 2px 0 rgba(10,13,20,.03);
+    --yellow-200:#ffecc0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg-weak-50);color:var(--text-strong-950);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  input,select{font-family:inherit}
+  .hidden{display:none !important}
+  .mono{font-variant-numeric:tabular-nums}
+
+  .shell{display:flex;min-height:100vh;background:var(--bg-weak-50)}
+
+  /* ================= SIDEBAR — статичная копия реального сайдбара (по скриншоту) ================= */
+  .sidebar{
+    width:var(--sidebar-w);flex:none;background:var(--static-white);border-right:1px solid var(--stroke-soft-200);
+    display:flex;flex-direction:column;padding:12px;position:sticky;top:0;height:100vh;overflow-y:auto;
+    user-select:none;
+  }
+  .sb-brand-row{display:flex;align-items:center;width:100%;margin-bottom:32px;padding:0 8px;gap:12px}
+  .sb-brand-avatar{width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,var(--primary-base),#9B7BF0);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+  .sb-brand-name{font-size:14px;font-weight:500;color:var(--text-strong-950);line-height:1.2;text-transform:capitalize}
+  .sb-brand-sub{font-size:12px;color:var(--text-soft-400);font-weight:400}
+
+  .sb-label{display:flex;align-items:center;gap:6px;margin:0 0 16px;padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft-400)}
+  .sb-label:first-of-type{margin-top:0}
+
+  .sb-item{
+    display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-10);
+    font-size:14px;font-weight:400;line-height:20px;color:var(--text-sub-600);margin-bottom:2px;
+  }
+  .sb-item .ic{width:18px;height:18px;flex:none;color:currentColor}
+  .sb-item.active{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .sb-item.active .ic{color:currentColor}
+  .sb-item.parent{cursor:default}
+  .sb-label-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  .sb-chev{flex:none;width:10px;height:10px;color:var(--text-soft-400);display:inline-flex;transform:rotate(-90deg);transition:transform .15s}
+  .sb-chev svg{width:10px;height:10px}
+  .sb-chev.open{transform:rotate(0deg)}
+
+  .sb-tree{padding-left:0;margin:2px 0 4px;display:flex;flex-direction:column;gap:2px}
+  .sb-child{
+    position:relative;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-radius:var(--radius-8);border-left:2px solid transparent;
+    font-size:13px;font-weight:400;line-height:20px;color:var(--text-sub-600);margin-bottom:0;
+  }
+  .sb-child .ic{width:16px;height:16px;flex:none;color:currentColor}
+  .sb-child.active{background:var(--bg-weak-50);color:var(--primary-base);font-weight:500;border-left-color:var(--primary-base)}
+  .sb-child.active .ic{color:currentColor}
+  .sb-child.active::before{display:none}
+  .sb-child.injected{background:var(--bg-weak-50);color:var(--text-strong-950)}
+
+  /* ================= MAIN ================= */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-weak-50)}
+
+  .topbar{
+    height:72px;flex:none;background:var(--static-white);border-bottom:1px solid var(--divider);
+    display:flex;align-items:center;gap:12px;padding:0 24px;position:sticky;top:0;z-index:20;
+  }
+  .crumbs{display:none}
+  .tb-spacer{flex:1}
+  .tb-lang{height:36px;display:flex;align-items:center;gap:6px;padding:0 8px 0 12px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft-200);font-size:14px;font-weight:500;color:var(--text-sub-600);cursor:default;background:var(--static-white);box-shadow:var(--shadow-x-small)}
+  .tb-lang .flag{width:20px;height:20px;flex:none;border-radius:50%;overflow:hidden;display:block}
+  .tb-lang svg.ic{width:13px;height:13px;color:var(--text-sub-600);flex:none}
+  .tb-divider{width:1px;height:28px;background:var(--divider)}
+  .tb-user{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:var(--radius-10);cursor:default}
+  .tb-avatar{position:relative;width:36px;height:36px;border-radius:50%;background:var(--yellow-200);color:var(--text-strong-950);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+  .tb-avatar .dot{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:var(--success-base);border:2px solid var(--static-white)}
+  .tb-user-text{display:flex;flex-direction:column;min-width:0}
+  .tb-user-name{font-size:13px;font-weight:500;color:var(--text-strong-950);line-height:1.3;display:flex;align-items:center;gap:4px}
+  .tb-user-name svg{width:14px;height:14px;color:var(--primary-base);flex:none}
+  .tb-user-email{font-size:12px;color:var(--text-soft-400);font-weight:400;line-height:1.3}
+  .tb-user-chev{display:inline-flex;width:13px;height:13px;color:var(--text-soft-400);flex:none}
+  .tb-user-chev svg{width:13px;height:13px}
+
+  .content{padding:16px;min-width:1024px;width:100%;margin:0}
+
+
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 20px;padding:20px 24px;background:var(--static-white);border:1px solid var(--stroke-soft-200);border-radius:16px;box-shadow:var(--shadow-small)}
+  .page-head h1{font-size:18px;font-weight:500;line-height:28px;letter-spacing:0;color:var(--text-strong-950);margin-bottom:4px}
+  .page-head p{font-size:13px;color:var(--text-soft-400);max-width:640px;line-height:1.5}
+
+  .btn{
+    min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:500;
+    padding:8px 12px;border-radius:10px;border:1px solid transparent;transition:.12s;white-space:nowrap;
+  }
+  .btn-primary{background:var(--primary-base);color:var(--text-white-0)}
+  .btn-primary:hover{background:var(--primary-hover);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+  .btn-outline{background:var(--static-white);color:var(--text-sub-600);border-color:var(--stroke-soft-200)}
+  .btn-outline:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .btn-danger{background:var(--error-lighter);color:var(--error-base)}
+  .btn-danger:hover{background:#ffe0e0}
+  .btn-sm{min-height:32px;padding:5px 10px;font-size:13px;border-radius:8px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;margin:0 0 16px;padding:0;position:relative}
+  .search-field{position:relative}
+  .search-field .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-soft-400)}
+  .filter-bar input[type=text],.search-field input[type=text]{
+    height:40px;padding:8px 12px 8px 36px;border:1px solid var(--stroke-soft-200);border-radius:10px;font-size:14px;background:var(--static-white);min-width:240px;color:var(--text-strong-950);
+  }
+  .filter-bar input:focus,.search-field input:focus{outline:none;border-color:var(--primary-base);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+
+  /* мультивыбор (Валюта / Функции) */
+  .ms{position:relative}
+  .ms-trigger{height:40px;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--stroke-soft-200);border-radius:10px;font-size:14px;background:var(--static-white);color:var(--text-sub-600)}
+  .ms-trigger svg{width:12px;height:12px;color:var(--text-soft-400);flex:none}
+  .ms.open .ms-trigger{border-color:var(--primary-base);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+  .ms-count{background:var(--primary-alpha-10);color:var(--primary-base);font-size:11px;font-weight:600;padding:1px 6px;border-radius:999px;min-width:16px;text-align:center}
+  .ms-count.hidden{display:none}
+  .ms-panel{position:absolute;top:calc(100% + 6px);right:0;background:var(--static-white);border:1px solid var(--stroke-soft-200);border-radius:10px;box-shadow:var(--shadow-small);padding:6px;z-index:30;display:none}
+  .ms.open .ms-panel{display:grid;grid-auto-flow:column;column-gap:4px;row-gap:2px}
+  .ms-panel.cols-3{grid-template-rows:repeat(3,auto);min-width:200px}
+  .ms-panel.cols-2{grid-template-rows:repeat(2,auto);min-width:380px}
+  .ms-option{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;font-size:13px;color:var(--text-sub-600);cursor:pointer;white-space:nowrap}
+  .ms-option:hover{background:var(--bg-weak-50)}
+  .ms-option input{accent-color:var(--primary-base)}
+
+  .card{background:var(--static-white);border:1px solid var(--stroke-soft-200);border-radius:10px;overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow-small)}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;table-layout:fixed}
+  thead th{height:40px;background:var(--bg-weak-50);border-bottom:1px solid var(--stroke-soft-200);text-align:left;font-weight:500;color:var(--text-soft-400);padding:0 12px;font-size:13px}
+  thead th:first-child{border-top-left-radius:10px}
+  thead th:last-child{border-top-right-radius:10px}
+  thead th.sortable{cursor:pointer;user-select:none}
+  thead th.sortable:hover{color:var(--text-sub-600)}
+  thead th.sortable .sort-ic{display:inline-flex;width:11px;height:11px;margin-left:4px;vertical-align:-1px;color:var(--text-soft-400)}
+  thead th.sortable.active .sort-ic{color:var(--primary-base)}
+  thead th.sortable .sort-ic svg{width:11px;height:11px}
+  tbody td{height:52px;padding:10px 12px;border-top:1px solid var(--stroke-soft-200);color:var(--text-sub-600);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  tbody td.wrap{white-space:normal}
+  tbody tr:first-child td{border-top:none}
+  tbody tr:hover{background:var(--bg-weak-50)}
+  .cell-main{font-weight:400;color:var(--text-strong-950)}
+  .cell-link{color:var(--primary-base);font-weight:700;text-decoration:none;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px}
+  .cell-link:hover{text-decoration:underline}
+  .row-actions{display:flex;gap:4px}
+  .icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:none;border:none;color:var(--text-soft-400)}
+  .icon-btn:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .icon-btn.danger:hover{background:var(--error-lighter);color:var(--error-base)}
+  .icon-btn svg{width:16px;height:16px}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:999px;white-space:nowrap;letter-spacing:0}
+  .pill.green{background:var(--success-lighter);color:var(--success-base)}
+  .pill.amber{background:var(--warning-lighter);color:var(--warning-base)}
+  .pill.red{background:var(--error-lighter);color:var(--error-base)}
+  .pill.blue{background:var(--primary-alpha-10);color:var(--primary-base)}
+  .pill.gray{background:var(--bg-weak-50);color:var(--text-soft-400)}
+  .pill .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+  /* пагинация — по образцу "Роли и права" */
+  .pagination{display:flex;align-items:center;justify-content:space-between;padding:0;font-size:13px;color:var(--text-soft-400)}
+  .pg-pages{display:flex;align-items:center;gap:3px}
+  .pg-arrow,.pg-num{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-sub-600);border:none;background:none}
+  .pg-arrow{color:var(--text-soft-400)}
+  .pg-arrow:disabled{opacity:.4}
+  .pg-num.active{background:var(--primary-base);color:#fff;font-weight:500}
+  .pg-size{height:32px;display:flex;align-items:center;gap:6px;border:1px solid var(--stroke-soft-200);border-radius:8px;padding:5px 10px;font-weight:500;color:var(--text-sub-600);background:var(--static-white)}
+
+  .chips-cell{display:flex;flex-wrap:wrap;gap:4px;max-width:220px}
+  .chips-cell .tag{font-size:12px;font-weight:500;padding:3px 8px;border-radius:999px;background:var(--primary-alpha-10);color:var(--primary-base)}
+  .chips-cell .tag.more{background:var(--bg-weak-50);color:var(--text-soft-400)}
+
+  .switch{position:relative;width:34px;height:19px;flex:none;display:inline-block}
+  .switch input{opacity:0;width:0;height:0}
+  .switch .track{position:absolute;inset:0;background:var(--stroke-soft-200);border-radius:999px;transition:.15s;cursor:pointer}
+  .switch .track::before{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  .switch input:checked + .track{background:var(--primary-base)}
+  .switch input:checked + .track::before{transform:translateX(15px)}
+  .switch input:disabled + .track{opacity:.4;cursor:not-allowed}
+
+  .back-btn{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);background:var(--static-white);box-shadow:var(--shadow-x-small);color:var(--primary-base)}
+  .back-btn:hover{background:var(--bg-weak-50)}
+  .back-btn svg{width:18px;height:18px}
+  .details-top h1{font-size:24px;font-weight:600;color:var(--text-strong-950);line-height:1.3}
+
+  /* "Группа + основная информация" — карточка; поля 1:1 по review_spec/groups (тарифы) */
+  .info-card{background:var(--static-white);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-16);box-shadow:var(--shadow-small);padding:24px;margin:16px 16px 20px}
+  .details-top-row{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+  .details-top-row h1{flex:1;font-size:22px;font-weight:600;color:var(--text-strong-950);min-width:0}
+  .details-top-actions{display:flex;gap:8px;flex:none}
+  .info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+  .info-field{display:flex;flex-direction:column;gap:8px;min-width:0}
+  .info-value .chips-cell{flex-wrap:nowrap;overflow:hidden}
+  .info-value .chips-cell .tag{flex:none}
+  .info-field label{font-size:13px;color:var(--text-sub-600)}
+  .info-value{font-size:14px;font-weight:500;color:var(--text-strong-950);word-break:break-word;display:flex;flex-wrap:wrap;gap:5px}
+  .info-value.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;font-weight:400;color:var(--text-sub-600)}
+  .field select{height:40px;padding:8px 11px;border:1px solid var(--stroke-soft-200);border-radius:10px;font-size:14px;background:var(--static-white)}
+  .field select:focus{outline:none;border-color:var(--primary-base);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+
+  .check-list{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto}
+  .check-list-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer}
+  .check-list-item:hover{background:var(--bg-weak-50)}
+  .check-list-item input{accent-color:var(--primary-base);flex:none}
+  .cli-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .cli-name{font-size:13px;font-weight:500;color:var(--text-strong-950)}
+  .cli-email{font-size:12px;color:var(--text-soft-400)}
+  .check-list-empty{padding:24px 8px;text-align:center;color:var(--text-soft-400);font-size:13px}
+  .check-list-loading{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 8px;color:var(--text-soft-400);font-size:12px}
+  .check-list-loading .spin{width:13px;height:13px;border:2px solid var(--stroke-soft-200);border-top-color:var(--primary-base);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .check-list-end{padding:10px 8px;text-align:center;color:var(--text-soft-400);font-size:12px}
+
+  .tabs{display:inline-flex;gap:2px;background:var(--bg-soft-200);border-radius:10px;padding:4px;margin:28px 16px 16px}
+  .tab-btn{height:34px;padding:7px 16px;font-size:14px;font-weight:500;color:var(--text-soft-400);background:none;border:none;border-radius:8px}
+  .tab-btn.active{color:var(--primary-base);background:#fff;box-shadow:0 1px 2px rgba(19,19,19,.08);font-weight:500}
+  .tab-btn:hover:not(.active){color:var(--text-sub-600)}
+
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  .tab-panel{padding:0 16px 16px}
+  .info-box{border:1px solid var(--primary-alpha-16);background:var(--primary-alpha-10);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-sub-600);margin-bottom:16px}
+  .users-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .info-box b{color:var(--text-strong-950)}
+  .info-box a{color:var(--primary-base);font-weight:500;text-decoration:none}
+
+  .fee-input{height:34px;width:84px;padding:6px 8px;border:1px solid var(--stroke-soft-200);border-radius:8px;font-size:13px;background:var(--static-white)}
+  .fee-input:focus{outline:none;border-color:var(--primary-base);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+
+  .currency-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .currency-card{border:1px solid var(--stroke-soft-200);border-radius:10px;padding:12px;background:var(--static-white)}
+  .currency-card .cc-sym{font-weight:500;font-size:14px;margin-bottom:9px;color:var(--text-strong-950)}
+  .currency-card .cc-rows{display:flex;flex-direction:column;gap:7px}
+  .currency-card .cc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--text-soft-400)}
+
+  .disabled-note{font-size:13px;color:var(--text-soft-400);margin-bottom:12px}
+
+  .overlay{position:fixed;inset:0;background:rgba(19,19,19,.42);display:flex;align-items:flex-start;justify-content:center;padding:52px 20px;z-index:100;overflow-y:auto}
+  .modal{background:var(--static-white);border-radius:16px;width:100%;max-width:560px;box-shadow:0 24px 64px rgba(19,19,19,.24)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--stroke-soft-200)}
+  .modal-head h3{font-size:18px;font-weight:500;line-height:28px}
+  .modal-close{background:none;border:none;font-size:16px;color:var(--text-soft-400);line-height:1;padding:4px}
+  .modal-close:hover{color:var(--text-strong-950)}
+  .modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:18px;max-height:64vh;overflow-y:auto}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:13px;font-weight:500;color:var(--text-sub-600)}
+  .field input[type=text]{height:40px;padding:8px 11px;border:1px solid var(--stroke-soft-200);border-radius:10px;font-size:14px}
+  .field input[type=text]:focus{outline:none;border-color:var(--primary-base);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+  .field-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .field-row .fr-label{font-size:14px;font-weight:500;color:var(--text-strong-950)}
+  .field-row .fr-hint{font-size:12px;color:var(--text-soft-400);margin-top:2px}
+  .group-title{font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--text-soft-400);margin-bottom:9px}
+  .check-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .check-item{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text-sub-600);padding:8px 10px;border:1px solid var(--stroke-soft-200);border-radius:8px;cursor:pointer;background:var(--static-white)}
+  .check-item:hover{border-color:var(--primary-alpha-16)}
+  .check-item.checked{background:var(--primary-alpha-10);border-color:var(--primary-base);color:var(--primary-base)}
+  .check-item input{accent-color:var(--primary-base)}
+  .check-item.disabled{opacity:.5;cursor:not-allowed}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--stroke-soft-200)}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--text-strong-950);color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:200;display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s}
+  .toast.show{opacity:1;transform:none}
+  .toast .d{width:6px;height:6px;border-radius:50%;background:var(--success-base)}
+
+  .source-note{display:none}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ================= SIDEBAR — статичная, некликабельная копия реального меню (по скриншоту), рендерится JS ================= -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <div class="topbar" id="topbar"></div>
+
+    <div class="content">
+
+      <!-- ===================== VIEW: LIST ===================== -->
+      <div id="view-list">
+        <div class="page-head">
+          <div>
+            <h1>Группы</h1>
+            <p>Сегментация клиентов по условиям обслуживания — доступные валюты, функции, комиссии и требование 2FA.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal(null)">Новая группа</button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-field">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/></svg>
+            <input type="text" id="f-search" placeholder="Поиск по ID или названию" oninput="onFilterChange()">
+          </div>
+          <div class="ms" id="ms-currency">
+            <button type="button" class="ms-trigger" onclick="toggleMs('currency')">Валюта<span class="ms-count hidden" id="ms-currency-count"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="ms-panel cols-3" id="ms-currency-panel"></div>
+          </div>
+          <div class="ms" id="ms-services">
+            <button type="button" class="ms-trigger" onclick="toggleMs('services')">Функции<span class="ms-count hidden" id="ms-services-count"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="ms-panel cols-2" id="ms-services-panel"></div>
+          </div>
+          <button class="btn btn-outline" onclick="resetFilters()">Сбросить</button>
+          <button class="btn btn-outline" onclick="refreshList()">Обновить</button>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:13%">ID</th>
+                <th style="width:18%" class="sortable" id="th-name" onclick="setSort('name')">Название<span class="sort-ic"></span></th>
+                <th style="width:11%" class="sortable" id="th-count" onclick="setSort('user_count')">Участники<span class="sort-ic"></span></th>
+                <th style="width:7%">2FA</th>
+                <th style="width:19%">Валюты</th>
+                <th style="width:17%">Функции</th>
+                <th style="width:15%">Действия</th>
+              </tr>
+            </thead>
+            <tbody id="groups-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span id="pg-total">Всего: 0 групп</span>
+          <div class="pg-pages" id="pg-pages"></div>
+          <div class="pg-size">10 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- ===================== VIEW: DETAILS ===================== -->
+      <div id="view-details" class="hidden">
+        <div class="info-card">
+          <div class="details-top-row">
+            <button class="back-btn" onclick="showList()" title="Назад к списку групп">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h1 id="details-title">Группа — VIP</h1>
+            <div class="details-top-actions">
+              <button class="btn btn-primary btn-sm" onclick="openModal(currentGroupId)">Редактировать</button>
+              <button class="btn btn-danger btn-sm" onclick="askDeleteGroup(currentGroupId)">Удалить</button>
+            </div>
+          </div>
+          <div class="info-grid" id="details-info-grid"></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="users" onclick="switchTab('users')">Пользователи</button>
+          <button class="tab-btn" data-tab="fees" onclick="switchTab('fees')">Комиссии</button>
+          <button class="tab-btn" data-tab="swift" onclick="switchTab('swift')">SWIFT</button>
+          <button class="tab-btn" data-tab="currencies" onclick="switchTab('currencies')">Валюты</button>
+        </div>
+
+        <div class="tab-panel active" data-panel="users">
+          <div class="users-toolbar">
+            <div class="search-field" style="flex:1;max-width:340px">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/></svg>
+              <input type="text" id="f-members-search" placeholder="Поиск по ID, имени или email" oninput="renderMembers()" style="width:100%">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openAddMember()">Добавить участника</button>
+          </div>
+          <div class="card">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:24%">ID</th>
+                  <th style="width:32%">Имя</th>
+                  <th style="width:32%">Email</th>
+                  <th style="width:12%"></th>
+                </tr>
+              </thead>
+              <tbody id="members-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="fees">
+          <div class="card">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:20%">Рынок</th>
+                  <th style="width:20%">Лимитный ордер, %</th>
+                  <th style="width:20%">Рыночный ордер, %</th>
+                  <th style="width:22%">Действует до</th>
+                  <th style="width:18%"></th>
+                </tr>
+              </thead>
+              <tbody id="fees-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="swift">
+          <div class="card">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:12%">Валюта</th>
+                  <th>До 10 000</th>
+                  <th>До 100 000</th>
+                  <th>До 500 000</th>
+                  <th>Свыше 500 000</th>
+                  <th style="width:16%"></th>
+                </tr>
+              </thead>
+              <tbody id="swift-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="currencies">
+          <div id="currencies-disabled-note" class="disabled-note hidden">
+            Тонкая настройка валют выключена — группа использует общий список разрешённых валют
+            (задаётся в карточке группы). <a onclick="openModal(currentGroupId)" style="color:var(--accent);font-weight:700;cursor:pointer">Включить в настройках группы →</a>
+          </div>
+          <div id="currencies-grid" class="currency-grid"></div>
+        </div>
+      </div>
+
+      <div class="source-note"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL ===================== -->
+<div class="overlay hidden" id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Новая группа</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Название группы</label>
+        <input type="text" id="m-name" placeholder="Например, VIP">
+      </div>
+
+      <div class="field-row">
+        <div>
+          <div class="fr-label">Требуется 2FA</div>
+          <div class="fr-hint">Обязательное подтверждение операций для участников группы</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="m-2fa"><span class="track"></span></label>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <div class="fr-label">Тонкая настройка валют</div>
+          <div class="fr-hint">Вместо простого списка — отдельные депозит/вывод/лендинг и т.д. по каждой валюте (вкладка «Валюты»)</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="m-currency-settings" onchange="onToggleCurrencySettings()"><span class="track"></span></label>
+      </div>
+
+      <div>
+        <div class="group-title">Разрешённые валюты</div>
+        <div class="check-grid" id="m-currencies"></div>
+      </div>
+
+      <div>
+        <div class="group-title">Доступные функции клиента</div>
+        <div class="check-grid" id="m-services"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" id="m-save-btn" onclick="saveModal()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADD MEMBER MODAL — мультивыбор с поиском ===================== -->
+<div class="overlay hidden" id="add-member-overlay" onclick="if(event.target===this) closeAddMember()">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <h3>Добавить участников</h3>
+      <button class="modal-close" onclick="closeAddMember()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;gap:12px">
+      <div class="search-field" style="width:100%">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/></svg>
+        <input type="text" id="add-member-search" placeholder="Поиск по ID, имени или email" oninput="renderAddMemberList()" style="width:100%">
+      </div>
+      <div class="check-list" id="add-member-list" onscroll="onAddMemberScroll(event)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeAddMember()">Отмена</button>
+      <button class="btn btn-primary" onclick="confirmAddMember()">Добавить <span id="add-member-count"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GENERIC CONFIRM MODAL (удаление группы/участника, сохранение/сброс комиссий) ===================== -->
+<div class="overlay hidden" id="confirm-overlay" onclick="if(event.target===this) closeConfirm()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h3 id="confirm-title">Подтверждение</h3>
+      <button class="modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:none">
+      <div id="confirm-body" style="font-size:14px;color:var(--text-sub-600);line-height:1.5"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeConfirm()">Отмена</button>
+      <button class="btn btn-primary" id="confirm-action-btn" onclick="runConfirm()">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="d"></span><span id="toast-text"></span></div>
+
+<script>
+function svg(inner){ return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`; }
+const ic = {
+  process:  svg('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+  clients:  svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><circle cx="18" cy="9" r="2.3"/><path d="M16.5 21v-1a5 5 0 0 0-1-3"/>'),
+  chart:    svg('<path d="M4 20V10"/><path d="M11 20V4"/><path d="M18 20v-7"/>'),
+  calendar: svg('<rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3.5 10h17"/>'),
+  gear:     svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  chevUp:   svg('<path d="M18 15l-6-6-6 6"/>'),
+  chevDown: svg('<path d="M6 9l6 6 6-6"/>'),
+  roles:    svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M16 3.2a3 3 0 0 1 0 5.6"/><path d="M22 21v-1a5 5 0 0 0-3.5-4.8"/>'),
+  check:    svg('<path d="M12 2l7 3.5v5.3c0 4.6-3 8.9-7 10.2-4-1.3-7-5.6-7-10.2V5.5z"/><path d="M9 12l2 2 4-4.5"/>'),
+  percent:  svg('<circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/><path d="M18 6L6 18"/>'),
+  partners: svg('<path d="M8.5 14l2 2 5-5"/><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/>'),
+  wallet:   svg('<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M16 12h3"/><path d="M3 10h18"/>'),
+  coin:     svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 15.2c.5.7 1.4 1.1 2.5 1.1 1.7 0 3-1 3-2.3 0-3-5.5-1.5-5.5-4.5 0-1.3 1.3-2.3 3-2.3 1.1 0 2 .4 2.5 1.1"/><path d="M12 7v10"/>'),
+  building: svg('<rect x="4" y="3" width="10" height="18"/><rect x="14" y="9" width="6" height="12"/><path d="M7 7h1M11 7h1M7 11h1M11 11h1M7 15h1M11 15h1"/>'),
+  grid:     svg('<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>'),
+  shieldCheck: svg('<path d="M12 2l7 3.5v5.3c0 4.6-3 8.9-7 10.2-4-1.3-7-5.6-7-10.2V5.5z"/><path d="M9.3 12l1.7 1.7 3.7-3.9"/>'),
+  search:   svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/>'),
+  doc:      svg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h8"/>'),
+  groupIcon: svg('<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M14 15h2a5 5 0 0 1 5 5v1"/>'),
+  logout:   svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>'),
+  edit:     svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  trash:    svg('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>'),
+  archive:  svg('<rect x="3" y="4" width="18" height="5" rx="1.4"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/>'),
+  bell:     svg('<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'),
+  badge:    svg('<circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M8 12.3l2.5 2.5L16 9" stroke="#fff" stroke-width="2.4"/>'),
+};
+const flagRU = `<svg viewBox="0 0 24 24" width="100%" height="100%"><rect width="24" height="8" y="0" fill="#fff"/><rect width="24" height="8" y="8" fill="#0039a6"/><rect width="24" height="8" y="16" fill="#d52b1e"/></svg>`;
+
+function renderSidebar(){
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sb-brand-row">
+      <div class="sb-brand-avatar">BI</div>
+      <div>
+        <div class="sb-brand-name">Bitbanker</div>
+        <div class="sb-brand-sub">Админ-панель</div>
+      </div>
+    </div>
+
+    <div class="sb-label">Рабочее место</div>
+    <div class="sb-item">${ic.process}<span class="sb-label-text">Процессы</span><span class="sb-chev">${ic.chevDown}</span></div>
+    <div class="sb-item">${ic.clients}<span class="sb-label-text">Клиенты</span><span class="sb-chev">${ic.chevDown}</span></div>
+    <div class="sb-item">${ic.chart}<span class="sb-label-text">Аналитика</span><span class="sb-chev">${ic.chevDown}</span></div>
+    <div class="sb-item">${ic.calendar}<span class="sb-label-text">Операционный день</span></div>
+
+    <div class="sb-label">Управление платформой</div>
+    <div class="sb-item parent">${ic.gear}<span class="sb-label-text">Настройки</span><span class="sb-chev open">${ic.chevDown}</span></div>
+    <div class="sb-tree">
+      <div class="sb-child">${ic.roles} Роли и права</div>
+      <div class="sb-child">${ic.check} Правила верификации</div>
+      <div class="sb-child">${ic.percent} Тарифы и комиссии</div>
+      <div class="sb-child">${ic.partners} Партнёры наличных операций</div>
+      <div class="sb-child">${ic.wallet} Виртуальные счета (vABS)</div>
+      <div class="sb-child">${ic.coin} Валюты</div>
+      <div class="sb-child active injected">${ic.groupIcon} Группы</div>
+      <div class="sb-child">${ic.building} Номинальные компании</div>
+      <div class="sb-child">${ic.grid} Настройки СБП</div>
+      <div class="sb-child">${ic.shieldCheck} Настройки AML</div>
+      <div class="sb-child">${ic.search} Настройки KYT</div>
+      <div class="sb-child">${ic.doc} Реквизиты</div>
+    </div>
+  `;
+}
+
+function renderTopbar(){
+  document.getElementById('topbar').innerHTML = `
+    <div class="tb-spacer"></div>
+    <div class="tb-lang"><span class="flag">${flagRU}</span><span>Русский</span>${ic.chevDown}</div>
+    <div class="tb-divider"></div>
+    <div class="tb-user">
+      <div class="tb-avatar">SA<span class="dot"></span></div>
+      <div class="tb-user-text">
+        <span class="tb-user-name">Super Admin ${ic.badge}</span>
+        <span class="tb-user-email">super-admin@admin.com</span>
+      </div>
+      <span class="tb-user-chev">${ic.chevDown}</span>
+    </div>
+  `;
+}
+
+const CURRENCIES = ['BTC','ETH','USDT','USDC','TON','RUB','KGS'];
+const SERVICES = [
+  { key:'is_lending_enabled', label:'Лендинг' },
+  { key:'is_borrowing_enabled', label:'Займы' },
+  { key:'is_investing_available', label:'Инвестиции' },
+  { key:'is_transfer_enabled', label:'Переводы' },
+  { key:'is_pledge_enabled', label:'Залог' },
+  { key:'otc_deals', label:'OTC-сделки' },
+];
+const MARKETS = ['BTC/USDT','ETH/USDT','TON/USDT','USDT/RUB'];
+const USERS_POOL = (() => {
+  const curated = [
+    { id:101, name:'Иван Петров', email:'i.petrov@mail.example' },
+    { id:102, name:'Анна Смирнова', email:'a.smirnova@mail.example' },
+    { id:103, name:'Тимур Асанов', email:'t.asanov@mail.example' },
+    { id:104, name:'Мария Ким', email:'m.kim@mail.example' },
+    { id:105, name:'Данияр Токтосунов', email:'d.toktosunov@mail.example' },
+    { id:106, name:'Ольга Волкова', email:'o.volkova@mail.example' },
+    { id:107, name:'Bekzhan Nurlanov', email:'b.nurlanov@mail.example' },
+    { id:108, name:'Elena Bright', email:'e.bright@mail.example' },
+  ];
+  /* + большой мок-пул — чтобы показать скролл и подгрузку в модалке добавления */
+  const firstNames = ['Александр','Мария','Дмитрий','Екатерина','Сергей','Ольга','Николай','Татьяна','Андрей','Юлия','Максим','Наталья','Илья','Виктория','Роман','Полина','Артём','Дарья','Владимир','Анастасия','Кирилл','Елена','Павел','Светлана'];
+  const lastNames = ['Иванов','Смирнов','Кузнецов','Попов','Соколов','Лебедев','Новиков','Морозов','Волков','Алексеев','Захаров','Романов','Борисов','Королёв','Орлов'];
+  const generated = [];
+  for (let i = 0; i < 52; i++){
+    const id = 109 + i;
+    const name = `${firstNames[i % firstNames.length]} ${lastNames[(i * 7) % lastNames.length]}`;
+    generated.push({ id, name, email: `user${id}@mail.example` });
+  }
+  return [...curated, ...generated];
+})();
+
+let groups = [
+  { id:1, name:'VIP', user_count:12, need_check_2fa:true, currency_settings_enabled:false,
+    permitted_currencies:['BTC','ETH','USDT','USDC'],
+    permissions:['is_lending_enabled','is_investing_available','is_transfer_enabled'],
+    market_fees:{ 'BTC/USDT':{limit_fee:'0.05',market_fee:'0.10',expired_at:''}, 'ETH/USDT':{limit_fee:'0.05',market_fee:'0.10',expired_at:''} },
+    member_ids:[101,102,103] },
+  { id:2, name:'Партнёрская — Gamma', user_count:4, need_check_2fa:false, currency_settings_enabled:true,
+    permitted_currencies:['USDT','USDC','RUB'],
+    permissions:['is_transfer_enabled'],
+    market_fees:{ 'USDT/RUB':{limit_fee:'0.15',market_fee:'0.20',expired_at:'2026-12-31'} },
+    member_ids:[104] },
+  { id:3, name:'Стандартная', user_count:3820, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:['BTC','ETH','USDT','USDC','TON','RUB','KGS'],
+    permissions:['is_lending_enabled','is_borrowing_enabled','is_transfer_enabled','otc_deals'],
+    market_fees:{}, member_ids:[105,106,107,108] },
+  { id:4, name:'Партнёрская — Delta', user_count:27, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:['USDT','RUB'], permissions:['is_transfer_enabled'], market_fees:{} },
+  { id:5, name:'Сотрудники', user_count:9, need_check_2fa:true, currency_settings_enabled:false,
+    permitted_currencies:['BTC','ETH','USDT'], permissions:['is_lending_enabled','is_borrowing_enabled'], market_fees:{} },
+  { id:6, name:'Тестовая — QA', user_count:2, need_check_2fa:false, currency_settings_enabled:true,
+    permitted_currencies:['BTC','USDT'], permissions:[], market_fees:{} },
+  { id:7, name:'Заблокированные', user_count:0, need_check_2fa:true, currency_settings_enabled:false,
+    permitted_currencies:[], permissions:[], market_fees:{} },
+  { id:8, name:'OTC-клиенты', user_count:41, need_check_2fa:true, currency_settings_enabled:false,
+    permitted_currencies:['BTC','ETH','USDT','USDC','TON'], permissions:['otc_deals','is_transfer_enabled'], market_fees:{} },
+  { id:9, name:'Партнёрская — Epsilon', user_count:15, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:['USDT','KGS'], permissions:['is_transfer_enabled'], market_fees:{} },
+  { id:10, name:'Инвесторы', user_count:63, need_check_2fa:true, currency_settings_enabled:false,
+    permitted_currencies:['BTC','ETH','USDT','USDC'], permissions:['is_investing_available'], market_fees:{} },
+  { id:11, name:'Кэшбэк-программа', user_count:308, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:['USDT','RUB','KGS'], permissions:['is_transfer_enabled'], market_fees:{} },
+  { id:12, name:'Резиденты KG', user_count:1204, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:['USDT','KGS'], permissions:['is_lending_enabled','is_transfer_enabled'], market_fees:{} },
+  { id:13, name:'Залоговое кредитование', user_count:18, need_check_2fa:true, currency_settings_enabled:false,
+    permitted_currencies:['BTC','ETH','USDT'], permissions:['is_pledge_enabled'], market_fees:{} },
+  { id:14, name:'Партнёрская — Zeta', user_count:6, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:['USDT'], permissions:['is_transfer_enabled'], market_fees:{} },
+  { id:15, name:'Маркетинг', user_count:1, need_check_2fa:false, currency_settings_enabled:false,
+    permitted_currencies:[], permissions:[], market_fees:{} },
+];
+let nextGroupId = 16;
+let currentGroupId = null, currentTab = 'users', editingGroupId = null;
+const PAGE_SIZE = 10;
+let currentPage = 1;
+let sortKey = null, sortDir = 'asc';
+let selectedCurrencies = new Set();
+let selectedFunctions = new Set();
+
+function toast(text){
+  const el = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  el.classList.add('show');
+  clearTimeout(window.__t);
+  window.__t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+function findGroup(id){ return groups.find(g => g.id === Number(id)); }
+function mulberry32(seed){
+  let t = seed >>> 0;
+  return function(){
+    t = (t + 0x6D2B79F5) | 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function fakeUuid(seed){
+  const rnd = mulberry32(seed * 97 + 13);
+  const hex = n => Array.from({length:n}, () => Math.floor(rnd()*16).toString(16)).join('');
+  return `${hex(8)}-${hex(4)}-4${hex(3)}-${'89ab'[Math.floor(rnd()*4)]}${hex(3)}-${hex(12)}`;
+}
+function fakeUuidShort(seed){
+  const u = fakeUuid(seed);
+  return `${u.slice(0,8)}…${u.slice(-6)}`;
+}
+
+function getFilteredGroups(){
+  const query = (document.getElementById('f-search')?.value || '').trim().toLowerCase();
+  let list = groups.filter(g => {
+    const byQuery = !query || String(g.id).includes(query) || g.name.toLowerCase().includes(query);
+    const byCurrency = !selectedCurrencies.size || g.permitted_currencies.some(c => selectedCurrencies.has(c));
+    const byFunctions = !selectedFunctions.size || g.permissions.some(p => selectedFunctions.has(p));
+    return byQuery && byCurrency && byFunctions;
+  });
+  if (sortKey){
+    list = [...list].sort((a,b) => {
+      const av = a[sortKey], bv = b[sortKey];
+      const res = typeof av === 'string' ? av.localeCompare(bv, 'ru') : av - bv;
+      return sortDir === 'asc' ? res : -res;
+    });
+  }
+  return list;
+}
+
+function setSort(key){
+  if (sortKey === key){ sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+  else { sortKey = key; sortDir = 'asc'; }
+  currentPage = 1;
+  renderList();
+}
+
+function renderSortIcons(){
+  ['name','user_count'].forEach(key => {
+    const th = document.getElementById(key === 'name' ? 'th-name' : 'th-count');
+    th.classList.toggle('active', sortKey === key);
+    const icEl = th.querySelector('.sort-ic');
+    if (sortKey !== key){ icEl.innerHTML = ic.chevDown; return; }
+    icEl.innerHTML = sortDir === 'asc' ? ic.chevUp : ic.chevDown;
+  });
+}
+
+function renderList(){
+  const filtered = getFilteredGroups();
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (currentPage > pageCount) currentPage = pageCount;
+  const pageItems = filtered.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
+
+  document.getElementById('groups-tbody').innerHTML = pageItems.length ? pageItems.map(g => `
+    <tr>
+      <td><a class="cell-link" title="${fakeUuid(g.id)}" onclick="showDetails(${g.id})">${fakeUuidShort(g.id)}</a></td>
+      <td class="cell-main">${g.name}</td>
+      <td>${g.user_count.toLocaleString('ru-RU')}</td>
+      <td>${g.need_check_2fa ? '<span class="pill green">Да</span>' : '<span class="pill gray">Нет</span>'}</td>
+      <td><div class="chips-cell">${chipsFor(g.permitted_currencies, g.currency_settings_enabled ? 'тонкая настройка' : null)}</div></td>
+      <td><div class="chips-cell">${chipsFor(g.permissions.map(p => (SERVICES.find(s=>s.key===p)||{}).label || p), null, 2)}</div></td>
+      <td><div class="row-actions">
+        <button class="icon-btn" title="Редактировать" onclick="openModal(${g.id})">${ic.edit}</button>
+        <button class="icon-btn danger" title="Удалить" onclick="askDeleteGroup(${g.id})">${ic.trash}</button>
+      </div></td>
+    </tr>`).join('') : `
+    <tr>
+      <td colspan="7" class="wrap" style="padding:42px 16px;text-align:center;color:var(--ink-4)">
+        Ничего не найдено. Измените поиск или сбросьте фильтры
+      </td>
+    </tr>`;
+
+  document.getElementById('pg-total').textContent = `Всего: ${filtered.length} из ${groups.length}`;
+  renderPagination(pageCount);
+  renderSortIcons();
+}
+
+function renderPagination(pageCount){
+  const wrap = document.getElementById('pg-pages');
+  let html = `<button class="pg-arrow" ${currentPage<=1?'disabled':''} onclick="goPage(${currentPage-1})">‹</button>`;
+  for (let p = 1; p <= pageCount; p++){
+    html += `<button class="pg-num ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  html += `<button class="pg-arrow" ${currentPage>=pageCount?'disabled':''} onclick="goPage(${currentPage+1})">›</button>`;
+  wrap.innerHTML = html;
+}
+function goPage(p){
+  currentPage = p;
+  renderList();
+}
+function onFilterChange(){ currentPage = 1; renderList(); }
+function resetFilters(){
+  document.getElementById('f-search').value = '';
+  selectedCurrencies.clear();
+  selectedFunctions.clear();
+  document.querySelectorAll('#ms-currency-panel input, #ms-services-panel input').forEach(i => i.checked = false);
+  updateMsCount('currency');
+  updateMsCount('services');
+  currentPage = 1;
+  renderList();
+  toast('Фильтры сброшены');
+}
+function refreshList(){
+  renderList();
+  toast('Список обновлён');
+}
+
+function renderMsPanels(){
+  document.getElementById('ms-currency-panel').innerHTML = CURRENCIES.map(c => `
+    <label class="ms-option"><input type="checkbox" onchange="toggleMsValue('currency','${c}')"> ${c}</label>`).join('');
+  document.getElementById('ms-services-panel').innerHTML = SERVICES.map(s => `
+    <label class="ms-option"><input type="checkbox" onchange="toggleMsValue('services','${s.key}')"> ${s.label}</label>`).join('');
+}
+function toggleMs(name){
+  const el = document.getElementById('ms-'+name);
+  const wasOpen = el.classList.contains('open');
+  document.querySelectorAll('.ms.open').forEach(x => x.classList.remove('open'));
+  if (!wasOpen) el.classList.add('open');
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.ms')) document.querySelectorAll('.ms.open').forEach(x => x.classList.remove('open'));
+});
+function toggleMsValue(name, value){
+  const set = name === 'currency' ? selectedCurrencies : selectedFunctions;
+  if (set.has(value)) set.delete(value); else set.add(value);
+  updateMsCount(name);
+  onFilterChange();
+}
+function updateMsCount(name){
+  const set = name === 'currency' ? selectedCurrencies : selectedFunctions;
+  const el = document.getElementById('ms-'+name+'-count');
+  el.textContent = set.size || '';
+  el.classList.toggle('hidden', !set.size);
+}
+function chipsFor(list, extraNote, max = 3){
+  const shown = list.slice(0, max);
+  let html = shown.map(x => `<span class="tag">${x}</span>`).join('');
+  if (list.length > max) html += `<span class="tag more">+${list.length-max}</span>`;
+  if (extraNote) html += `<span class="tag more">${extraNote}</span>`;
+  return html || '<span class="tag more">—</span>';
+}
+/* ---------- Универсальная модалка подтверждения ---------- */
+let confirmCallback = null;
+function openConfirm({title, body, actionLabel = 'Подтвердить', danger = false, disabled = false, onConfirm}){
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').innerHTML = body;
+  const btn = document.getElementById('confirm-action-btn');
+  btn.textContent = actionLabel;
+  btn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+  btn.disabled = disabled;
+  confirmCallback = onConfirm;
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+}
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.add('hidden');
+  confirmCallback = null;
+}
+function runConfirm(){
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+}
+
+function askDeleteGroup(id){
+  const g = findGroup(id);
+  if (!g) return;
+  const blocked = g.user_count > 0;
+  openConfirm({
+    title: 'Удалить группу',
+    body: blocked
+      ? `Нельзя удалить группу «${g.name}» — в ней ${g.user_count.toLocaleString('ru-RU')} участник(ов). Сначала перенесите их в другую группу.`
+      : `Удалить группу «${g.name}»? Это действие необратимо.`,
+    actionLabel: 'Удалить группу',
+    danger: true,
+    disabled: blocked,
+    onConfirm: () => doDeleteGroup(id),
+  });
+}
+function doDeleteGroup(id){
+  const g = findGroup(id);
+  if (!g || g.user_count > 0) return;
+  groups = groups.filter(x => x.id !== id);
+  toast(`Группа «${g.name}» удалена`);
+  if (currentGroupId === id) showList(); else renderList();
+}
+function showList(){
+  document.getElementById('view-details').classList.add('hidden');
+  document.getElementById('view-list').classList.remove('hidden');
+  renderList();
+}
+function showDetails(id){
+  currentGroupId = Number(id);
+  const g = findGroup(currentGroupId);
+  if (!g) return;
+  document.getElementById('view-list').classList.add('hidden');
+  document.getElementById('view-details').classList.remove('hidden');
+  document.getElementById('details-title').textContent = `Группа — ${g.name}`;
+  renderDetailsInfo(g);
+  switchTab(currentTab);
+}
+function renderDetailsInfo(g){
+  document.getElementById('details-info-grid').innerHTML = `
+    <div class="info-field"><label>Название группы</label><div class="info-value">${g.name}</div></div>
+    <div class="info-field"><label>ID</label><div class="info-value mono" title="${fakeUuid(g.id)}">${fakeUuidShort(g.id)}</div></div>
+    <div class="info-field"><label>Участников</label><div class="info-value">${g.user_count.toLocaleString('ru-RU')}</div></div>
+    <div class="info-field"><label>Требуется 2FA</label><div class="info-value">${g.need_check_2fa ? 'Да' : 'Нет'}</div></div>
+    <div class="info-field"><label>Тонкая настройка валют</label><div class="info-value">${g.currency_settings_enabled ? 'Включена' : 'Выключена'}</div></div>
+    <div class="info-field"><label>Разрешённые валюты</label><div class="info-value"><div class="chips-cell">${chipsFor(g.permitted_currencies)}</div></div></div>
+    <div class="info-field"><label>Доступные функции клиента</label><div class="info-value"><div class="chips-cell">${chipsFor(g.permissions.map(p => (SERVICES.find(s=>s.key===p)||{}).label || p), null, 2)}</div></div></div>
+  `;
+}
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+  if (tab === 'users') renderMembers();
+  if (tab === 'fees') renderFees();
+  if (tab === 'swift') renderSwift();
+  if (tab === 'currencies') renderCurrenciesTab();
+}
+function renderMembers(){
+  const g = findGroup(currentGroupId);
+  const memberIds = g.member_ids || (g.member_ids = []);
+  let members = memberIds.map(id => USERS_POOL.find(u => u.id === id)).filter(Boolean);
+
+  const query = (document.getElementById('f-members-search')?.value || '').trim().toLowerCase();
+  if (query){
+    members = members.filter(u =>
+      fakeUuidShort(u.id).toLowerCase().includes(query) ||
+      String(u.id).includes(query) ||
+      u.name.toLowerCase().includes(query) ||
+      u.email.toLowerCase().includes(query)
+    );
+  }
+
+  document.getElementById('members-tbody').innerHTML = members.length ? members.map(u => `
+    <tr>
+      <td class="cell-link" title="${fakeUuid(u.id)}">${fakeUuidShort(u.id)}</td>
+      <td class="cell-main">${u.name}</td>
+      <td>${u.email}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn danger" title="Убрать из группы" onclick="askRemoveMember(${u.id})">${ic.trash}</button>
+      </div></td>
+    </tr>`).join('') : `
+    <tr><td colspan="4" class="wrap" style="padding:24px 16px;text-align:center;color:var(--text-soft-400)">${query ? 'Ничего не найдено' : 'В группе пока нет участников (демо-список)'}</td></tr>`;
+}
+
+let addMemberSelected = new Set();
+function openAddMember(){
+  addMemberSelected = new Set();
+  document.getElementById('add-member-search').value = '';
+  renderAddMemberList();
+  document.getElementById('add-member-overlay').classList.remove('hidden');
+}
+function closeAddMember(){
+  document.getElementById('add-member-overlay').classList.add('hidden');
+}
+function renderAddMemberList(){
+  const g = findGroup(currentGroupId);
+  const memberIds = g.member_ids || (g.member_ids = []);
+  const query = (document.getElementById('add-member-search').value || '').trim().toLowerCase();
+  let available = USERS_POOL.filter(u => !memberIds.includes(u.id));
+  if (query){
+    available = available.filter(u =>
+      String(u.id).includes(query) ||
+      fakeUuidShort(u.id).toLowerCase().includes(query) ||
+      u.name.toLowerCase().includes(query) ||
+      u.email.toLowerCase().includes(query)
+    );
+  }
+  document.getElementById('add-member-list').innerHTML = available.length ? available.map(u => `
+    <label class="check-list-item">
+      <input type="checkbox" ${addMemberSelected.has(u.id) ? 'checked' : ''} onchange="toggleAddMemberSelect(${u.id}, this.checked)">
+      <div class="cli-text"><span class="cli-name">${u.name}</span><span class="cli-email">${u.email} · ${fakeUuidShort(u.id)}</span></div>
+    </label>`).join('') : `<div class="check-list-empty">${query ? 'Ничего не найдено' : 'Все доступные пользователи уже добавлены'}</div>`;
+  updateAddMemberCount();
+}
+function toggleAddMemberSelect(id, checked){
+  if (checked) addMemberSelected.add(id); else addMemberSelected.delete(id);
+  updateAddMemberCount();
+}
+function updateAddMemberCount(){
+  document.getElementById('add-member-count').textContent = addMemberSelected.size ? `(${addMemberSelected.size})` : '';
+}
+function confirmAddMember(){
+  if (!addMemberSelected.size) return;
+  const g = findGroup(currentGroupId);
+  const names = [];
+  addMemberSelected.forEach(id => {
+    (g.member_ids ||= []).push(id);
+    names.push(USERS_POOL.find(u => u.id === id).name);
+    g.user_count += 1;
+  });
+  closeAddMember();
+  renderMembers();
+  renderDetailsInfo(g);
+  toast(names.length === 1 ? `«${names[0]}» добавлен в группу «${g.name}»` : `Добавлено участников: ${names.length}`);
+}
+
+function askRemoveMember(id){
+  const g = findGroup(currentGroupId);
+  const u = USERS_POOL.find(x => x.id === id);
+  openConfirm({
+    title: 'Убрать участника',
+    body: `Убрать «${u.name}» (${u.email}) из группы «${g.name}»?`,
+    actionLabel: 'Убрать участника',
+    danger: true,
+    onConfirm: () => doRemoveMember(id),
+  });
+}
+function doRemoveMember(id){
+  const g = findGroup(currentGroupId);
+  const u = USERS_POOL.find(x => x.id === id);
+  g.member_ids = (g.member_ids || []).filter(x => x !== id);
+  g.user_count = Math.max(0, g.user_count - 1);
+  renderMembers();
+  renderDetailsInfo(g);
+  toast(`«${u.name}» убран из группы «${g.name}»`);
+}
+function cssSafe(s){ return s.replace(/[^a-zA-Z0-9]/g,'_'); }
+function renderFees(){
+  const g = findGroup(currentGroupId);
+  document.getElementById('fees-tbody').innerHTML = MARKETS.map(m => {
+    const fee = g.market_fees[m] || {limit_fee:'',market_fee:'',expired_at:''};
+    const safe = cssSafe(m);
+    return `<tr>
+      <td class="cell-main mono">${m}</td>
+      <td><input class="fee-input" value="${fee.limit_fee}" placeholder="—" id="fee-limit-${safe}" data-orig="${fee.limit_fee}" oninput="updateFeeDirty('${m}')"></td>
+      <td><input class="fee-input" value="${fee.market_fee}" placeholder="—" id="fee-market-${safe}" data-orig="${fee.market_fee}" oninput="updateFeeDirty('${m}')"></td>
+      <td><input class="fee-input" type="date" style="width:140px" value="${fee.expired_at}" id="fee-exp-${safe}" data-orig="${fee.expired_at}" oninput="updateFeeDirty('${m}')"></td>
+      <td><div class="row-actions">
+        <button class="btn btn-outline btn-sm" id="fee-save-${safe}" disabled onclick="askSaveFee('${m}')">Сохранить</button>
+        <button class="btn btn-outline btn-sm" onclick="askResetFee('${m}')">Сбросить</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+function updateFeeDirty(market){
+  const safe = cssSafe(market);
+  const inputs = ['limit','market','exp'].map(k => document.getElementById(`fee-${k}-${safe}`));
+  const dirty = inputs.some(i => i.value !== i.dataset.orig);
+  document.getElementById(`fee-save-${safe}`).disabled = !dirty;
+}
+function askSaveFee(market){
+  openConfirm({
+    title: 'Сохранить комиссию',
+    body: `Сохранить комиссию по рынку «${market}» для группы «${findGroup(currentGroupId).name}»?`,
+    actionLabel: 'Сохранить',
+    onConfirm: () => doSaveFee(market),
+  });
+}
+function doSaveFee(market){
+  const g = findGroup(currentGroupId);
+  const safe = cssSafe(market);
+  g.market_fees[market] = {
+    limit_fee: document.getElementById(`fee-limit-${safe}`).value,
+    market_fee: document.getElementById(`fee-market-${safe}`).value,
+    expired_at: document.getElementById(`fee-exp-${safe}`).value,
+  };
+  renderFees();
+  toast(`Комиссия по ${market} сохранена`);
+}
+function askResetFee(market){
+  openConfirm({
+    title: 'Сбросить комиссию',
+    body: `Сбросить комиссию по рынку «${market}» до общей ставки рынка?`,
+    actionLabel: 'Сбросить',
+    danger: true,
+    onConfirm: () => doResetFee(market),
+  });
+}
+function doResetFee(market){
+  const g = findGroup(currentGroupId);
+  delete g.market_fees[market];
+  renderFees();
+  toast(`Комиссия по ${market} сброшена до общей ставки рынка`);
+}
+function renderSwift(){
+  const g = findGroup(currentGroupId);
+  g.swift_fees ||= {};
+  document.getElementById('swift-tbody').innerHTML = g.permitted_currencies.map(c => {
+    const fee = g.swift_fees[c] || {t1:'',t2:'',t3:'',t4:''};
+    const safe = cssSafe(c);
+    return `<tr>
+      <td class="cell-main mono">${c}</td>
+      <td><input class="fee-input" style="width:68px" placeholder="0.3%" value="${fee.t1}" data-orig="${fee.t1}" id="swift-t1-${safe}" oninput="updateSwiftDirty('${c}')"></td>
+      <td><input class="fee-input" style="width:68px" placeholder="0.2%" value="${fee.t2}" data-orig="${fee.t2}" id="swift-t2-${safe}" oninput="updateSwiftDirty('${c}')"></td>
+      <td><input class="fee-input" style="width:68px" placeholder="0.15%" value="${fee.t3}" data-orig="${fee.t3}" id="swift-t3-${safe}" oninput="updateSwiftDirty('${c}')"></td>
+      <td><input class="fee-input" style="width:68px" placeholder="0.1%" value="${fee.t4}" data-orig="${fee.t4}" id="swift-t4-${safe}" oninput="updateSwiftDirty('${c}')"></td>
+      <td><div class="row-actions">
+        <button class="btn btn-outline btn-sm" id="swift-save-${safe}" disabled onclick="askSaveSwift('${c}')">Сохранить</button>
+        <button class="btn btn-outline btn-sm" onclick="askResetSwift('${c}')">Сбросить</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+function updateSwiftDirty(currency){
+  const safe = cssSafe(currency);
+  const inputs = ['t1','t2','t3','t4'].map(k => document.getElementById(`swift-${k}-${safe}`));
+  const dirty = inputs.some(i => i.value !== i.dataset.orig);
+  document.getElementById(`swift-save-${safe}`).disabled = !dirty;
+}
+function askSaveSwift(currency){
+  openConfirm({
+    title: 'Сохранить комиссию SWIFT',
+    body: `Сохранить комиссию SWIFT для валюты «${currency}» в группе «${findGroup(currentGroupId).name}»?`,
+    actionLabel: 'Сохранить',
+    onConfirm: () => doSaveSwift(currency),
+  });
+}
+function doSaveSwift(currency){
+  const g = findGroup(currentGroupId);
+  const safe = cssSafe(currency);
+  g.swift_fees[currency] = {
+    t1: document.getElementById(`swift-t1-${safe}`).value,
+    t2: document.getElementById(`swift-t2-${safe}`).value,
+    t3: document.getElementById(`swift-t3-${safe}`).value,
+    t4: document.getElementById(`swift-t4-${safe}`).value,
+  };
+  renderSwift();
+  toast(`Комиссия SWIFT для ${currency} сохранена`);
+}
+function askResetSwift(currency){
+  openConfirm({
+    title: 'Сбросить комиссию SWIFT',
+    body: `Сбросить комиссию SWIFT для валюты «${currency}»?`,
+    actionLabel: 'Сбросить',
+    danger: true,
+    onConfirm: () => doResetSwift(currency),
+  });
+}
+function doResetSwift(currency){
+  const g = findGroup(currentGroupId);
+  delete g.swift_fees[currency];
+  renderSwift();
+  toast(`Комиссия SWIFT для ${currency} сброшена`);
+}
+function renderCurrenciesTab(){
+  const g = findGroup(currentGroupId);
+  document.getElementById('currencies-disabled-note').classList.toggle('hidden', g.currency_settings_enabled);
+  const grid = document.getElementById('currencies-grid');
+  if (!g.currency_settings_enabled){ grid.innerHTML = ''; return; }
+  const rows = [['is_deposit_enabled','Депозит'],['is_withdrawal_enabled','Вывод'],['is_lending_enabled','Лендинг'],['is_borrowing_enabled','Займы'],['is_investing_available','Инвестиции'],['is_transfer_enabled','Переводы']];
+  grid.innerHTML = g.permitted_currencies.map(c => `
+    <div class="currency-card">
+      <div class="cc-sym">${c}</div>
+      <div class="cc-rows">${rows.map(([key,label]) => `
+        <div class="cc-row"><span>${label}</span>
+          <label class="switch"><input type="checkbox" checked onchange="toast('${c}: «${label}» сохранено (демо)')"><span class="track"></span></label>
+        </div>`).join('')}</div>
+    </div>`).join('');
+}
+function openModal(id){
+  editingGroupId = id;
+  const g = id ? findGroup(id) : null;
+  document.getElementById('modal-title').textContent = g ? `Редактировать группу «${g.name}»` : 'Новая группа';
+  document.getElementById('m-save-btn').textContent = g ? 'Сохранить изменения' : 'Создать группу';
+  document.getElementById('m-name').value = g ? g.name : '';
+  document.getElementById('m-2fa').checked = g ? g.need_check_2fa : false;
+  document.getElementById('m-currency-settings').checked = g ? g.currency_settings_enabled : false;
+  document.getElementById('m-currencies').innerHTML = CURRENCIES.map(c => {
+    const checked = g ? g.permitted_currencies.includes(c) : false;
+    return `<label class="check-item ${checked?'checked':''}" data-currency="${c}"><input type="checkbox" ${checked?'checked':''} onchange="toggleCheckItem(this)"> ${c}</label>`;
+  }).join('');
+  document.getElementById('m-services').innerHTML = SERVICES.map(s => {
+    const checked = g ? g.permissions.includes(s.key) : false;
+    return `<label class="check-item ${checked?'checked':''}" data-service="${s.key}"><input type="checkbox" ${checked?'checked':''} onchange="toggleCheckItem(this)"> ${s.label}</label>`;
+  }).join('');
+  onToggleCurrencySettings();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function toggleCheckItem(input){ input.closest('.check-item').classList.toggle('checked', input.checked); }
+function onToggleCurrencySettings(){
+  const disabled = document.getElementById('m-currency-settings').checked;
+  document.querySelectorAll('#m-currencies input').forEach(i => i.disabled = disabled);
+  document.querySelectorAll('#m-currencies .check-item').forEach(el => el.classList.toggle('disabled', disabled));
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.add('hidden'); }
+function saveModal(){
+  const name = document.getElementById('m-name').value.trim();
+  if (!name){ toast('Укажите название группы'); return; }
+  const need_check_2fa = document.getElementById('m-2fa').checked;
+  const currency_settings_enabled = document.getElementById('m-currency-settings').checked;
+  const permitted_currencies = [...document.querySelectorAll('#m-currencies input:checked')].map(i => i.closest('.check-item').dataset.currency);
+  const permissions = [...document.querySelectorAll('#m-services input:checked')].map(i => i.closest('.check-item').dataset.service);
+  if (editingGroupId){
+    Object.assign(findGroup(editingGroupId), { name, need_check_2fa, currency_settings_enabled, permitted_currencies, permissions });
+    toast(`Группа «${name}» обновлена`);
+  } else {
+    groups.push({ id: nextGroupId++, name, user_count:0, need_check_2fa, currency_settings_enabled, permitted_currencies, permissions, market_fees:{} });
+    toast(`Группа «${name}» создана`);
+  }
+  closeModal();
+  if (!document.getElementById('view-list').classList.contains('hidden')) renderList();
+  if (currentGroupId === editingGroupId) showDetails(currentGroupId);
+}
+renderSidebar();
+renderTopbar();
+renderMsPanels();
+renderList();
+</script>
+</body>
+</html>

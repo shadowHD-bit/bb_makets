@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Back office · Клиент · Группы</title>
+<style>
+  :root{
+    --primary-base:#7246E6;--primary-hover:#7d55ed;--primary-alpha-10:#f4f0fe;--primary-alpha-16:#ece5ff;
+    --static-white:#fff;--bg-weak-50:#f7f7f7;--bg-soft-200:#f2f2f3;
+    --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;--text-white-0:#fff;
+    --stroke-soft-200:#ebebeb;--divider:#ebebeb;
+    --success-base:#1fc16b;--success-lighter:#e3f7ec;
+    --warning-base:#fa7319;--warning-lighter:#fff3eb;
+    --error-base:#fb3748;--error-lighter:#ffebec;
+    --radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--sidebar-w:280px;
+    --shadow-small:0 1px 2px rgba(14,18,27,.05),0 6px 10px rgba(14,18,27,.06);
+    --shadow-x-small:0 1px 2px 0 rgba(10,13,20,.03);
+    --yellow-200:#ffecc0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg-weak-50);color:var(--text-strong-950);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  input,select{font-family:inherit}
+  .hidden{display:none !important}
+  .mono{font-variant-numeric:tabular-nums}
+
+  .shell{display:flex;min-height:100vh;background:var(--bg-weak-50)}
+
+  /* ================= SIDEBAR — как в прототипе «Группы», без изменений ================= */
+  .sidebar{
+    width:var(--sidebar-w);flex:none;background:var(--static-white);border-right:1px solid var(--stroke-soft-200);
+    display:flex;flex-direction:column;padding:12px;position:sticky;top:0;height:100vh;overflow-y:auto;
+    user-select:none;
+  }
+  .sb-brand-row{display:flex;align-items:center;width:100%;margin-bottom:32px;padding:0 8px;gap:12px}
+  .sb-brand-avatar{width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,var(--primary-base),#9B7BF0);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+  .sb-brand-name{font-size:14px;font-weight:500;color:var(--text-strong-950);line-height:1.2;text-transform:capitalize}
+  .sb-brand-sub{font-size:12px;color:var(--text-soft-400);font-weight:400}
+
+  .sb-label{display:flex;align-items:center;gap:6px;margin:0 0 16px;padding:4px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft-400)}
+  .sb-label:first-of-type{margin-top:0}
+
+  .sb-item{
+    display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-10);
+    font-size:14px;font-weight:400;line-height:20px;color:var(--text-sub-600);margin-bottom:2px;
+  }
+  .sb-item .ic{width:18px;height:18px;flex:none;color:currentColor}
+  .sb-item.active{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .sb-item.active .ic{color:currentColor}
+  .sb-item.parent{cursor:default}
+  .sb-label-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  .sb-chev{flex:none;width:10px;height:10px;color:var(--text-soft-400);display:inline-flex;transform:rotate(-90deg);transition:transform .15s}
+  .sb-chev svg{width:10px;height:10px}
+  .sb-chev.open{transform:rotate(0deg)}
+
+  .sb-tree{padding-left:0;margin:2px 0 4px;display:flex;flex-direction:column;gap:2px}
+  .sb-child{
+    position:relative;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-radius:var(--radius-8);border-left:2px solid transparent;
+    font-size:13px;font-weight:400;line-height:20px;color:var(--text-sub-600);margin-bottom:0;
+  }
+  .sb-child .ic{width:16px;height:16px;flex:none;color:currentColor}
+  .sb-child.active{background:var(--bg-weak-50);color:var(--primary-base);font-weight:500;border-left-color:var(--primary-base)}
+  .sb-child.active .ic{color:currentColor}
+  .sb-child.injected{background:var(--bg-weak-50);color:var(--text-strong-950)}
+
+  /* ================= MAIN ================= */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-weak-50)}
+
+  .topbar{
+    height:72px;flex:none;background:var(--static-white);border-bottom:1px solid var(--divider);
+    display:flex;align-items:center;gap:12px;padding:0 24px;position:sticky;top:0;z-index:20;
+  }
+  .tb-spacer{flex:1}
+  .tb-lang{height:36px;display:flex;align-items:center;gap:6px;padding:0 8px 0 12px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft-200);font-size:14px;font-weight:500;color:var(--text-sub-600);cursor:default;background:var(--static-white);box-shadow:var(--shadow-x-small)}
+  .tb-lang .flag{width:20px;height:20px;flex:none;border-radius:50%;overflow:hidden;display:block}
+  .tb-lang svg.ic{width:13px;height:13px;color:var(--text-sub-600);flex:none}
+  .tb-divider{width:1px;height:28px;background:var(--divider)}
+  .tb-user{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:var(--radius-10);cursor:default}
+  .tb-avatar{position:relative;width:36px;height:36px;border-radius:50%;background:var(--yellow-200);color:var(--text-strong-950);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+  .tb-avatar .dot{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:var(--success-base);border:2px solid var(--static-white)}
+  .tb-user-text{display:flex;flex-direction:column;min-width:0}
+  .tb-user-name{font-size:13px;font-weight:500;color:var(--text-strong-950);line-height:1.3;display:flex;align-items:center;gap:4px}
+  .tb-user-name svg{width:14px;height:14px;color:var(--primary-base);flex:none}
+  .tb-user-email{font-size:12px;color:var(--text-soft-400);font-weight:400;line-height:1.3}
+  .tb-user-chev{display:inline-flex;width:13px;height:13px;color:var(--text-soft-400);flex:none}
+  .tb-user-chev svg{width:13px;height:13px}
+
+  .content{padding:16px;min-width:1024px;width:100%;margin:0}
+
+  .btn{
+    min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:500;
+    padding:8px 12px;border-radius:10px;border:1px solid transparent;transition:.12s;white-space:nowrap;
+  }
+  .btn-primary{background:var(--primary-base);color:var(--text-white-0)}
+  .btn-primary:hover{background:var(--primary-hover);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+  .btn-outline{background:var(--static-white);color:var(--text-sub-600);border-color:var(--stroke-soft-200)}
+  .btn-outline:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .btn-danger-solid{background:var(--error-base);color:#fff}
+  .btn-danger-solid:hover{background:#e12138}
+  .btn-danger{background:var(--error-lighter);color:var(--error-base)}
+  .btn-danger:hover{background:#ffe0e0}
+  .btn-sm{min-height:32px;padding:5px 10px;font-size:13px;border-radius:8px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .overlay{position:fixed;inset:0;background:rgba(19,19,19,.42);display:flex;align-items:flex-start;justify-content:center;padding:52px 20px;z-index:100;overflow-y:auto}
+  .modal{background:var(--static-white);border-radius:16px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(19,19,19,.24)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--stroke-soft-200)}
+  .modal-head h3{font-size:18px;font-weight:500;line-height:28px}
+  .modal-close{background:none;border:none;font-size:16px;color:var(--text-soft-400);line-height:1;padding:4px}
+  .modal-close:hover{color:var(--text-strong-950)}
+  .modal-body{padding:20px 22px}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--stroke-soft-200)}
+  .toolbar-row{display:flex;justify-content:flex-end;margin:0 0 12px}
+
+  .search-field{position:relative}
+  .search-field .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-soft-400)}
+  .search-field input[type=text]{
+    height:40px;width:100%;padding:8px 12px 8px 36px;border:1px solid var(--stroke-soft-200);border-radius:10px;font-size:14px;background:var(--static-white);color:var(--text-strong-950);
+  }
+  .search-field input:focus{outline:none;border-color:var(--primary-base);box-shadow:0 0 0 4px var(--primary-alpha-10)}
+
+  .alert-box{border:1px solid var(--error-lighter);background:var(--error-lighter);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--error-base);line-height:1.5}
+  .alert-box b{color:var(--text-strong-950)}
+
+  .pick-list{display:flex;flex-direction:column;gap:2px;max-height:260px;overflow-y:auto;margin-top:12px}
+  .pick-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+  .pick-item:hover{background:var(--bg-weak-50)}
+  .pick-item.selected{background:var(--primary-alpha-10);border-color:var(--primary-base)}
+  .pick-item .pi-name{font-size:13px;font-weight:500;color:var(--text-strong-950)}
+  .pick-item svg.ic{width:16px;height:16px;color:var(--primary-base);flex:none;visibility:hidden}
+  .pick-item.selected svg.ic{visibility:visible}
+  .pick-list-empty{padding:20px 8px;text-align:center;color:var(--text-soft-400);font-size:13px}
+
+  .card{background:var(--static-white);border:1px solid var(--stroke-soft-200);border-radius:10px;overflow:hidden;margin:0 0 16px;box-shadow:var(--shadow-small)}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;table-layout:fixed}
+  thead th{height:40px;background:var(--bg-weak-50);border-bottom:1px solid var(--stroke-soft-200);text-align:left;font-weight:500;color:var(--text-soft-400);padding:0 12px;font-size:13px}
+  thead th:first-child{border-top-left-radius:10px}
+  thead th:last-child{border-top-right-radius:10px}
+  tbody td{height:52px;padding:10px 12px;border-top:1px solid var(--stroke-soft-200);color:var(--text-sub-600);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  tbody td.wrap{white-space:normal}
+  tbody tr:first-child td{border-top:none}
+  tbody tr:hover{background:var(--bg-weak-50)}
+  .cell-main{font-weight:400;color:var(--text-strong-950)}
+  .cell-link{color:var(--primary-base);font-weight:700;text-decoration:none;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px}
+  .cell-link:hover{text-decoration:underline}
+  .row-actions{display:flex;gap:4px}
+  .icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:none;border:none;color:var(--text-soft-400)}
+  .icon-btn:hover{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .icon-btn.danger:hover{background:var(--error-lighter);color:var(--error-base)}
+  .icon-btn svg{width:16px;height:16px}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:999px;white-space:nowrap;letter-spacing:0}
+  .pill.green{background:var(--success-lighter);color:var(--success-base)}
+  .pill.gray{background:var(--bg-weak-50);color:var(--text-soft-400)}
+
+  .chips-cell{display:flex;flex-wrap:nowrap;gap:4px;max-width:220px;overflow:hidden}
+  .chips-cell .tag{flex:none;font-size:12px;font-weight:500;padding:3px 8px;border-radius:999px;background:var(--primary-alpha-10);color:var(--primary-base)}
+  .chips-cell .tag.more{background:var(--bg-weak-50);color:var(--text-soft-400)}
+
+  /* ===================== Шапка клиента — без подложки, прямо на фоне страницы ===================== */
+  .client-top{display:flex;align-items:center;gap:16px;margin:4px 0 0}
+  .back-btn{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);background:var(--static-white);box-shadow:var(--shadow-x-small);color:var(--primary-base)}
+  .back-btn:hover{background:var(--bg-weak-50)}
+  .back-btn svg{width:18px;height:18px}
+  .client-top h1{font-size:26px;font-weight:600;color:var(--text-strong-950);line-height:1.2}
+  .client-top-spacer{flex:1}
+  .client-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px 20px;margin:12px 0 20px 60px;font-size:13px;color:var(--text-soft-400)}
+  .client-meta b{color:var(--text-sub-600);font-weight:500}
+  .client-meta .copy-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:none;border:none;color:var(--text-soft-400);vertical-align:-4px}
+  .client-meta .copy-btn:hover{background:var(--bg-weak-50);color:var(--text-sub-600)}
+  .client-meta .copy-btn svg{width:13px;height:13px}
+
+  /* Вкладки — статичные, некликабельные (как сайдбар в прототипе групп) */
+  .tabs{display:inline-flex;gap:2px;background:var(--bg-soft-200);border-radius:10px;padding:4px;margin:0 0 16px;flex-wrap:wrap}
+  .tab-btn{height:34px;padding:7px 16px;font-size:14px;font-weight:500;color:var(--text-soft-400);background:none;border:none;border-radius:8px;white-space:nowrap;cursor:default}
+  .tab-btn.active{color:var(--primary-base);background:#fff;box-shadow:0 1px 2px rgba(19,19,19,.08);font-weight:500}
+  .tab-btn:disabled{opacity:1}
+
+  .empty-state{background:var(--static-white);border:1px dashed var(--stroke-soft-200);border-radius:10px;padding:32px 24px;text-align:center}
+  .empty-state p{color:var(--text-soft-400);font-size:13px;margin-bottom:12px}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--text-strong-950);color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:200;display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s}
+  .toast.show{opacity:1;transform:none}
+  .toast .d{width:6px;height:6px;border-radius:50%;background:var(--success-base)}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <div class="topbar" id="topbar"></div>
+
+    <div class="content">
+
+      <div class="client-top">
+        <button class="back-btn" onclick="toast('Назад к списку клиентов (демо)')" title="Назад к списку клиентов">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h1>Олег Владимирович Петров</h1>
+        <span class="pill green"><span class="d" style="width:5px;height:5px;border-radius:50%;background:currentColor"></span>Активен</span>
+        <div class="client-top-spacer"></div>
+        <button class="btn btn-danger-solid" onclick="toast('Клиент заблокирован (демо)')">Заблокировать</button>
+      </div>
+      <div class="client-meta">
+        <span><b>ID:</b> bf9aae2a-9de9-41d4-83c3-008dc9b75cb8
+          <button class="copy-btn" title="Скопировать ID" onclick="copyClientId()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+          </button>
+        </span>
+        <span><b>Дата:</b> 12/08/26, 14:43</span>
+        <span><b>Обновлено в:</b> 12/08/26, 14:43</span>
+      </div>
+
+      <!-- ===== Вкладки — статичные, некликабельные (только «Группы» реально показывает контент) ===== -->
+      <div class="tabs">
+        <button class="tab-btn" disabled>KYC</button>
+        <button class="tab-btn" disabled>Тарифы</button>
+        <button class="tab-btn" disabled>KYT</button>
+        <button class="tab-btn" disabled>Счета</button>
+        <button class="tab-btn" disabled>История операций</button>
+        <button class="tab-btn" disabled>Журнал событий</button>
+        <button class="tab-btn active" disabled>Группы</button>
+        <button class="tab-btn" disabled>Адреса Кошельков</button>
+        <button class="tab-btn" disabled>ОТС-сделки</button>
+      </div>
+
+      <div id="panel-groups"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADD TO GROUP MODAL ===================== -->
+<div class="overlay hidden" id="add-to-group-overlay" onclick="if(event.target===this) closeAddToGroupModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Добавить в группу</h3>
+      <button class="modal-close" onclick="closeAddToGroupModal()">✕</button>
+    </div>
+    <div class="modal-body" id="add-to-group-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeAddToGroupModal()">Отмена</button>
+      <button class="btn btn-primary" id="add-to-group-confirm-btn" onclick="confirmAddToGroup()" disabled>Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GENERIC CONFIRM MODAL ===================== -->
+<div class="overlay hidden" id="confirm-overlay" onclick="if(event.target===this) closeConfirm()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="confirm-title">Подтверждение</h3>
+      <button class="modal-close" onclick="closeConfirm()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="confirm-body" style="font-size:14px;color:var(--text-sub-600);line-height:1.5"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeConfirm()">Отмена</button>
+      <button class="btn btn-primary" id="confirm-action-btn" onclick="runConfirm()">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="d"></span><span id="toast-text"></span></div>
+
+<script>
+function svg(inner){ return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`; }
+const ic = {
+  process:  svg('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+  clients:  svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><circle cx="18" cy="9" r="2.3"/><path d="M16.5 21v-1a5 5 0 0 0-1-3"/>'),
+  chart:    svg('<path d="M4 20V10"/><path d="M11 20V4"/><path d="M18 20v-7"/>'),
+  calendar: svg('<rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M3.5 10h17"/>'),
+  gear:     svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  chevDown: svg('<path d="M6 9l6 6 6-6"/>'),
+  edit:     svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  trash:    svg('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>'),
+  eye:      svg('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>'),
+  badge:    svg('<circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M8 12.3l2.5 2.5L16 9" stroke="#fff" stroke-width="2.4"/>'),
+  roles:    svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M16 3.2a3 3 0 0 1 0 5.6"/><path d="M22 21v-1a5 5 0 0 0-3.5-4.8"/>'),
+  check:    svg('<path d="M12 2l7 3.5v5.3c0 4.6-3 8.9-7 10.2-4-1.3-7-5.6-7-10.2V5.5z"/><path d="M9 12l2 2 4-4.5"/>'),
+  percent:  svg('<circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="17" r="2.3"/><path d="M18 6L6 18"/>'),
+  partners: svg('<path d="M8.5 14l2 2 5-5"/><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/>'),
+  wallet:   svg('<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M16 12h3"/><path d="M3 10h18"/>'),
+  coin:     svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 15.2c.5.7 1.4 1.1 2.5 1.1 1.7 0 3-1 3-2.3 0-3-5.5-1.5-5.5-4.5 0-1.3 1.3-2.3 3-2.3 1.1 0 2 .4 2.5 1.1"/><path d="M12 7v10"/>'),
+  building: svg('<rect x="4" y="3" width="10" height="18"/><rect x="14" y="9" width="6" height="12"/><path d="M7 7h1M11 7h1M7 11h1M11 11h1M7 15h1M11 15h1"/>'),
+  grid:     svg('<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>'),
+  shieldCheck: svg('<path d="M12 2l7 3.5v5.3c0 4.6-3 8.9-7 10.2-4-1.3-7-5.6-7-10.2V5.5z"/><path d="M9.3 12l1.7 1.7 3.7-3.9"/>'),
+  search:   svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/>'),
+  doc:      svg('<path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h8"/>'),
+  groupIcon: svg('<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M14 15h2a5 5 0 0 1 5 5v1"/>'),
+};
+const flagRU = `<svg viewBox="0 0 24 24" width="100%" height="100%"><rect width="24" height="8" y="0" fill="#fff"/><rect width="24" height="8" y="8" fill="#0039a6"/><rect width="24" height="8" y="16" fill="#d52b1e"/></svg>`;
+
+function renderSidebar(){
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sb-brand-row">
+      <div class="sb-brand-avatar">BI</div>
+      <div>
+        <div class="sb-brand-name">Bitbanker</div>
+        <div class="sb-brand-sub">Админ-панель</div>
+      </div>
+    </div>
+
+    <div class="sb-label">Рабочее место</div>
+    <div class="sb-item">${ic.process}<span class="sb-label-text">Процессы</span><span class="sb-chev">${ic.chevDown}</span></div>
+    <div class="sb-item">${ic.clients}<span class="sb-label-text">Клиенты</span><span class="sb-chev">${ic.chevDown}</span></div>
+    <div class="sb-item">${ic.chart}<span class="sb-label-text">Аналитика</span><span class="sb-chev">${ic.chevDown}</span></div>
+    <div class="sb-item">${ic.calendar}<span class="sb-label-text">Операционный день</span></div>
+
+    <div class="sb-label">Управление платформой</div>
+    <div class="sb-item parent">${ic.gear}<span class="sb-label-text">Настройки</span><span class="sb-chev open">${ic.chevDown}</span></div>
+    <div class="sb-tree">
+      <div class="sb-child">${ic.roles} Роли и права</div>
+      <div class="sb-child">${ic.check} Правила верификации</div>
+      <div class="sb-child">${ic.percent} Тарифы и комиссии</div>
+      <div class="sb-child">${ic.partners} Партнёры наличных операций</div>
+      <div class="sb-child">${ic.wallet} Виртуальные счета (vABS)</div>
+      <div class="sb-child">${ic.coin} Валюты</div>
+      <div class="sb-child active injected">${ic.groupIcon} Группы</div>
+      <div class="sb-child">${ic.building} Номинальные компании</div>
+      <div class="sb-child">${ic.grid} Настройки СБП</div>
+      <div class="sb-child">${ic.shieldCheck} Настройки AML</div>
+      <div class="sb-child">${ic.search} Настройки KYT</div>
+      <div class="sb-child">${ic.doc} Реквизиты</div>
+    </div>
+  `;
+}
+
+function renderTopbar(){
+  document.getElementById('topbar').innerHTML = `
+    <div class="tb-spacer"></div>
+    <div class="tb-lang"><span class="flag">${flagRU}</span><span>Русский</span>${ic.chevDown}</div>
+    <div class="tb-divider"></div>
+    <div class="tb-user">
+      <div class="tb-avatar">SA<span class="dot"></span></div>
+      <div class="tb-user-text">
+        <span class="tb-user-name">Super Admin ${ic.badge}</span>
+        <span class="tb-user-email">super-admin@admin.com</span>
+      </div>
+      <span class="tb-user-chev">${ic.chevDown}</span>
+    </div>
+  `;
+}
+
+function toast(text){
+  const el = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  el.classList.add('show');
+  clearTimeout(window.__t);
+  window.__t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+function copyClientId(){
+  toast('ID скопирован в буфер обмена');
+}
+
+/* ---------- Вкладка «Группы» у клиента: одна строка — группа, в которой он состоит ---------- */
+const SERVICES = [
+  { key:'is_lending_enabled', label:'Лендинг' },
+  { key:'is_investing_available', label:'Инвестиции' },
+  { key:'is_transfer_enabled', label:'Переводы' },
+];
+let clientGroup = {
+  id: 1,
+  name: 'VIP',
+  need_check_2fa: true,
+  permitted_currencies: ['BTC','ETH','USDT','USDC'],
+  permissions: ['is_lending_enabled','is_investing_available','is_transfer_enabled'],
+};
+
+/* ---------- Универсальная модалка подтверждения ---------- */
+let confirmCallback = null;
+function openConfirm({title, body, actionLabel = 'Подтвердить', danger = false, disabled = false, onConfirm}){
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').innerHTML = body;
+  const btn = document.getElementById('confirm-action-btn');
+  btn.textContent = actionLabel;
+  btn.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+  btn.disabled = disabled;
+  confirmCallback = onConfirm;
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+}
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.add('hidden');
+  confirmCallback = null;
+}
+function runConfirm(){
+  if (confirmCallback) confirmCallback();
+  closeConfirm();
+}
+
+/* ---------- Модалка «Добавить в группу»: поиск + выбор из списка ---------- */
+const GROUPS_POOL = [
+  { id:1, name:'VIP', need_check_2fa:true, permitted_currencies:['BTC','ETH','USDT','USDC'], permissions:['is_lending_enabled','is_investing_available','is_transfer_enabled'] },
+  { id:2, name:'Партнёрская — Gamma', need_check_2fa:false, permitted_currencies:['USDT','USDC','RUB'], permissions:['is_transfer_enabled'] },
+  { id:3, name:'Стандартная', need_check_2fa:false, permitted_currencies:['BTC','ETH','USDT','USDC','TON','RUB','KGS'], permissions:['is_lending_enabled','is_transfer_enabled'] },
+  { id:4, name:'Партнёрская — Delta', need_check_2fa:false, permitted_currencies:['USDT','RUB'], permissions:['is_transfer_enabled'] },
+  { id:5, name:'Сотрудники', need_check_2fa:true, permitted_currencies:['BTC','ETH','USDT'], permissions:['is_lending_enabled'] },
+];
+let addToGroupSelectedId = null;
+
+function openAddToGroupModal(){
+  addToGroupSelectedId = null;
+  document.getElementById('add-to-group-confirm-btn').disabled = true;
+  const body = document.getElementById('add-to-group-body');
+
+  if (clientGroup){
+    body.innerHTML = `
+      <div class="alert-box">Клиент уже состоит в группе «<b>${clientGroup.name}</b>». Один клиент может быть только в одной группе — чтобы добавить в другую, сначала уберите его из текущей.</div>`;
+    document.getElementById('add-to-group-overlay').classList.remove('hidden');
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="search-field">
+      ${ic.search}
+      <input type="text" id="add-to-group-search" placeholder="Поиск группы по названию" oninput="renderAddToGroupList()">
+    </div>
+    <div class="pick-list" id="add-to-group-list"></div>`;
+  renderAddToGroupList();
+  document.getElementById('add-to-group-overlay').classList.remove('hidden');
+}
+function renderAddToGroupList(){
+  const query = (document.getElementById('add-to-group-search')?.value || '').trim().toLowerCase();
+  const list = GROUPS_POOL.filter(g => !query || g.name.toLowerCase().includes(query));
+  const el = document.getElementById('add-to-group-list');
+  el.innerHTML = list.length ? list.map(g => `
+    <div class="pick-item ${g.id === addToGroupSelectedId ? 'selected' : ''}" onclick="selectGroupOption(${g.id})">
+      <span class="pi-name">${g.name}</span>
+      ${ic.check}
+    </div>`).join('') : `<div class="pick-list-empty">Ничего не найдено</div>`;
+}
+function selectGroupOption(id){
+  addToGroupSelectedId = id;
+  renderAddToGroupList();
+  document.getElementById('add-to-group-confirm-btn').disabled = false;
+}
+function confirmAddToGroup(){
+  if (!addToGroupSelectedId) return;
+  const g = GROUPS_POOL.find(x => x.id === addToGroupSelectedId);
+  clientGroup = { ...g };
+  closeAddToGroupModal();
+  renderGroupsTab();
+  toast(`Клиент добавлен в группу «${g.name}»`);
+}
+function closeAddToGroupModal(){
+  document.getElementById('add-to-group-overlay').classList.add('hidden');
+}
+
+function askRemoveFromGroup(){
+  if (!clientGroup) return;
+  const name = clientGroup.name;
+  openConfirm({
+    title: 'Убрать из группы',
+    body: `Убрать клиента из группы «${name}»?`,
+    actionLabel: 'Убрать из группы',
+    danger: true,
+    onConfirm: () => {
+      clientGroup = null;
+      renderGroupsTab();
+      toast(`Клиент убран из группы «${name}»`);
+    },
+  });
+}
+
+function fakeUuidShort(seed){
+  // тот же приём, что в прототипе списка групп — стабильный псевдослучайный uuid-вид
+  let t = seed >>> 0;
+  const rnd = () => { t = (t + 0x6D2B79F5) | 0; let r = Math.imul(t ^ (t >>> 15), 1 | t); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0) / 4294967296; };
+  const hex = n => Array.from({length:n}, () => Math.floor(rnd()*16).toString(16)).join('');
+  const full = `${hex(8)}-${hex(4)}-4${hex(3)}-${'89ab'[Math.floor(rnd()*4)]}${hex(3)}-${hex(12)}`;
+  return `${full.slice(0,8)}…${full.slice(-6)}`;
+}
+function chipsFor(list, max = 2){
+  const shown = list.slice(0, max);
+  let html = shown.map(x => `<span class="tag">${x}</span>`).join('');
+  if (list.length > max) html += `<span class="tag more">+${list.length-max}</span>`;
+  return html || '<span class="tag more">—</span>';
+}
+
+function renderGroupsTab(){
+  const panel = document.getElementById('panel-groups');
+  const toolbar = `
+    <div class="toolbar-row">
+      <button class="btn btn-primary btn-sm" onclick="openAddToGroupModal()">Добавить в группу</button>
+    </div>`;
+
+  if (!clientGroup){
+    panel.innerHTML = toolbar + `
+      <div class="empty-state">
+        <p>Клиент не состоит ни в одной группе</p>
+      </div>`;
+    return;
+  }
+  panel.innerHTML = toolbar + `
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:16%">ID</th>
+            <th style="width:22%">Название</th>
+            <th style="width:10%">2FA</th>
+            <th style="width:24%">Валюты</th>
+            <th style="width:16%">Функции</th>
+            <th style="width:12%">Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a class="cell-link" onclick="toast('Переход в карточку группы «${clientGroup.name}» (демо)')">${fakeUuidShort(clientGroup.id)}</a></td>
+            <td class="cell-main">${clientGroup.name}</td>
+            <td>${clientGroup.need_check_2fa ? '<span class="pill green">Да</span>' : '<span class="pill gray">Нет</span>'}</td>
+            <td><div class="chips-cell">${chipsFor(clientGroup.permitted_currencies)}</div></td>
+            <td><div class="chips-cell">${chipsFor(clientGroup.permissions.map(p => (SERVICES.find(s=>s.key===p)||{}).label || p))}</div></td>
+            <td><div class="row-actions">
+              <button class="icon-btn" title="Открыть группу" onclick="toast('Переход в карточку группы «${clientGroup.name}» (демо)')">${ic.eye}</button>
+              <button class="icon-btn danger" title="Убрать из группы" onclick="askRemoveFromGroup()">${ic.trash}</button>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+renderSidebar();
+renderTopbar();
+renderGroupsTab();
+</script>
+</body>
+</html>
