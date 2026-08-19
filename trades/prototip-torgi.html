@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitadmin · Биржа · Торги и стакан</title>
+<style>
+  :root{
+    --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;
+    --bg-white-0:#fff;--bg-weak-50:#f7f7f7;--bg-soft-200:#ebebeb;
+    --stroke-soft-200:#ebebeb;
+    --primary-base:#7246e6;--primary-alpha-06:#7246e60f;--primary-alpha-12:#7246e61f;
+    --state-success-base:#1fc16b;--state-success-light:#c2f5da;--state-success-dark:#0b4627;
+    --state-warning-base:#fa7319;--state-warning-lighter:#fff3eb;--state-warning-dark:#c77a12;
+    --state-error-lighter:#ffebec;--state-error-base:#fb3748;
+    --yellow-200:#ffecc0;
+    --radius-6:6px;--radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--radius-full:999px;
+    --shadow-x-small:0 1px 2px 0 rgba(10,13,20,.03);
+    --shadow-toggle:0 2px 4px 0 rgba(14,18,27,.03),0 6px 10px 0 rgba(14,18,27,.06);
+    --sidebar-w:280px;--topbar-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg-weak-50);color:var(--text-strong-950);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased}
+  .mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .tabular{font-variant-numeric:tabular-nums}
+  button{font-family:inherit}
+
+  .shell{display:flex;min-height:100vh}
+
+  /* ================= SIDEBAR — статичная, некликабельная копия реального меню ================= */
+  .sidebar{width:var(--sidebar-w);flex:none;background:var(--bg-white-0);border-right:1px solid var(--stroke-soft-200);display:flex;flex-direction:column;padding:0 12px 12px;position:sticky;top:0;height:100vh;overflow-y:auto;user-select:none;pointer-events:none}
+  .sb-brand-row{display:flex;align-items:center;width:100%;height:var(--topbar-h);padding:0 8px}
+  .sb-brand-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary-base),#9b7bf0);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;margin-right:12px}
+  .sb-brand-name{font-size:14px;font-weight:500;line-height:1.2}
+  .sb-brand-sub{font-size:12px;color:var(--text-soft-400)}
+  .sb-label{padding:8px 10px 8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-soft-400)}
+  .sb-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-8);font-size:14px;font-weight:500;line-height:20px;color:var(--text-sub-600);margin-bottom:1px}
+  .sb-item .ic{width:18px;height:18px;flex:none;color:var(--text-soft-400)}
+  .sb-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-item .chev{width:9px;height:9px;color:var(--text-soft-400);flex:none;transform:rotate(-90deg)}
+  .sb-item .chev.open{transform:none}
+  .sb-item.expanded{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .sb-tree{display:flex;flex-direction:column;gap:1px;margin:1px 0 6px}
+  .sb-child{display:flex;align-items:center;padding:7px 10px 7px 14px;border-radius:var(--radius-8);border-left:2px solid transparent;font-size:13px;color:var(--text-sub-600)}
+  .sb-child.active{background:var(--bg-weak-50);color:var(--primary-base);font-weight:500;border-left-color:var(--primary-base)}
+
+  /* ================= MAIN ================= */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:var(--topbar-h);flex:none;background:var(--bg-white-0);border-bottom:1px solid var(--stroke-soft-200);display:flex;align-items:center;gap:12px;padding:0 24px;position:sticky;top:0;z-index:20;pointer-events:none;user-select:none}
+  .tb-spacer{flex:1}
+  .tb-lang{height:34px;display:flex;align-items:center;gap:6px;padding:0 8px 0 10px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft-200);font-size:13px;font-weight:500;color:var(--text-sub-600)}
+  .tb-lang .lang-code{font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--text-soft-400);border:1px solid var(--stroke-soft-200);border-radius:4px;padding:1px 4px;line-height:1.4}
+  .tb-lang .chev{width:9px;height:9px;color:var(--text-soft-400);flex:none;transform:rotate(180deg)}
+  .tb-divider{width:1px;height:26px;background:var(--stroke-soft-200)}
+  .tb-user{display:flex;align-items:center;gap:9px}
+  .tb-avatar{position:relative;width:34px;height:34px;border-radius:50%;background:var(--yellow-200);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .tb-avatar .dot{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border-radius:50%;background:var(--state-success-base);border:2px solid var(--bg-white-0)}
+  .tb-user-text{display:flex;flex-direction:column}
+  .tb-user-name{font-size:12.5px;font-weight:500}
+  .tb-user-email{font-size:11.5px;color:var(--text-soft-400)}
+
+  .content{padding:24px}
+
+  .page-head{border-radius:var(--radius-16);background:var(--bg-white-0);box-shadow:var(--shadow-x-small);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px}
+  .ph-left{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .ph-left h1{font-size:18px;font-weight:500;letter-spacing:-.27px;line-height:24px}
+  .ph-desc{font-size:14px;color:var(--text-sub-600);letter-spacing:-.084px;max-width:680px}
+  .ph-right{flex:none}
+
+  /* выбор диапазона дат — дропдаун с пресетами и календарём */
+  .drp{position:relative}
+  .drp-trigger{display:flex;align-items:center;gap:8px;border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);border-radius:var(--radius-10);padding:8px 12px;font:inherit;font-size:13px;font-weight:500;color:var(--text-strong-950);cursor:pointer}
+  .drp-trigger .ic{width:15px;height:15px;color:var(--text-soft-400);flex:none}
+  .drp-panel{position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);box-shadow:0 16px 40px rgba(14,18,27,.16);z-index:80;display:none;overflow:hidden;width:600px}
+  .drp.open .drp-panel{display:block}
+  .drp-body{display:flex}
+  .drp-presets{width:130px;flex:none;padding:10px;border-right:1px solid var(--stroke-soft-200);display:flex;flex-direction:column;gap:1px}
+  .drp-presets button{border:0;background:transparent;text-align:left;font:inherit;font-size:13px;color:var(--text-sub-600);padding:7px 8px;border-radius:var(--radius-8);cursor:pointer}
+  .drp-presets button:hover{background:var(--bg-weak-50)}
+  .drp-cal{flex:1;padding:14px}
+  .drp-cal-nav{display:flex;align-items:center;gap:8px}
+  .drp-nav-btn{border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);width:24px;height:24px;border-radius:var(--radius-6);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub-600);flex:none;font-size:13px}
+  .drp-nav-btn:hover{background:var(--bg-weak-50)}
+  .drp-grids{flex:1;display:flex;gap:20px}
+  .drp-month{flex:1;min-width:0}
+  .drp-month-title{text-align:center;font-size:13px;font-weight:500;margin-bottom:8px}
+  .drp-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:2px}
+  .drp-dow span{text-align:center;font-size:10px;font-weight:600;color:var(--text-soft-400);text-transform:uppercase}
+  .drp-days{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+  .drp-day{display:flex;align-items:center;justify-content:center;height:28px;font-size:12.5px;color:var(--text-strong-950);cursor:pointer;position:relative}
+  .drp-day.muted{color:var(--text-soft-400)}
+  .drp-day.in-range::before{content:"";position:absolute;inset:0 0;background:var(--primary-alpha-12)}
+  .drp-day .n{position:relative;z-index:1}
+  .drp-day.edge .n{background:var(--primary-base);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+  .drp-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--stroke-soft-200)}
+  .drp-range-text{font-size:12.5px;color:var(--text-sub-600);font-family:ui-monospace,monospace}
+  .drp-footer-actions{display:flex;gap:8px}
+  .drp-footer-actions button{border:0;border-radius:var(--radius-8);padding:7px 14px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+  .drp-footer-actions .drp-reset{background:transparent;color:var(--text-soft-400)}
+  .drp-footer-actions .drp-apply{background:var(--primary-base);color:#fff}
+
+  /* контур */
+  .scope-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+  .seg{display:inline-flex;gap:4px;border-radius:var(--radius-10);padding:4px;background:var(--bg-weak-50)}
+  .seg button{border:0;background:transparent;border-radius:var(--radius-6);padding:6px 12px;font-size:14px;font-weight:500;color:var(--text-soft-400);cursor:pointer;font-family:inherit}
+  .seg button.active{background:var(--bg-white-0);color:var(--text-strong-950);box-shadow:var(--shadow-toggle)}
+
+  .section-label{margin:0 0 10px}
+  .section-label h2{font-size:14px;font-weight:500}
+  .section-label.kpi-label{display:flex;align-items:center;gap:10px}
+  .kpi-meta{flex:1;text-align:center;font-size:11.5px;color:var(--text-soft-400)}
+  .kpi-view-dd{flex:none}
+  .kpi-view-dd .dd-trigger{border-color:var(--stroke-soft-200);background:var(--bg-white-0);color:var(--text-sub-600)}
+  .kpi-view-dd .dd-trigger .ic{width:13px;height:13px;color:var(--text-sub-600)}
+  .kpi-view-dd .dd-panel{right:0;left:auto;min-width:160px}
+  .kpi-view-dd .dd-opt .ic{width:13px;height:13px;color:var(--text-soft-400);flex:none;margin-right:8px}
+  .kpi-view-dd .dd-opt{justify-content:flex-start}
+  .kpi-view-dd .dd-opt .opt-lbl{flex:1}
+
+  /* KPI — единая карточка, сегменты через border-left */
+  .kpi-strip{display:flex;overflow:hidden;border-radius:var(--radius-16);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);box-shadow:var(--shadow-x-small);margin-bottom:18px}
+  .kpi-seg{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 14px;text-align:center;border-left:1px solid var(--stroke-soft-200)}
+  .kpi-seg:first-child{border-left:0}
+  .kpi-seg .lbl{font-size:12px;color:var(--text-soft-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .kpi-seg .val{margin-top:6px;font-size:24px;font-weight:500;line-height:28px;font-variant-numeric:tabular-nums}
+  .kpi-seg .delta{margin-top:2px;font-size:12px;font-weight:500;color:var(--text-soft-400)}
+  .kpi-seg .delta.up{color:var(--state-success-dark)}
+  .kpi-seg .delta.dn{color:var(--state-warning-dark)}
+  .kpi-strip.compact .kpi-seg{padding:12px 14px}
+  .kpi-strip.compact .kpi-seg .delta{display:none}
+  .kpi-hidden-hint{font-size:13px;color:var(--text-soft-400);margin-bottom:18px}
+
+  /* поиск */
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);background:var(--bg-white-0);padding:8px 12px;margin-bottom:10px;width:100%}
+  .search .ic{width:16px;height:16px;flex:none;color:var(--text-soft-400)}
+  .search input{border:0;outline:0;background:transparent;flex:1;font-size:14px;color:var(--text-strong-950);font:inherit}
+  .search input::placeholder{color:var(--text-soft-400)}
+  .search .go{font-size:13px;font-weight:500;color:var(--primary-base);flex:none;cursor:pointer;background:none;border:0;font-family:inherit}
+
+  /* фильтры/фасеты + период — кастомные дропдауны */
+  .filters-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:22px;position:relative}
+  .dd{position:relative}
+  .dd-trigger{display:flex;align-items:center;gap:6px;border:1px solid var(--primary-base);background:var(--primary-alpha-06);border-radius:var(--radius-8);padding:6px 10px 6px 12px;font:inherit;cursor:pointer;color:var(--primary-base)}
+  .dd-trigger .k{color:var(--text-soft-400);font-size:13px;font-weight:500;white-space:nowrap}
+  .dd-trigger .val{font-size:13px;font-weight:500;white-space:nowrap}
+  .dd-trigger .chev{width:9px;height:9px;color:var(--primary-base);flex:none;transition:transform .15s}
+  .dd.open .dd-trigger .chev{transform:rotate(180deg)}
+  .dd-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;max-height:280px;overflow-y:auto;background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);box-shadow:0 10px 30px rgba(14,18,27,.14);padding:6px;z-index:60;display:none}
+  .dd.open .dd-panel{display:block}
+  .dd-opt{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:7px 10px;border-radius:var(--radius-8);font-size:13px;color:var(--text-strong-950);white-space:nowrap;cursor:pointer}
+  .dd-opt:hover{background:var(--bg-weak-50)}
+  .dd-opt.sel{color:var(--primary-base);font-weight:600}
+  .dd-opt .ck{width:13px;height:13px;color:var(--primary-base);opacity:0;flex:none}
+  .dd-opt.sel .ck{opacity:1}
+  .date-inline{display:flex;align-items:center;gap:8px}
+  .date-box{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);border-radius:var(--radius-8);padding:6px 10px}
+  .date-box .k{font-size:12.5px;color:var(--text-soft-400);font-weight:500}
+  .date-box input[type=date]{border:0;outline:0;background:transparent;font:inherit;font-size:12.5px;color:var(--text-strong-950);width:118px}
+  .fr-divider{width:1px;height:20px;background:var(--stroke-soft-200);margin:0 4px}
+
+  /* вкладки */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--stroke-soft-200);margin-bottom:18px}
+  .tab-btn{border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;color:var(--text-soft-400);padding:10px 4px;margin-right:22px;cursor:pointer;position:relative;display:flex;align-items:center;gap:7px}
+  .tab-btn.active{color:var(--text-strong-950)}
+  .tab-btn.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--primary-base);border-radius:2px 2px 0 0}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  /* карточка/панель */
+  .panel{background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);overflow:hidden}
+  .panel header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--stroke-soft-200)}
+  .panel header h3{font-size:14px;font-weight:500}
+  .panel header .hint{margin-left:auto;font-size:12px;color:var(--text-soft-400);display:flex;align-items:center;gap:6px}
+
+  /* стакан */
+  .book-mid{display:flex;align-items:center;justify-content:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--stroke-soft-200);font-size:12.5px;color:var(--text-soft-400)}
+  .book-mid b{color:var(--text-strong-950);font-weight:600;font-family:ui-monospace,monospace}
+  .book-cols{display:grid;grid-template-columns:1fr 1fr}
+  .book-col{padding:6px 0}
+  .book-col + .book-col{border-left:1px solid var(--stroke-soft-200)}
+  .book-col-head{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:6px 16px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400)}
+  .book-col-head .c-amt,.book-col-head .c-cum{text-align:right}
+  .book-col-head .c-px{text-align:right}
+  .book-col:last-child .book-col-head .c-cum{text-align:left}
+  .book-row{position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:5px 16px;font-size:12.5px;font-family:ui-monospace,monospace}
+  .book-row .c-amt,.book-row .c-cum{text-align:right}
+  /* bid — bar/накопление растут от центра (правый край блока Bid) наружу влево;
+     ask — зеркально, от центра (левый край блока Ask) наружу вправо */
+  .book-row .depth-bar{position:absolute;top:0;bottom:0;right:0;opacity:.10;z-index:0}
+  .book-row.ask .depth-bar{background:var(--state-error-base);left:0;right:auto}
+  .book-row.bid .depth-bar{background:var(--state-success-base)}
+  .book-row .c-px,.book-row .c-amt,.book-row .c-cum{position:relative;z-index:1}
+  .book-row .c-px{font-weight:700}
+  .book-row.ask .c-cum{text-align:left}
+  .book-row.ask .c-px{text-align:right;color:var(--state-error-base)}
+  .book-row.bid .c-px{color:var(--state-success-base)}
+  .mm-tag{display:inline-block;margin-left:6px;font-family:Inter,sans-serif;font-size:9.5px;font-weight:700;color:var(--primary-base);background:var(--primary-alpha-12);border-radius:4px;padding:0 4px;vertical-align:middle}
+  .type-tag{display:inline-block;margin-left:6px;font-family:Inter,sans-serif;font-size:9.5px;font-weight:700;color:var(--text-soft-400);background:var(--bg-weak-50);border-radius:4px;padding:0 4px;vertical-align:middle}
+  .book-row.dim{opacity:.28}
+
+  /* сделки */
+  .trade-block{border-top:1px solid var(--stroke-soft-200)}
+  .trade-block:first-child{border-top:0}
+  .trade-block{cursor:pointer}
+  .trade-block:hover{background:var(--bg-weak-50)}
+  .trade-block.dim{opacity:.35}
+  .trade-row{display:grid;grid-template-columns:0.9fr 0.9fr 1fr 0.9fr 0.8fr 0.9fr 1.6fr 1.5fr 1.1fr 1fr;gap:8px;align-items:center;padding:6px 16px;font-size:12px}
+  .trade-row.head-row{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400);border-bottom:1px solid var(--stroke-soft-200);padding:8px 16px}
+  .trade-row .role-pill{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:var(--radius-full);width:fit-content}
+  .trade-row .role-pill.maker{background:var(--primary-alpha-12);color:var(--primary-base)}
+  .trade-row .role-pill.taker{background:var(--bg-weak-50);color:var(--text-sub-600)}
+  .side-tag{font-weight:700}
+  .side-tag.buy{color:var(--state-success-base)}
+  .side-tag.sell{color:var(--state-error-base)}
+  .settle-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:var(--radius-full);width:fit-content}
+  .settle-pill .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+  .settle-pill.SETTLED{background:var(--state-success-light);color:var(--state-success-base)}
+  .settle-pill.PENDING{background:var(--state-warning-lighter);color:var(--state-warning-base)}
+  .settle-pill.FAILED{background:var(--state-error-lighter);color:var(--state-error-base)}
+  .userid{color:var(--text-sub-600);font-family:ui-monospace,monospace}
+  .trade-scroll{overflow-x:auto}
+
+  /* фильтры по парам */
+  .watch-head-row{display:grid;grid-template-columns:24px 140px 160px 160px;gap:12px;padding:8px 16px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400);border-bottom:1px solid var(--stroke-soft-200)}
+  .watch-row{display:grid;grid-template-columns:24px 140px 160px 160px;gap:12px;align-items:center;padding:9px 16px;border-top:1px solid var(--stroke-soft-200);font-size:13px}
+  .watch-row:first-child{border-top:0}
+  .watch-row .chk{width:16px;height:16px;border:1.5px solid var(--stroke-soft-200);border-radius:5px;flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff}
+  .watch-row .chk.on{background:var(--primary-base);border-color:var(--primary-base)}
+  .watch-row .chk svg{width:10px;height:10px}
+  .watch-row .sym{font-family:ui-monospace,monospace;font-weight:700;cursor:pointer}
+  .watch-row .sym:hover{color:var(--primary-base)}
+  .watch-row.active .sym{color:var(--primary-base)}
+  .watch-row .mono{font-family:ui-monospace,monospace}
+  .footer-hint{font-size:11px;color:var(--text-soft-400);padding:9px 16px;border-top:1px solid var(--stroke-soft-200)}
+
+  .pair-sym{font-family:ui-monospace,monospace;font-weight:700}
+
+  /* drawer карточки сделки */
+  .overlay{position:fixed;inset:0;background:rgba(17,17,17,.32);z-index:100;display:none}
+  .overlay.show{display:block}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;background:var(--bg-white-0);z-index:101;box-shadow:-12px 0 30px rgba(14,18,27,.18);transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}
+  .drawer.show{transform:none}
+  .drawer-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--stroke-soft-200)}
+  .drawer-head h3{font-size:15px;font-weight:500;cursor:pointer}
+  .drawer-head .settle-pill{margin-left:auto}
+  .drawer-close{border:0;background:var(--bg-weak-50);width:28px;height:28px;border-radius:var(--radius-8);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub-600);flex:none}
+  .drawer-body{padding:6px 18px 18px;overflow-y:auto;flex:1}
+  .drawer-section{margin-top:16px}
+  .drawer-section .st{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400);margin-bottom:8px}
+  .side-card{border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);padding:11px 12px;margin-bottom:8px}
+  .side-card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .side-card .role-pill{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:var(--radius-full)}
+  .side-card .role-pill.maker{background:var(--primary-alpha-12);color:var(--primary-base)}
+  .side-card .role-pill.taker{background:var(--bg-weak-50);color:var(--text-sub-600)}
+  .drow{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;padding:3px 0}
+  .drow .k{color:var(--text-soft-400)}
+  .drow .v{font-family:ui-monospace,monospace;font-weight:600}
+  .drow .v.link{color:var(--primary-base);cursor:pointer;font-family:Inter,sans-serif;font-weight:500}
+  .timeline{display:flex;flex-direction:column;gap:0}
+  .tl-item{display:flex;gap:10px;padding:6px 0;position:relative}
+  .tl-item .tl-dot{width:7px;height:7px;border-radius:50%;background:var(--primary-base);margin-top:5px;flex:none}
+  .tl-item .tl-txt{font-size:12.5px}
+  .tl-item .tl-time{font-size:11px;color:var(--text-soft-400)}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--text-strong-950);color:#fff;padding:11px 16px;border-radius:var(--radius-10);font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:200;display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;max-width:360px}
+  .toast.show{opacity:1;transform:none}
+  .toast .d{width:6px;height:6px;border-radius:50%;background:var(--primary-base);flex:none}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ================= SIDEBAR — статичная, некликабельная копия реального меню ================= -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <div class="topbar" id="topbar"></div>
+
+    <div class="content">
+
+      <div class="page-head">
+        <div class="ph-left">
+          <h1>Торги и стакан</h1>
+          <p class="ph-desc">Стакан в реальном времени, лента сделок обеих сторон и рабочий набор пар — наблюдение и навигация по matching engine, без управления ордерами (отмена — в «Ордерной книге»).</p>
+        </div>
+        <div class="ph-right">
+          <div class="dd drp" id="dateRangeDd"></div>
+        </div>
+      </div>
+
+      <div class="scope-row">
+        <div class="seg" id="scopeSeg">
+          <button class="active" data-scope="ALL">Все</button>
+          <button data-scope="MM">Внутренний MM</button>
+        </div>
+      </div>
+
+      <div class="section-label kpi-label">
+        <h2>KPI · сейчас</h2>
+        <span class="kpi-meta" id="kpiMeta"></span>
+        <div class="dd kpi-view-dd" id="kpiViewDd"></div>
+      </div>
+      <div class="kpi-strip" id="kpiStrip"></div>
+      <div class="kpi-hidden-hint" id="kpiHiddenHint" style="display:none">KPI скрыты — нажмите «Скрыто», чтобы развернуть.</div>
+
+      <div class="filters-row" id="chipRow"></div>
+
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab-btn active" data-tab="book">Стакан в реальном времени</button>
+        <button type="button" class="tab-btn" data-tab="trades">История сделок</button>
+        <button type="button" class="tab-btn" data-tab="watch">Фильтры по парам</button>
+      </div>
+
+      <div class="tab-panel active" id="panel-book">
+        <div class="panel">
+          <header>
+            <h3 id="bookTitle">Стакан · BTC/USDT</h3>
+            <span class="hint">обновляется по TRADING_ORDERBOOK_UPDATED</span>
+          </header>
+          <div class="book-mid" id="bookMid"></div>
+          <div class="book-cols">
+            <div class="book-col">
+              <div class="book-col-head"><span>Bid</span><span class="c-amt">Объём</span><span class="c-cum">Накоп.</span></div>
+              <div id="bidsBody"></div>
+            </div>
+            <div class="book-col">
+              <div class="book-col-head"><span class="c-cum">Накоп.</span><span class="c-amt">Объём</span><span class="c-px">Ask</span></div>
+              <div id="asksBody"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-trades">
+        <div class="panel">
+          <header><h3>Лента сделок</h3><span class="hint" id="tradesHint"></span></header>
+          <div class="search" style="margin:12px 16px;width:auto">
+            <span class="ic">⌕</span>
+            <input type="text" id="searchInput" placeholder="ID ордера (ORD-…) или ID сделки (TRD-…) в этой ленте">
+            <button type="button" class="go" id="searchGo">Найти →</button>
+          </div>
+          <div class="trade-scroll">
+            <div class="trade-row head-row">
+              <span>Время</span><span>Пара</span><span>ID сделки</span><span>Цена</span><span>Объём</span><span>Сторона</span><span>Роль / Клиент</span><span>Ордер · тип</span><span>Комиссия</span><span>Расчёт</span>
+            </div>
+            <div id="tradesBody"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-watch">
+        <div class="panel">
+          <div class="trade-scroll">
+            <div class="watch-head-row">
+              <span></span><span>Пара</span><span>Оборот за период</span><span>Сделок за период</span>
+            </div>
+            <div id="watchBody"></div>
+          </div>
+          <div class="footer-hint">SUM(quote_amount) / COUNT(*) по tradingTrades, group by market_id, dateFrom/dateTo — нужна USD-конвертация для оборота</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3 id="drawerTitle">TRD-10428</h3>
+    <span class="settle-pill" id="drawerSettle"></span>
+    <button type="button" class="drawer-close" id="drawerClose">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<div class="toast" id="toast"><span class="d"></span><span id="toastText"></span></div>
+
+<script>
+(function(){
+  "use strict";
+
+  function svg(inner){ return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`; }
+  const ic = {
+    grid: svg('<rect x="3" y="3" width="7" height="7" rx="1.3"/><rect x="14" y="3" width="7" height="7" rx="1.3"/><rect x="3" y="14" width="7" height="7" rx="1.3"/><rect x="14" y="14" width="7" height="7" rx="1.3"/>'),
+    process: svg('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+    clients: svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><circle cx="18" cy="9" r="2.2"/><path d="M16.5 21v-1a5 5 0 0 0-1-3"/>'),
+    chart: svg('<path d="M4 20V10"/><path d="M11 20V4"/><path d="M18 20v-7"/>'),
+    wallet: svg('<rect x="3" y="6" width="18" height="13" rx="2.3"/><path d="M16 12h3"/><path d="M3 10h18"/>'),
+    vault: svg('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="12" r="3"/>'),
+    exchange: svg('<path d="M7 3v14"/><path d="M3 7l4-4 4 4"/><path d="M17 21V7"/><path d="M21 17l-4 4-4-4"/>'),
+    crypto: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 15.2c.5.7 1.4 1.1 2.5 1.1 1.7 0 3-1 3-2.3 0-3-5.5-1.5-5.5-4.5 0-1.3 1.3-2.3 3-2.3 1.1 0 2 .4 2.5 1.1"/><path d="M12 7v10"/>'),
+    gear: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    chev: svg('<path d="M6 9l6 6 6-6"/>'),
+    check: svg('<path d="M20 6L9 17l-5-5"/>'),
+    kpiFull: svg('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
+    kpiCompact: svg('<rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/>'),
+    kpiHidden: svg('<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-10-8-10-8a18.5 18.5 0 0 1 4.22-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>')
+  };
+
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sb-brand-row">
+      <div class="sb-brand-avatar">BI</div>
+      <div><div class="sb-brand-name">Bitbanker</div><div class="sb-brand-sub">Admin Panel</div></div>
+    </div>
+    <div class="sb-label">Рабочее место</div>
+    <div class="sb-item">${ic.grid}<span class="lbl">Обзор</span></div>
+    <div class="sb-item">${ic.process}<span class="lbl">Процессы</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.clients}<span class="lbl">Клиенты</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.chart}<span class="lbl">Аналитика</span><span class="chev">${ic.chev}</span></div>
+
+    <div class="sb-label">Финансовые продукты</div>
+    <div class="sb-item">${ic.wallet}<span class="lbl">ОПС / PSP</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.vault}<span class="lbl">Депозитарий</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item expanded">${ic.exchange}<span class="lbl">Биржа</span><span class="chev open">${ic.chev}</span></div>
+    <div class="sb-tree">
+      <div class="sb-child">Обзор биржи</div>
+      <div class="sb-child active">Торги (стакан и сделки)</div>
+      <div class="sb-child">Ордерная книга</div>
+      <div class="sb-child">Маркет-дата</div>
+      <div class="sb-child">Маркет-мейкеры биржи</div>
+      <div class="sb-child">Допуск клиентов</div>
+    </div>
+    <div class="sb-item">${ic.crypto}<span class="lbl">Криптоброкер</span><span class="chev">${ic.chev}</span></div>
+
+    <div class="sb-label">Управление платформой</div>
+    <div class="sb-item">${ic.gear}<span class="lbl">Настройки</span><span class="chev">${ic.chev}</span></div>
+  `;
+
+  document.getElementById('topbar').innerHTML = `
+    <div class="tb-spacer"></div>
+    <div class="tb-lang"><span class="lang-code">RU</span> Русский ${ic.chev}</div>
+    <div class="tb-divider"></div>
+    <div class="tb-user">
+      <div class="tb-avatar">SA<span class="dot"></span></div>
+      <div class="tb-user-text"><span class="tb-user-name">Super Admin</span><span class="tb-user-email">super-admin@admin.com</span></div>
+    </div>
+  `;
+
+  // ---------------------------------------------------------------
+  // P0 + P1 по birzha-torgi-trading-srs.md, всё в прототипе — рабочее.
+  // KPI — только метрики, реально достижимые без новой модели данных
+  // (GROUP BY / COUNT / расчёт по уже полученным полям): контур «Все» —
+  // все 5, контур «Внутренний MM» — 3 из 5 (без «MM-эффективность» и
+  // «Нетто-позиция» — методология не определена и требует данных вне
+  // trading, см. документ).
+  // Полностью убрано (P2, без плейсхолдеров): событийный слой для
+  // произвольных KPI, контуры «Pro-режим»/«Простой режим»,
+  // широковещательный push сделок/ордеров (стакан и лента обновляются
+  // вручную — фильтры/период, без имитации автообновления), реестр
+  // статусов интеграций, экспорт ленты сделок, эскалация в кейс,
+  // клиентский поиск (по имени/email/телефону — поиск в этом
+  // прототипе только по ID ордера/сделки на вкладке «История сделок»).
+  // ---------------------------------------------------------------
+
+  const MARKETS = [
+    {sym:'BTC/USDT', status:'active', fav:true, turnover:'$1,84M', trades:612},
+    {sym:'ETH/USDT', status:'active', fav:true, turnover:'$0,96M', trades:405},
+    {sym:'USDT/RUB', status:'active', fav:true, turnover:'$0,71M', trades:288},
+    {sym:'TON/USDT', status:'active', fav:false, turnover:'$0,18M', trades:94},
+    {sym:'TRX/USDT', status:'paused', fav:false, turnover:'$0,02M', trades:11},
+    {sym:'BTC/RUB', status:'active', fav:false, turnover:'$0,34M', trades:127},
+    {sym:'USDC/USDT', status:'active', fav:false, turnover:'$0,09M', trades:47}
+  ];
+
+  // фильтр «Пара» предлагает только рабочий набор с вкладки «Фильтры по парам»
+  // (чекбоксы), а не все рынки биржи; текущая открытая пара остаётся в списке,
+  // даже если её сняли с избранного, — иначе непонятно, что смотришь
+  function getPairList(){
+    const favs = MARKETS.filter(m => m.fav).map(m => m.sym);
+    if (!favs.includes(STATE.pair)) favs.push(STATE.pair);
+    return favs;
+  }
+
+  const BOOKS = {
+    'BTC/USDT': {
+      asks: [{px:64332,amt:0.42,mm:false},{px:64328,amt:0.18,mm:true},{px:64322,amt:0.65,mm:false},{px:64318,amt:0.30,mm:false},{px:64312,amt:1.10,mm:true}].reverse(),
+      bids: [{px:64308,amt:0.95,mm:true},{px:64302,amt:0.40,mm:false},{px:64296,amt:1.25,mm:false},{px:64290,amt:0.20,mm:false},{px:64284,amt:0.80,mm:true}]
+    },
+    'ETH/USDT': {
+      asks: [{px:3419.4,amt:1.8,mm:false},{px:3418.6,amt:0.9,mm:true},{px:3417.9,amt:2.4,mm:false},{px:3417.2,amt:1.1,mm:false},{px:3416.5,amt:3.0,mm:true}].reverse(),
+      bids: [{px:3415.8,amt:2.6,mm:true},{px:3415.0,amt:1.4,mm:false},{px:3414.3,amt:3.3,mm:false},{px:3413.6,amt:0.7,mm:false},{px:3412.9,amt:2.1,mm:true}]
+    },
+    'USDT/RUB': {
+      asks: [{px:97.68,amt:12400,mm:false},{px:97.65,amt:8100,mm:true},{px:97.61,amt:15200,mm:false},{px:97.58,amt:6300,mm:false},{px:97.55,amt:9900,mm:true}].reverse(),
+      bids: [{px:97.42,amt:11000,mm:true},{px:97.39,amt:7200,mm:false},{px:97.35,amt:14800,mm:false},{px:97.31,amt:5600,mm:false},{px:97.28,amt:8700,mm:true}]
+    }
+  };
+  function bookFor(sym){ return BOOKS[sym] || BOOKS['BTC/USDT']; }
+
+  const TRADES = [
+    {id:'TRD-10428', time:'14:31:58', sym:'BTC/USDT', price:65000, amount:0.045, side:'BUY', makerUserId:'usr_a1e4', takerUserId:'usr_9c07', makerOrderId:'ORD-88210', takerOrderId:'ORD-88231', makerFee:'0.0000675 BTC', takerFee:'7.31 USDT', settlement:'SETTLED', makerMM:true, takerType:'MARKET', rateSource:'BINANCE, offset 5 bps'},
+    {id:'TRD-10427', time:'14:29:12', sym:'BTC/USDT', price:64980, amount:0.012, side:'SELL', makerUserId:'usr_5f21', takerUserId:'usr_a1e4', makerOrderId:'ORD-88190', takerOrderId:'ORD-88222', makerFee:'0.0000180 BTC', takerFee:'1.95 USDT', settlement:'SETTLED', makerMM:false, takerType:'LIMIT'},
+    {id:'TRD-10426', time:'14:26:45', sym:'ETH/USDT', price:3418.2, amount:0.62, makerUserId:'usr_c390', takerUserId:'usr_7b1d', makerOrderId:'ORD-88170', takerOrderId:'ORD-88201', makerFee:'0.00093 ETH', takerFee:'5.31 USDT', side:'BUY', settlement:'PENDING', makerMM:true, takerType:'MARKET', rateSource:'BINANCE, offset 5 bps'},
+    {id:'TRD-10425', time:'14:22:03', sym:'USDT/RUB', price:97.44, amount:5400, makerUserId:'usr_9c07', takerUserId:'usr_5f21', makerOrderId:'ORD-88140', takerOrderId:'ORD-88188', makerFee:'4.32 RUB', takerFee:'10.79 USDT', side:'SELL', settlement:'SETTLED', makerMM:false, takerType:'LIMIT'},
+    {id:'TRD-10424', time:'14:18:37', sym:'BTC/USDT', price:64950, amount:0.008, makerUserId:'usr_7b1d', takerUserId:'usr_c390', makerOrderId:'ORD-88120', takerOrderId:'ORD-88155', makerFee:'0.0000120 BTC', takerFee:'1.30 USDT', side:'BUY', settlement:'FAILED', makerMM:false, takerType:'MARKET'},
+    {id:'TRD-10423', time:'14:11:20', sym:'ETH/USDT', price:3412.9, amount:1.10, makerUserId:'usr_a1e4', takerUserId:'usr_9c07', makerOrderId:'ORD-88090', takerOrderId:'ORD-88112', makerFee:'0.00167 ETH', takerFee:'9.42 USDT', side:'SELL', settlement:'SETTLED', makerMM:true, takerType:'LIMIT', rateSource:'BINANCE, offset 8 bps'}
+  ];
+
+  const TODAY = new Date(2026, 7, 19);
+  function toISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  const STATE = {
+    scope:'ALL', pair:'BTC/USDT', side:'Все', orderType:'Все', role:'Все', activeTab:'book',
+    dateFrom: new Date(2025, 7, 20), dateTo: new Date(TODAY), kpiView:'full'
+  };
+
+  function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  let toastTimer;
+  function showToast(text){
+    const el = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  function closeAllDd(except){
+    document.querySelectorAll('.dd.open').forEach(dd => { if (dd !== except) dd.classList.remove('open'); });
+  }
+  document.addEventListener('click', () => closeAllDd());
+
+  function ddMarkup(id, label, value){
+    return `
+      <div class="dd" id="${id}">
+        <button type="button" class="dd-trigger"><span class="k">${esc(label)}</span><span class="val">${esc(value)}</span>${ic.chev}</button>
+        <div class="dd-panel"></div>
+      </div>`;
+  }
+
+  const FACETS = [
+    {key:'pair', k:'Пара:', options: getPairList},
+    {key:'side', k:'Сторона:', options:['Все','Покупка','Продажа']},
+    {key:'orderType', k:'Тип ордера:', options:['Все','LIMIT','MARKET']},
+    {key:'role', k:'Роль:', options:['Все','Мейкер','Тейкер']}
+  ];
+
+  function renderChips(){
+    const filtersHtml = FACETS.map((f, i) => ddMarkup(`fdd${i}`, f.k, STATE[f.key])).join('');
+    document.getElementById('chipRow').innerHTML = filtersHtml;
+
+    FACETS.forEach((f, i) => {
+      const dd = document.getElementById(`fdd${i}`);
+      const panel = dd.querySelector('.dd-panel');
+      const opts = typeof f.options === 'function' ? f.options() : f.options;
+      panel.addEventListener('click', e => e.stopPropagation());
+      panel.innerHTML = opts.map(o => `<div class="dd-opt${o===STATE[f.key]?' sel':''}" data-val="${esc(o)}">${esc(o)}<span class="ck">✓</span></div>`).join('');
+      dd.querySelector('.dd-trigger').addEventListener('click', e => {
+        e.stopPropagation();
+        const willOpen = !dd.classList.contains('open');
+        closeAllDd();
+        dd.classList.toggle('open', willOpen);
+      });
+      panel.querySelectorAll('.dd-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          panel.querySelectorAll('.dd-opt').forEach(o => o.classList.toggle('sel', o === opt));
+          dd.querySelector('.val').textContent = opt.dataset.val;
+          dd.classList.remove('open');
+          STATE[f.key] = opt.dataset.val;
+          if (f.key === 'pair') { renderBook(); renderWatch(); renderKpi(); }
+          renderTrades();
+          showToast(`Фильтр применён: ${f.k} ${opt.dataset.val}`);
+        });
+      });
+    });
+  }
+
+  const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const DOW_NAMES = ['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
+  function fmtRu(d){ return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+  function sameDay(a, b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+  function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+
+  const DATE_PRESETS = [
+    {label:'Сегодня', range:() => [new Date(TODAY), new Date(TODAY)]},
+    {label:'Вчера', range:() => [addDays(TODAY,-1), addDays(TODAY,-1)]},
+    {label:'Неделя', range:() => [addDays(TODAY,-6), new Date(TODAY)]},
+    {label:'Месяц', range:() => [addDays(TODAY,-29), new Date(TODAY)]},
+    {label:'Квартал', range:() => [addDays(TODAY,-89), new Date(TODAY)]},
+    {label:'Год', range:() => [addDays(TODAY,-364), new Date(TODAY)]},
+    {label:'Прошлый месяц', range:() => {
+      const first = new Date(TODAY.getFullYear(), TODAY.getMonth()-1, 1);
+      const last = new Date(TODAY.getFullYear(), TODAY.getMonth(), 0);
+      return [first, last];
+    }}
+  ];
+
+  let drpWorking = {start: STATE.dateFrom, end: STATE.dateTo};
+  let drpAnchor = {year: STATE.dateFrom.getFullYear(), month: STATE.dateFrom.getMonth()};
+
+  function buildMonthCells(year, month){
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) {
+      const day = daysInPrevMonth - startOffset + 1 + i;
+      cells.push({date: new Date(year, month - 1, day), muted: true});
+    }
+    for (let d = 1; d <= daysInMonth; d++) cells.push({date: new Date(year, month, d), muted: false});
+    let next = 1;
+    while (cells.length % 7 !== 0) { cells.push({date: new Date(year, month + 1, next), muted: true}); next++; }
+    return cells;
+  }
+
+  function renderMonth(year, month){
+    const cells = buildMonthCells(year, month);
+    const dowHtml = DOW_NAMES.map(d => `<span>${d}</span>`).join('');
+    const start = drpWorking.start, end = drpWorking.end;
+    const daysHtml = cells.map(c => {
+      const inRange = start && end && c.date >= (start < end ? start : end) && c.date <= (start < end ? end : start);
+      const isEdge = (start && sameDay(c.date, start)) || (end && sameDay(c.date, end));
+      const cls = ['drp-day', c.muted ? 'muted' : '', inRange ? 'in-range' : '', isEdge ? 'edge' : ''].filter(Boolean).join(' ');
+      return `<div class="${cls}" data-date="${toISO(c.date)}"><span class="n">${c.date.getDate()}</span></div>`;
+    }).join('');
+    return `
+      <div class="drp-month-title">${MONTH_NAMES[month]} ${year}</div>
+      <div class="drp-dow">${dowHtml}</div>
+      <div class="drp-days">${daysHtml}</div>`;
+  }
+
+  function renderCalendar(){
+    const panel = document.querySelector('#dateRangeDd .drp-panel');
+    if (!panel) return;
+    let m2y = drpAnchor.year, m2m = drpAnchor.month + 1;
+    if (m2m > 11) { m2m = 0; m2y++; }
+    panel.querySelector('[data-idx="0"]').innerHTML = renderMonth(drpAnchor.year, drpAnchor.month);
+    panel.querySelector('[data-idx="1"]').innerHTML = renderMonth(m2y, m2m);
+    panel.querySelectorAll('.drp-day').forEach(el => {
+      el.addEventListener('click', () => {
+        const [yy, mm, dd2] = el.dataset.date.split('-').map(Number);
+        const d = new Date(yy, mm - 1, dd2);
+        if (!drpWorking.start || (drpWorking.start && drpWorking.end)) {
+          drpWorking = {start: d, end: null};
+        } else {
+          drpWorking = d < drpWorking.start ? {start: d, end: drpWorking.start} : {start: drpWorking.start, end: d};
+        }
+        renderCalendar();
+        updateDrpRangeText();
+      });
+    });
+  }
+
+  function updateDrpRangeText(){
+    const panel = document.querySelector('#dateRangeDd .drp-panel');
+    if (!panel) return;
+    const {start, end} = drpWorking;
+    panel.querySelector('.drp-range-text').textContent = start && end ? `${fmtRu(start)} — ${fmtRu(end)}` : (start ? `${fmtRu(start)} — …` : '…');
+  }
+
+  function renderDateRangeDd(){
+    const dd = document.getElementById('dateRangeDd');
+    dd.innerHTML = `
+      <button type="button" class="drp-trigger">${svg('<rect x="3" y="4.5" width="18" height="16" rx="2.3"/><path d="M8 2.5v4M16 2.5v4M3 9.5h18"/>')}<span class="val">${fmtRu(STATE.dateFrom)} — ${fmtRu(STATE.dateTo)}</span></button>
+      <div class="drp-panel">
+        <div class="drp-body">
+          <div class="drp-presets">${DATE_PRESETS.map(p => `<button type="button" data-preset="${esc(p.label)}">${esc(p.label)}</button>`).join('')}</div>
+          <div class="drp-cal">
+            <div class="drp-cal-nav">
+              <button type="button" class="drp-nav-btn" id="drpPrev">‹</button>
+              <div class="drp-grids">
+                <div class="drp-month" data-idx="0"></div>
+                <div class="drp-month" data-idx="1"></div>
+              </div>
+              <button type="button" class="drp-nav-btn" id="drpNext">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="drp-footer">
+          <span class="drp-range-text"></span>
+          <div class="drp-footer-actions">
+            <button type="button" class="drp-reset">Сбросить</button>
+            <button type="button" class="drp-apply">Применить</button>
+          </div>
+        </div>
+      </div>`;
+    dd.querySelector('.drp-panel').addEventListener('click', e => e.stopPropagation());
+    dd.querySelector('.drp-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !dd.classList.contains('open');
+      closeAllDd();
+      if (willOpen) {
+        drpWorking = {start: STATE.dateFrom, end: STATE.dateTo};
+        drpAnchor = {year: STATE.dateFrom.getFullYear(), month: STATE.dateFrom.getMonth()};
+        renderCalendar();
+        updateDrpRangeText();
+      }
+      dd.classList.toggle('open', willOpen);
+    });
+    dd.querySelectorAll('.drp-presets button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = DATE_PRESETS.find(p => p.label === btn.dataset.preset);
+        const [start, end] = preset.range();
+        applyDateRange(start, end);
+      });
+    });
+    document.getElementById('drpPrev').addEventListener('click', () => {
+      drpAnchor.month--; if (drpAnchor.month < 0) { drpAnchor.month = 11; drpAnchor.year--; }
+      renderCalendar();
+    });
+    document.getElementById('drpNext').addEventListener('click', () => {
+      drpAnchor.month++; if (drpAnchor.month > 11) { drpAnchor.month = 0; drpAnchor.year++; }
+      renderCalendar();
+    });
+    dd.querySelector('.drp-reset').addEventListener('click', () => {
+      drpWorking = {start: STATE.dateFrom, end: STATE.dateTo};
+      renderCalendar();
+      updateDrpRangeText();
+    });
+    dd.querySelector('.drp-apply').addEventListener('click', () => {
+      if (drpWorking.start && drpWorking.end) applyDateRange(drpWorking.start, drpWorking.end);
+    });
+  }
+
+  function applyDateRange(start, end){
+    STATE.dateFrom = start; STATE.dateTo = end;
+    const dd = document.getElementById('dateRangeDd');
+    dd.querySelector('.drp-trigger .val').textContent = `${fmtRu(start)} — ${fmtRu(end)}`;
+    dd.classList.remove('open');
+    renderTrades();
+    showToast(`Период: ${fmtRu(start)} — ${fmtRu(end)} — лента сделок пересчитана (dateFrom/dateTo в tradingTrades)`);
+  }
+
+  const KPI = {
+    ALL: [
+      {lbl:'Оборот за период', val:'$3,26M', delta:'+9% к пред. неделе', cls:'up'},
+      {lbl:'Сделок за период', val:'1 843', delta:'+6% к пред. неделе', cls:'up'},
+      {lbl:'Спред топ-пары', val:'0,17%', delta:'BTC/USDT', cls:''},
+      {lbl:'Глубина стакана ±2%', val:'$612K', delta:'BTC/USDT, снимок сейчас', cls:''},
+      {lbl:'Активные ордера в стакане', val:'1 482', delta:'OPEN + PARTIALLY_FILLED', cls:''}
+    ],
+    MM: [
+      {lbl:'Объём котировок MM', val:'$18 342,0M', delta:'+7% к пред. неделе', cls:'up'},
+      {lbl:'Сделок по квотам MM', val:'612', delta:'+12% к пред. неделе', cls:'up'},
+      {lbl:'Доля MM в обороте', val:'12,07%', delta:'-2 п.п. к пред. неделе', cls:'dn'}
+    ]
+  };
+
+  const SCOPE_LABEL = {ALL:'Все', MM:'Внутренний MM'};
+  const KPI_VIEWS = [
+    {key:'full', label:'Развёрнуто', icon:'kpiFull'},
+    {key:'compact', label:'Компактно', icon:'kpiCompact'},
+    {key:'hidden', label:'Скрыто', icon:'kpiHidden'}
+  ];
+
+  function renderKpi(){
+    document.getElementById('kpiStrip').innerHTML = KPI[STATE.scope].map(k => `
+      <div class="kpi-seg"><div class="lbl">${esc(k.lbl)}</div><div class="val">${esc(k.val)}</div><div class="delta ${k.cls}">${esc(k.delta)}</div></div>
+    `).join('');
+    document.getElementById('kpiMeta').textContent = `пара: ${STATE.pair} · контур: ${SCOPE_LABEL[STATE.scope]}`;
+    applyKpiView();
+  }
+
+  function applyKpiView(){
+    const strip = document.getElementById('kpiStrip');
+    const hint = document.getElementById('kpiHiddenHint');
+    const hidden = STATE.kpiView === 'hidden';
+    hint.style.display = hidden ? 'block' : 'none';
+    strip.style.display = hidden ? 'none' : 'flex';
+    strip.classList.toggle('compact', STATE.kpiView === 'compact');
+  }
+
+  function renderKpiViewControl(){
+    const dd = document.getElementById('kpiViewDd');
+    const current = KPI_VIEWS.find(v => v.key === STATE.kpiView);
+    dd.innerHTML = `
+      <button type="button" class="dd-trigger"><span class="ic-wrap">${ic[current.icon]}</span><span class="val">${esc(current.label)}</span>${ic.chev}</button>
+      <div class="dd-panel"></div>`;
+    const panel = dd.querySelector('.dd-panel');
+    panel.addEventListener('click', e => e.stopPropagation());
+    panel.innerHTML = KPI_VIEWS.map(v => `<div class="dd-opt${v.key===STATE.kpiView?' sel':''}" data-key="${v.key}">${ic[v.icon]}<span class="opt-lbl">${esc(v.label)}</span><span class="ck">✓</span></div>`).join('');
+    dd.querySelector('.dd-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !dd.classList.contains('open');
+      closeAllDd();
+      dd.classList.toggle('open', willOpen);
+    });
+    panel.querySelectorAll('.dd-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        STATE.kpiView = opt.dataset.key;
+        dd.classList.remove('open');
+        renderKpiViewControl();
+        applyKpiView();
+      });
+    });
+  }
+
+  function renderBook(){
+    const sym = STATE.pair;
+    const book = bookFor(sym);
+    document.getElementById('bookTitle').textContent = `Стакан · ${sym}`;
+    const bestBid = book.bids[0].px, bestAsk = book.asks[0].px;
+    const mid = (bestBid + bestAsk) / 2;
+    const spread = bestAsk - bestBid;
+    const spreadPct = (spread / mid * 100).toFixed(2);
+    const dec = sym === 'USDT/RUB' ? 2 : (sym === 'BTC/USDT' ? 0 : 1);
+    document.getElementById('bookMid').innerHTML = `mid-price <b>${mid.toFixed(dec)}</b> &nbsp;·&nbsp; спред <b>${spread.toFixed(dec)}</b> (${spreadPct}%)`;
+
+    function rows(list, cls, flip){
+      let cum = 0;
+      const maxAmt = Math.max(...list.map(r => r.amt));
+      const px = r => `<span class="c-px">${r.px.toLocaleString('ru-RU')}${r.mm ? '<span class="mm-tag">MM</span>' : ''}</span>`;
+      const amt = r => `<span class="c-amt">${r.amt}</span>`;
+      const cumSpan = c => `<span class="c-cum">${c.toFixed(3)}</span>`;
+      return list.map(r => {
+        cum += r.amt;
+        const dim = STATE.scope === 'MM' && !r.mm;
+        // bid: цена / объём / накопление (цена у внешнего края, накопление у центра)
+        // ask: накопление / объём / цена — зеркально, накопление и бар растут от центра
+        const cells = flip ? cumSpan(cum) + amt(r) + px(r) : px(r) + amt(r) + cumSpan(cum);
+        return `<div class="book-row ${cls}${dim ? ' dim' : ''}">
+          <div class="depth-bar" style="width:${Math.round(r.amt / maxAmt * 100)}%"></div>
+          ${cells}
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('asksBody').innerHTML = rows(book.asks, 'ask', true);
+    document.getElementById('bidsBody').innerHTML = rows(book.bids, 'bid', false);
+  }
+
+  function tradeMatches(t){
+    if (STATE.pair !== t.sym) return false;
+    if (STATE.scope === 'MM' && !t.makerMM) return false;
+    if (STATE.side === 'Покупка' && t.side !== 'BUY') return false;
+    if (STATE.side === 'Продажа' && t.side !== 'SELL') return false;
+    // мейкер всегда лежит в стакане лимитным ордером, поэтому фильтр LIMIT матчит любую сделку;
+    // MARKET матчит только те, где тейкер зашёл рыночным ордером
+    if (STATE.orderType === 'MARKET' && t.takerType !== 'MARKET') return false;
+    return true;
+  }
+
+  function renderTrades(){
+    const list = TRADES.filter(t => t.sym === STATE.pair);
+    const shown = list.filter(t => tradeMatches(t));
+    document.getElementById('tradesHint').textContent = `${shown.length} из ${list.length} по паре ${STATE.pair}`;
+    document.getElementById('tradesBody').innerHTML = list.map(t => {
+      const dim = !tradeMatches(t);
+      const showMaker = STATE.role !== 'Тейкер';
+      const showTaker = STATE.role !== 'Мейкер';
+      const rowHtml = (userId, orderId, fee, role, showCommon) => `
+        <div class="trade-row">
+          <span>${showCommon ? t.time : ''}</span>
+          <span>${showCommon ? esc(t.sym) : ''}</span>
+          <span>${showCommon ? `<span class="mono">${t.id}</span>` : ''}</span>
+          <span class="mono">${showCommon ? t.price.toLocaleString('ru-RU') : ''}</span>
+          <span class="mono">${showCommon ? t.amount : ''}</span>
+          <span>${showCommon ? `<span class="side-tag ${t.side==='BUY'?'buy':'sell'}">${t.side==='BUY'?'Покупка':'Продажа'}</span>` : ''}</span>
+          <span><span class="role-pill ${role}">${role === 'maker' ? 'Мейкер' : 'Тейкер'}</span> <span class="userid">${userId}</span>${role==='maker' && t.makerMM ? '<span class="mm-tag">MM</span>' : ''}</span>
+          <span class="mono">${orderId}<span class="type-tag">${role === 'maker' ? 'LIMIT' : t.takerType}</span></span>
+          <span class="mono">${fee}</span>
+          <span>${showCommon ? `<span class="settle-pill ${t.settlement}"><span class="d"></span>${t.settlement}</span>` : ''}</span>
+        </div>`;
+      const makerHtml = showMaker ? rowHtml(t.makerUserId, t.makerOrderId, t.makerFee, 'maker', true) : '';
+      const takerHtml = showTaker ? rowHtml(t.takerUserId, t.takerOrderId, t.takerFee, 'taker', !showMaker) : '';
+      return `<div class="trade-block${dim ? ' dim' : ''}" data-id="${t.id}">${makerHtml}${takerHtml}</div>`;
+    }).join('');
+    document.querySelectorAll('.trade-block').forEach(el => {
+      el.addEventListener('click', () => openDrawer(el.dataset.id));
+    });
+  }
+
+  function renderWatch(){
+    document.getElementById('watchBody').innerHTML = MARKETS.map(m => `
+      <div class="watch-row${m.sym === STATE.pair ? ' active' : ''}" data-sym="${esc(m.sym)}">
+        <span class="chk${m.fav ? ' on' : ''}" data-act="fav">${m.fav ? ic.check : ''}</span>
+        <span class="sym" data-act="open">${esc(m.sym)}</span>
+        <span class="mono">${esc(m.turnover)}</span>
+        <span class="mono">${m.trades}</span>
+      </div>
+    `).join('');
+    document.querySelectorAll('.watch-row .chk').forEach(chk => {
+      chk.addEventListener('click', e => {
+        e.stopPropagation();
+        const sym = chk.closest('.watch-row').dataset.sym;
+        const m = MARKETS.find(x => x.sym === sym);
+        m.fav = !m.fav;
+        renderWatch(); renderChips();
+        showToast(`${sym} ${m.fav ? 'добавлена в рабочий набор' : 'убрана из рабочего набора'}`);
+      });
+    });
+    document.querySelectorAll('.watch-row .sym').forEach(el => {
+      el.addEventListener('click', () => {
+        const sym = el.closest('.watch-row').dataset.sym;
+        STATE.pair = sym;
+        renderChips(); renderBook(); renderTrades(); renderWatch(); renderKpi();
+        setTab('book');
+        showToast(`Активная пара: ${sym}`);
+      });
+    });
+  }
+
+  function setTab(tab){
+    STATE.activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tab}`));
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => setTab(btn.dataset.tab));
+  });
+
+  document.querySelectorAll('#scopeSeg button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#scopeSeg button').forEach(b => b.classList.toggle('active', b === btn));
+      STATE.scope = btn.dataset.scope;
+      renderKpi(); renderBook(); renderTrades();
+      showToast(STATE.scope === 'MM' ? 'Контур «Внутренний MM»: is_market_maker = true (JOIN orders ↔ trades)' : 'Контур «Все»');
+    });
+  });
+
+  function doSearch(){
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    const qUpper = q.toUpperCase();
+    const list = TRADES.filter(t => t.sym === STATE.pair);
+    const byTrade = list.find(t => t.id.toUpperCase() === qUpper);
+    if (byTrade) { openDrawer(byTrade.id); return; }
+    const byOrder = list.find(t => t.makerOrderId.toUpperCase() === qUpper || t.takerOrderId.toUpperCase() === qUpper);
+    if (byOrder) { openDrawer(byOrder.id); showToast(`Ордер ${q} найден в сделке ${byOrder.id}`); return; }
+    showToast(`Не найдено в ленте по паре ${STATE.pair} — попробуйте сменить пару/период`);
+  }
+  document.getElementById('searchGo').addEventListener('click', doSearch);
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  function openDrawer(tradeId){
+    const t = TRADES.find(x => x.id === tradeId);
+    if (!t) return;
+    document.getElementById('drawerTitle').textContent = t.id;
+    const settleEl = document.getElementById('drawerSettle');
+    settleEl.className = `settle-pill ${t.settlement}`;
+    settleEl.innerHTML = `<span class="d"></span>${t.settlement}`;
+    document.getElementById('drawerBody').innerHTML = `
+      <div class="drawer-section">
+        <div class="st">Сделка</div>
+        <div class="drow"><span class="k">Пара</span><span class="v">${t.sym}</span></div>
+        <div class="drow"><span class="k">Время</span><span class="v">${t.time}</span></div>
+        <div class="drow"><span class="k">Цена · Объём</span><span class="v">${t.price.toLocaleString('ru-RU')} · ${t.amount}</span></div>
+        <div class="drow"><span class="k">Сторона тейкера</span><span class="v">${t.side === 'BUY' ? 'Покупка' : 'Продажа'}</span></div>
+      </div>
+      <div class="drawer-section">
+        <div class="st">Стороны сделки</div>
+        <div class="side-card">
+          <div class="top"><span class="role-pill maker">Мейкер</span>${t.makerMM ? '<span class="mm-tag">MM</span>' : ''}</div>
+          <div class="drow"><span class="k">Клиент</span><span class="v link" data-action="client">${t.makerUserId}</span></div>
+          <div class="drow"><span class="k">Ордер</span><span class="v link" data-action="order" data-order="${t.makerOrderId}">${t.makerOrderId} <span class="type-tag">LIMIT</span></span></div>
+          <div class="drow"><span class="k">Комиссия</span><span class="v">${t.makerFee}</span></div>
+          ${t.makerMM ? `<div class="drow"><span class="k">Источник котировки</span><span class="v">${t.rateSource}</span></div>` : ''}
+        </div>
+        <div class="side-card">
+          <div class="top"><span class="role-pill taker">Тейкер</span></div>
+          <div class="drow"><span class="k">Клиент</span><span class="v link" data-action="client">${t.takerUserId}</span></div>
+          <div class="drow"><span class="k">Ордер</span><span class="v link" data-action="order" data-order="${t.takerOrderId}">${t.takerOrderId} <span class="type-tag">${t.takerType}</span></span></div>
+          <div class="drow"><span class="k">Комиссия</span><span class="v">${t.takerFee}</span></div>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="st">Таймлайн (tradingTradeEvents)</div>
+        <div class="timeline">
+          <div class="tl-item"><span class="tl-dot"></span><div><div class="tl-txt">Ордер мейкера встал в стакан</div><div class="tl-time">${t.time}</div></div></div>
+          <div class="tl-item"><span class="tl-dot"></span><div><div class="tl-txt">Сделка ${t.id} исполнена</div><div class="tl-time">${t.time}</div></div></div>
+          <div class="tl-item"><span class="tl-dot"></span><div><div class="tl-txt">Статус расчёта: ${t.settlement}</div><div class="tl-time">по факту outbox</div></div></div>
+        </div>
+      </div>
+    `;
+    document.querySelectorAll('#drawerBody [data-action="client"]').forEach(el => {
+      el.addEventListener('click', () => showToast('Профиль клиента — вне домена trading, переход в User 360'));
+    });
+    document.querySelectorAll('#drawerBody [data-action="order"]').forEach(el => {
+      el.addEventListener('click', () => showToast(`Переход в «Ордерную книгу»: ${el.dataset.order}`));
+    });
+    document.getElementById('drawerTitle').onclick = () => showToast(`ID ${t.id} скопирован`);
+
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  }
+  function closeDrawer(){
+    document.getElementById('overlay').classList.remove('show');
+    document.getElementById('drawer').classList.remove('show');
+  }
+  document.getElementById('overlay').addEventListener('click', closeDrawer);
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+
+  renderChips();
+  renderDateRangeDd();
+  renderKpiViewControl();
+  renderKpi();
+  renderBook(); renderTrades(); renderWatch();
+})();
+</script>
+</body>
+</html>

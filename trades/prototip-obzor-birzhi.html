@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitadmin · Биржа · Обзор биржи</title>
+<style>
+  :root{
+    --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;
+    --bg-white-0:#fff;--bg-weak-50:#f7f7f7;--bg-soft-200:#ebebeb;
+    --stroke-soft-200:#ebebeb;
+    --primary-base:#7246e6;--primary-alpha-06:#7246e60f;--primary-alpha-12:#7246e61f;
+    --state-success-base:#1fc16b;--state-success-light:#c2f5da;--state-success-dark:#0b4627;
+    --state-warning-base:#fa7319;--state-warning-lighter:#fff3eb;--state-warning-dark:#c77a12;
+    --state-error-lighter:#ffebec;--state-error-base:#fb3748;
+    --yellow-200:#ffecc0;
+    --radius-6:6px;--radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--radius-full:999px;
+    --shadow-x-small:0 1px 2px 0 rgba(10,13,20,.03);
+    --shadow-toggle:0 2px 4px 0 rgba(14,18,27,.03),0 6px 10px 0 rgba(14,18,27,.06);
+    --sidebar-w:280px;--topbar-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg-weak-50);color:var(--text-strong-950);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased}
+  .mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .tabular{font-variant-numeric:tabular-nums}
+  button{font-family:inherit}
+
+  .shell{display:flex;min-height:100vh}
+
+  /* ================= SIDEBAR — статичная, некликабельная копия реального меню ================= */
+  .sidebar{width:var(--sidebar-w);flex:none;background:var(--bg-white-0);border-right:1px solid var(--stroke-soft-200);display:flex;flex-direction:column;padding:0 12px 12px;position:sticky;top:0;height:100vh;overflow-y:auto;user-select:none;pointer-events:none}
+  .sb-brand-row{display:flex;align-items:center;width:100%;height:var(--topbar-h);padding:0 8px}
+  .sb-brand-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary-base),#9b7bf0);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;margin-right:12px}
+  .sb-brand-name{font-size:14px;font-weight:500;line-height:1.2}
+  .sb-brand-sub{font-size:12px;color:var(--text-soft-400)}
+  .sb-label{padding:8px 10px 8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-soft-400)}
+  .sb-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-8);font-size:14px;font-weight:500;line-height:20px;color:var(--text-sub-600);margin-bottom:1px}
+  .sb-item .ic{width:18px;height:18px;flex:none;color:var(--text-soft-400)}
+  .sb-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-item .chev{width:9px;height:9px;color:var(--text-soft-400);flex:none;transform:rotate(-90deg)}
+  .sb-item .chev.open{transform:none}
+  .sb-item.expanded{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .sb-tree{display:flex;flex-direction:column;gap:1px;margin:1px 0 6px}
+  .sb-child{display:flex;align-items:center;padding:7px 10px 7px 14px;border-radius:var(--radius-8);border-left:2px solid transparent;font-size:13px;color:var(--text-sub-600)}
+  .sb-child.active{background:var(--bg-weak-50);color:var(--primary-base);font-weight:500;border-left-color:var(--primary-base)}
+
+  /* ================= MAIN ================= */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:var(--topbar-h);flex:none;background:var(--bg-white-0);border-bottom:1px solid var(--stroke-soft-200);display:flex;align-items:center;gap:12px;padding:0 24px;position:sticky;top:0;z-index:20;pointer-events:none;user-select:none}
+  .tb-spacer{flex:1}
+  .tb-lang{height:34px;display:flex;align-items:center;gap:6px;padding:0 8px 0 10px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft-200);font-size:13px;font-weight:500;color:var(--text-sub-600)}
+  .tb-lang .lang-code{font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--text-soft-400);border:1px solid var(--stroke-soft-200);border-radius:4px;padding:1px 4px;line-height:1.4}
+  .tb-lang .chev{width:9px;height:9px;color:var(--text-soft-400);flex:none;transform:rotate(180deg)}
+  .tb-divider{width:1px;height:26px;background:var(--stroke-soft-200)}
+  .tb-user{display:flex;align-items:center;gap:9px}
+  .tb-avatar{position:relative;width:34px;height:34px;border-radius:50%;background:var(--yellow-200);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .tb-avatar .dot{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border-radius:50%;background:var(--state-success-base);border:2px solid var(--bg-white-0)}
+  .tb-user-text{display:flex;flex-direction:column}
+  .tb-user-name{font-size:12.5px;font-weight:500}
+  .tb-user-email{font-size:11.5px;color:var(--text-soft-400)}
+
+  .content{padding:24px}
+
+  .page-head{border-radius:var(--radius-16);background:var(--bg-white-0);box-shadow:var(--shadow-x-small);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px}
+  .ph-left{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .ph-left h1{font-size:18px;font-weight:500;letter-spacing:-.27px;line-height:24px}
+  .ph-desc{font-size:14px;color:var(--text-sub-600);letter-spacing:-.084px;max-width:640px}
+  .ph-right{display:flex;align-items:center;gap:8px;flex:none}
+  .ph-updated{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-soft-400)}
+  .ph-updated button{border:0;background:none;font:inherit;font-weight:500;text-decoration:underline;color:var(--primary-base);cursor:pointer}
+  .ph-updated button.spin{opacity:.6;pointer-events:none}
+
+  .section-label{margin:26px 0 10px}
+  .section-label h2{font-size:14px;font-weight:500}
+  .section-label.kpi-label{display:flex;align-items:center;gap:10px}
+  .kpi-meta{flex:1;text-align:center;font-size:11.5px;color:var(--text-soft-400)}
+  .kpi-view-dd{flex:none}
+  .kpi-view-dd .dd-trigger{border-color:var(--stroke-soft-200);background:var(--bg-white-0);color:var(--text-sub-600)}
+  .kpi-view-dd .dd-trigger .ic{width:13px;height:13px;color:var(--text-sub-600)}
+  .kpi-view-dd .dd-panel{right:0;left:auto;min-width:160px}
+  .kpi-view-dd .dd-opt .ic{width:13px;height:13px;color:var(--text-soft-400);flex:none;margin-right:8px}
+  .kpi-view-dd .dd-opt{justify-content:flex-start}
+  .kpi-view-dd .dd-opt .opt-lbl{flex:1}
+
+  /* контур — сегмент над KPI, без подписи */
+  .scope-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+  .seg{display:inline-flex;gap:4px;border-radius:var(--radius-10);padding:4px;background:var(--bg-weak-50)}
+  .seg button{border:0;background:transparent;border-radius:var(--radius-6);padding:6px 12px;font-size:14px;font-weight:500;color:var(--text-soft-400);cursor:pointer;font-family:inherit}
+  .seg button.active{background:var(--bg-white-0);color:var(--text-strong-950);box-shadow:var(--shadow-toggle)}
+
+  /* KPI — единая карточка, сегменты через border-left */
+  .kpi-strip{display:flex;overflow:hidden;border-radius:var(--radius-16);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);box-shadow:var(--shadow-x-small);margin-bottom:22px}
+  .kpi-seg{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 14px;text-align:center;border-left:1px solid var(--stroke-soft-200)}
+  .kpi-seg:first-child{border-left:0}
+  .kpi-seg .lbl{font-size:12px;color:var(--text-soft-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .kpi-seg .val{margin-top:6px;font-size:24px;font-weight:500;line-height:28px}
+  .kpi-seg .delta{margin-top:2px;font-size:12px;font-weight:500;color:var(--text-soft-400)}
+  .kpi-seg .delta.up{color:var(--state-success-dark)}
+  .kpi-seg .delta.dn{color:var(--state-warning-dark)}
+
+  .kpi-strip.compact .kpi-seg{padding:12px 14px}
+  .kpi-strip.compact .kpi-seg .delta{display:none}
+
+  .kpi-hidden-hint{font-size:13px;color:var(--text-soft-400);margin-bottom:22px}
+
+  /* фильтры + период — кастомные дропдауны, не нативный select */
+  .filters-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:22px;position:relative}
+  .dd{position:relative}
+  .dd-trigger{display:flex;align-items:center;gap:6px;border:1px solid var(--primary-base);background:var(--primary-alpha-06);border-radius:var(--radius-8);padding:6px 10px 6px 12px;font:inherit;cursor:pointer;color:var(--primary-base)}
+  .dd-trigger .k{color:var(--text-soft-400);font-size:13px;font-weight:500;white-space:nowrap}
+  .dd-trigger .val{font-size:13px;font-weight:500;white-space:nowrap}
+  .dd-trigger .chev{width:9px;height:9px;color:var(--primary-base);flex:none;transition:transform .15s}
+  .dd.open .dd-trigger .chev{transform:rotate(180deg)}
+  .dd-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;max-height:280px;overflow-y:auto;background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);box-shadow:0 10px 30px rgba(14,18,27,.14);padding:6px;z-index:60;display:none}
+  .dd.open .dd-panel{display:block}
+  .dd-opt{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:7px 10px;border-radius:var(--radius-8);font-size:13px;color:var(--text-strong-950);white-space:nowrap;cursor:pointer}
+  .dd-opt:hover{background:var(--bg-weak-50)}
+  .dd-opt.sel{color:var(--primary-base);font-weight:600}
+  .dd-opt .ck{width:13px;height:13px;color:var(--primary-base);opacity:0;flex:none}
+  .dd-opt.sel .ck{opacity:1}
+  .date-inline{display:flex;align-items:center;gap:8px}
+  .date-box{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);border-radius:var(--radius-8);padding:6px 10px}
+  .date-box .k{font-size:12.5px;color:var(--text-soft-400);font-weight:500}
+  .date-box input[type=date]{border:0;outline:0;background:transparent;font:inherit;font-size:12.5px;color:var(--text-strong-950);width:118px}
+  .fr-divider{width:1px;height:20px;background:var(--stroke-soft-200);margin:0 4px}
+  .period-btn{border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);border-radius:var(--radius-8);padding:6px 12px;font-size:12.5px;font-weight:500;color:var(--text-sub-600);cursor:pointer;font-family:inherit}
+  .period-btn:hover:not(.active){background:var(--bg-weak-50)}
+  .period-btn.active{background:var(--primary-base);border-color:var(--primary-base);color:#fff}
+
+  table.data{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.data th{text-align:left;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400);padding:8px}
+  table.data td{padding:10px 8px;border-top:1px solid var(--stroke-soft-200);font-size:12.5px}
+  table.data tr.clickable{cursor:pointer}
+  table.data tr.clickable:hover{background:var(--bg-weak-50)}
+  .pair-sym{font-family:ui-monospace,monospace;font-weight:700;color:var(--text-strong-950)}
+
+  /* виджеты — одинаковая высота в строке */
+  .widgets{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:16px;align-items:stretch}
+  @media (max-width:960px){.widgets{grid-template-columns:1fr;grid-auto-rows:auto}}
+  .widget{background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);overflow:hidden;display:flex;flex-direction:column;height:100%}
+  .widget header{display:flex;align-items:baseline;gap:8px;padding:12px 16px;border-bottom:1px solid var(--stroke-soft-200)}
+  .widget header h3{font-size:14px;font-weight:500}
+  .widget header .hint{margin-left:auto;font-size:12px;color:var(--text-soft-400)}
+  .widget .body{padding:8px;flex:1}
+
+  .bar-row{display:grid;grid-template-columns:92px 1fr 120px;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--stroke-soft-200)}
+  .bar-row:first-child{border-top:0}
+  .bar-row .sym{font-family:ui-monospace,monospace;font-weight:700;font-size:12.5px}
+  .bar-track{height:8px;border-radius:4px;background:var(--bg-weak-50);overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;background:var(--primary-base)}
+  .bar-row .amt{display:flex;justify-content:flex-end;align-items:baseline;gap:8px;font-family:ui-monospace,monospace;font-weight:700;font-size:12.5px}
+  .bar-row .amt .delta{font-size:11.5px;font-weight:600}
+  .bar-row .amt .delta.up{color:var(--state-success-base)}
+  .bar-row .amt .delta.dn{color:var(--state-error-base)}
+
+  .stat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 10px;border-top:1px solid var(--stroke-soft-200);font-size:13px}
+  .stat-row:first-child{border-top:0}
+  .stat-row .k{color:var(--text-sub-600)}
+  .stat-row .v{font-family:ui-monospace,monospace;font-weight:700;display:flex;align-items:center;gap:6px}
+  .stat-row .v .d{font-size:11px;color:var(--state-success-dark);font-weight:600}
+  .stat-row .link{color:var(--primary-base);cursor:pointer}
+
+  .empty-hint{padding:22px 14px;color:var(--text-soft-400);font-size:12.5px;text-align:center}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--text-strong-950);color:#fff;padding:11px 16px;border-radius:var(--radius-10);font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:200;display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;max-width:360px}
+  .toast.show{opacity:1;transform:none}
+  .toast .d{width:6px;height:6px;border-radius:50%;background:var(--primary-base);flex:none}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ================= SIDEBAR — статичная, некликабельная копия реального меню ================= -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <div class="topbar" id="topbar"></div>
+
+    <div class="content">
+
+      <div class="page-head">
+        <div class="ph-left">
+          <h1>Обзор биржи</h1>
+          <p class="ph-desc">Оборот, активные пары, ликвидность стакана, активные трейдеры, лучшие пары, спреды — сводный дашборд биржевой торговли на стакане.</p>
+        </div>
+        <div class="ph-right">
+          <div class="ph-updated">данные на <span class="mono" id="updTime">14:32</span><button type="button" id="refreshBtn">обновить</button></div>
+        </div>
+      </div>
+
+      <div class="scope-row">
+        <div class="seg" id="scopeSeg">
+          <button class="active" data-scope="ALL">Все</button>
+          <button data-scope="TECHNICAL">Технические</button>
+        </div>
+      </div>
+
+      <div class="filters-row" id="chipRow"></div>
+
+      <div class="section-label kpi-label">
+        <h2>KPI · сейчас</h2>
+        <span class="kpi-meta" id="kpiMeta"></span>
+        <div class="dd kpi-view-dd" id="kpiViewDd"></div>
+      </div>
+      <div class="kpi-strip" id="kpiStrip"></div>
+      <div class="kpi-hidden-hint" id="kpiHiddenHint" style="display:none">KPI скрыты — нажмите «Скрыто», чтобы развернуть.</div>
+
+      <div class="section-label"><h2>Виджеты дашборда</h2></div>
+      <div class="widgets">
+
+        <section class="widget">
+          <header><h3>Лучшие пары по объёму</h3><span class="hint" id="topPairsHint"></span></header>
+          <div class="body" id="topPairsBody"></div>
+        </section>
+
+        <section class="widget">
+          <header><h3>Ликвидность стакана · bid/ask и depth</h3></header>
+          <div class="body" style="overflow-x:auto">
+            <table class="data">
+              <thead><tr><th>Пара</th><th>Bid / Ask</th><th>Depth ±1%</th><th>Depth ±2%</th><th>Доля MM</th></tr></thead>
+              <tbody id="liqBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="widget">
+          <header><h3>Спреды по парам</h3><span class="hint">текущий момент</span></header>
+          <div class="body" style="overflow-x:auto">
+            <table class="data">
+              <thead><tr><th>Пара</th><th>Текущий спред</th></tr></thead>
+              <tbody id="spreadBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="widget">
+          <header><h3 id="tradersTitle">Трейдеры и ордера</h3></header>
+          <div class="body"><div id="tradersStats"></div></div>
+        </section>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="d"></span><span id="toastText"></span></div>
+
+<script>
+(function(){
+  "use strict";
+
+  function svg(inner){ return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`; }
+  const ic = {
+    grid: svg('<rect x="3" y="3" width="7" height="7" rx="1.3"/><rect x="14" y="3" width="7" height="7" rx="1.3"/><rect x="3" y="14" width="7" height="7" rx="1.3"/><rect x="14" y="14" width="7" height="7" rx="1.3"/>'),
+    process: svg('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+    clients: svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><circle cx="18" cy="9" r="2.2"/><path d="M16.5 21v-1a5 5 0 0 0-1-3"/>'),
+    chart: svg('<path d="M4 20V10"/><path d="M11 20V4"/><path d="M18 20v-7"/>'),
+    wallet: svg('<rect x="3" y="6" width="18" height="13" rx="2.3"/><path d="M16 12h3"/><path d="M3 10h18"/>'),
+    vault: svg('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="12" r="3"/>'),
+    exchange: svg('<path d="M7 3v14"/><path d="M3 7l4-4 4 4"/><path d="M17 21V7"/><path d="M21 17l-4 4-4-4"/>'),
+    crypto: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 15.2c.5.7 1.4 1.1 2.5 1.1 1.7 0 3-1 3-2.3 0-3-5.5-1.5-5.5-4.5 0-1.3 1.3-2.3 3-2.3 1.1 0 2 .4 2.5 1.1"/><path d="M12 7v10"/>'),
+    gear: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    chev: svg('<path d="M6 9l6 6 6-6"/>'),
+    kpiFull: svg('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
+    kpiCompact: svg('<rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/>'),
+    kpiHidden: svg('<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-10-8-10-8a18.5 18.5 0 0 1 4.22-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>')
+  };
+
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sb-brand-row">
+      <div class="sb-brand-avatar">BI</div>
+      <div><div class="sb-brand-name">Bitbanker</div><div class="sb-brand-sub">Admin Panel</div></div>
+    </div>
+    <div class="sb-label">Рабочее место</div>
+    <div class="sb-item">${ic.grid}<span class="lbl">Обзор</span></div>
+    <div class="sb-item">${ic.process}<span class="lbl">Процессы</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.clients}<span class="lbl">Клиенты</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.chart}<span class="lbl">Аналитика</span><span class="chev">${ic.chev}</span></div>
+
+    <div class="sb-label">Финансовые продукты</div>
+    <div class="sb-item">${ic.wallet}<span class="lbl">ОПС / PSP</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.vault}<span class="lbl">Депозитарий</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item expanded">${ic.exchange}<span class="lbl">Биржа</span><span class="chev open">${ic.chev}</span></div>
+    <div class="sb-tree">
+      <div class="sb-child active">Обзор биржи</div>
+      <div class="sb-child">Торги (стакан и сделки)</div>
+      <div class="sb-child">Ордерная книга</div>
+      <div class="sb-child">Маркет-дата</div>
+      <div class="sb-child">Маркет-мейкеры биржи</div>
+      <div class="sb-child">Допуск клиентов</div>
+    </div>
+    <div class="sb-item">${ic.crypto}<span class="lbl">Криптоброкер</span><span class="chev">${ic.chev}</span></div>
+
+    <div class="sb-label">Управление платформой</div>
+    <div class="sb-item">${ic.gear}<span class="lbl">Настройки</span><span class="chev">${ic.chev}</span></div>
+  `;
+
+  document.getElementById('topbar').innerHTML = `
+    <div class="tb-spacer"></div>
+    <div class="tb-lang"><span class="lang-code">RU</span> Русский ${ic.chev}</div>
+    <div class="tb-divider"></div>
+    <div class="tb-user">
+      <div class="tb-avatar">SA<span class="dot"></span></div>
+      <div class="tb-user-text"><span class="tb-user-name">Super Admin</span><span class="tb-user-email">super-admin@admin.com</span></div>
+    </div>
+  `;
+
+  // ---------------------------------------------------------------
+  // P0 + P1 по v2.md, всё в прототипе — рабочее и реагирует на фильтры.
+  // Полностью убрано (P2, без плейсхолдеров): «Средний спред» и колонки
+  // Динамика/Оценка у спредов, «Состояние ликвидности», контуры
+  // «Наши»/«Партнёрские», MM-эффективность, нетто-позиция MM,
+  // kill-switch, клиентский поиск.
+  // ---------------------------------------------------------------
+
+  const PAIR_LIST = ['Все пары','BTC/USDT','ETH/USDT','USDT/RUB','TON/USDT','TRX/USDT','BTC/RUB','USDC/USDT'];
+  const PERIODS = ['Сегодня','Неделя','Месяц','Квартал'];
+  const PERIOD_WORD = {'Сегодня':'день', 'Неделя':'неделю', 'Месяц':'месяц', 'Квартал':'квартал'};
+
+  const KPI_STATIC = {
+    ALL: {lbl:'Активные пары', val:'14', delta:'из 18 включённых', cls:''},
+    TECHNICAL: [
+      {lbl:'Активные уровни сетки', val:'18', delta:'', cls:''},
+      {lbl:'Служебные ордера в стакане', val:'246', delta:'is_market_maker = true', cls:''}
+    ]
+  };
+
+  const KPI_PERIOD = {
+    ALL: {
+      'Сегодня': {val:'$0,71M', delta:'+4% к пред. дню'},
+      'Неделя':  {val:'$4,80M', delta:'+11% к пред. неделе'},
+      'Месяц':   {val:'$19,90M', delta:'+14% к пред. месяцу'},
+      'Квартал': {val:'$58,40M', delta:'+9% к пред. кварталу'}
+    },
+    TECHNICAL: {
+      'Сегодня': {val:'$0,42M', delta:'+2% к пред. дню'},
+      'Неделя':  {val:'$2,90M', delta:'+6% к пред. неделе'},
+      'Месяц':   {val:'$12,10M', delta:'+8% к пред. месяцу'},
+      'Квартал': {val:'$35,60M', delta:'+5% к пред. кварталу'}
+    }
+  };
+
+  const TRADERS_COUNT_PERIOD = {'Сегодня':{v:'84', d:'+9'}, 'Неделя':{v:'326', d:'+24'}, 'Месяц':{v:'918', d:'+71'}, 'Квартал':{v:'1 240', d:'+96'}};
+  const NEW_TRADERS_PERIOD = {'Сегодня':'7', 'Неделя':'41', 'Месяц':'156', 'Квартал':'402'};
+  const TOP_TRADER_ORDERS_PERIOD = {'Сегодня':'38', 'Неделя':'214', 'Месяц':'640', 'Квартал':'1 890'};
+
+  const DEPTH_BASE = 612;
+  function depthKpi(mm){
+    if (mm === 'Без MM') return {val:`$${Math.round(DEPTH_BASE*0.42)}K`, delta:'без учёта MM-квот', cls:'dn'};
+    return {val:`$${DEPTH_BASE}K`, delta:'снимок сейчас', cls:''};
+  }
+
+  const FILTERS = {
+    ALL: [
+      {key:'pair', k:'Пары:', options: PAIR_LIST},
+      {key:'mm',   k:'Участие MM:', options:['Включая MM-квоты','Без MM']}
+    ],
+    TECHNICAL: [
+      {key:'pair', k:'Пары:', options: PAIR_LIST},
+      {key:'grid', k:'Уровни сетки:', options:['Все уровни','1–5','6–10','11+']}
+    ]
+  };
+
+  const TRADERS_TECHNICAL = [
+    {k:'Активные уровни сетки', v:'18'},
+    {k:'Служебные ордера MM в стакане', v:'246'},
+    {k:'Залежавшиеся служебные ордера', v:'2'}
+  ];
+
+  const TRADERS_TITLE = {ALL:'Трейдеры и ордера', TECHNICAL:'MM-сетка и служебные ордера'};
+
+  const TOP_PAIRS_PERIOD = {
+    'Сегодня': [{sym:'USDT/RUB', usd:0.30, delta:'+9%'}, {sym:'BTC/USDT', usd:0.22, delta:'+6%'}, {sym:'ETH/USDT', usd:0.13, delta:'+3%'}, {sym:'USDC/USDT', usd:0.06, delta:'+1%'}],
+    'Неделя':  [{sym:'USDT/RUB', usd:0.80, delta:'+24%'}, {sym:'BTC/USDT', usd:0.64, delta:'+19%'}, {sym:'ETH/USDT', usd:0.40, delta:'+11%'}, {sym:'USDC/USDT', usd:0.24, delta:'+6%'}],
+    'Месяц':   [{sym:'USDT/RUB', usd:3.30, delta:'+18%'}, {sym:'BTC/USDT', usd:2.60, delta:'+14%'}, {sym:'ETH/USDT', usd:1.60, delta:'+9%'}, {sym:'USDC/USDT', usd:1.00, delta:'+3%'}],
+    'Квартал': [{sym:'USDT/RUB', usd:9.60, delta:'+12%'}, {sym:'BTC/USDT', usd:7.80, delta:'+10%'}, {sym:'ETH/USDT', usd:4.70, delta:'+7%'}, {sym:'USDC/USDT', usd:2.90, delta:'+2%'}]
+  };
+
+  const LIQUIDITY = [
+    {sym:'BTC/USDT', ba:'64 210 / 64 318', d1:236, d2:418, mm:58},
+    {sym:'ETH/USDT', ba:'3 412 / 3 419', d1:158, d2:291, mm:61},
+    {sym:'USDT/RUB', ba:'97.42 / 97.68', d1:121, d2:214, mm:44},
+    {sym:'TON/USDT', ba:'6.91 / 6.96', d1:38.0, d2:61.0, mm:72}
+  ];
+
+  const SPREADS = [
+    {sym:'BTC/USDT', cur:'0,17%'},
+    {sym:'ETH/USDT', cur:'0,21%'},
+    {sym:'USDT/RUB', cur:'0,27%'},
+    {sym:'TON/USDT', cur:'0,72%'}
+  ];
+
+  const STATE = {scope:'ALL', period:'Неделя', pair:'Все пары', mm:'Включая MM-квоты', kpiView:'full'};
+
+  const SCOPE_LABEL = {ALL:'Все', TECHNICAL:'Технические'};
+  const PERIOD_LOWER = {'Сегодня':'сегодня', 'Неделя':'неделя', 'Месяц':'месяц', 'Квартал':'квартал'};
+  const KPI_VIEWS = [
+    {key:'full', label:'Развёрнуто', icon:'kpiFull'},
+    {key:'compact', label:'Компактно', icon:'kpiCompact'},
+    {key:'hidden', label:'Скрыто', icon:'kpiHidden'}
+  ];
+
+  function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  let toastTimer;
+  function showToast(text){
+    const el = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  function renderKpi(){
+    const {scope, period, mm} = STATE;
+    let list;
+    if (scope === 'ALL') {
+      const t = KPI_PERIOD.ALL[period];
+      const tr = TRADERS_COUNT_PERIOD[period];
+      const d = depthKpi(mm);
+      list = [
+        {lbl:'Оборот за период', val:t.val, delta:t.delta, cls:'up'},
+        KPI_STATIC.ALL,
+        {lbl:'Активные трейдеры', val:tr.v, delta:`${tr.d} за ${PERIOD_WORD[period]}`, cls:'up'},
+        {lbl:'Глубина стакана ±1%', val:d.val, delta:d.delta, cls:d.cls}
+      ];
+    } else {
+      const t = KPI_PERIOD.TECHNICAL[period];
+      list = [{lbl:'Объём квот внутр. MM', val:t.val, delta:t.delta, cls:'up'}, ...KPI_STATIC.TECHNICAL];
+    }
+    document.getElementById('kpiStrip').innerHTML = list.map(k => `
+      <div class="kpi-seg"><div class="lbl">${esc(k.lbl)}</div><div class="val tabular">${esc(k.val)}</div><div class="delta ${k.cls}">${esc(k.delta)}</div></div>
+    `).join('');
+    document.getElementById('kpiMeta').textContent = `период: ${PERIOD_LOWER[period]} · контур: ${SCOPE_LABEL[scope]}`;
+    applyKpiView();
+  }
+
+  function applyKpiView(){
+    const strip = document.getElementById('kpiStrip');
+    const hint = document.getElementById('kpiHiddenHint');
+    const hidden = STATE.kpiView === 'hidden';
+    hint.style.display = hidden ? 'block' : 'none';
+    strip.style.display = hidden ? 'none' : 'flex';
+    strip.classList.toggle('compact', STATE.kpiView === 'compact');
+  }
+
+  function renderKpiViewControl(){
+    const dd = document.getElementById('kpiViewDd');
+    const current = KPI_VIEWS.find(v => v.key === STATE.kpiView);
+    dd.innerHTML = `
+      <button type="button" class="dd-trigger"><span class="ic-wrap">${ic[current.icon]}</span><span class="val">${esc(current.label)}</span>${ic.chev}</button>
+      <div class="dd-panel"></div>`;
+    const panel = dd.querySelector('.dd-panel');
+    panel.addEventListener('click', e => e.stopPropagation());
+    panel.innerHTML = KPI_VIEWS.map(v => `<div class="dd-opt${v.key===STATE.kpiView?' sel':''}" data-key="${v.key}">${ic[v.icon]}<span class="opt-lbl">${esc(v.label)}</span><span class="ck">✓</span></div>`).join('');
+    dd.querySelector('.dd-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !dd.classList.contains('open');
+      closeAllDd();
+      dd.classList.toggle('open', willOpen);
+    });
+    panel.querySelectorAll('.dd-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        STATE.kpiView = opt.dataset.key;
+        dd.classList.remove('open');
+        renderKpiViewControl();
+        applyKpiView();
+      });
+    });
+  }
+
+  function closeAllDd(except){
+    document.querySelectorAll('.dd.open').forEach(dd => { if (dd !== except) dd.classList.remove('open'); });
+  }
+  document.addEventListener('click', () => closeAllDd());
+
+  function ddMarkup(id, label, value){
+    return `
+      <div class="dd" id="${id}">
+        <button type="button" class="dd-trigger"><span class="k">${esc(label)}</span><span class="val">${esc(value)}</span>${ic.chev}</button>
+        <div class="dd-panel"></div>
+      </div>`;
+  }
+
+  function periodByDays(days){
+    if (days <= 1) return 'Сегодня';
+    if (days <= 10) return 'Неделя';
+    if (days <= 45) return 'Месяц';
+    return 'Квартал';
+  }
+
+  function syncPeriodUI(){
+    document.querySelectorAll('#chipRow .period-btn').forEach(b => b.classList.toggle('active', b.textContent === STATE.period));
+  }
+
+  function renderChips(){
+    const filters = FILTERS[STATE.scope];
+    const filtersHtml = filters.map((f, i) => ddMarkup(`fdd${i}`, f.k, f.key === 'pair' ? STATE.pair : (f.key === 'mm' ? STATE.mm : f.options[0]))).join('');
+    const dateHtml = `
+      <div class="date-inline">
+        <div class="date-box"><span class="k">с</span><input type="date" id="dateFrom" value="2026-05-22"></div>
+        <div class="date-box"><span class="k">по</span><input type="date" id="dateTo" value="2026-08-19"></div>
+      </div>`;
+    const periodHtml = PERIODS.map(p => `<button type="button" class="period-btn${p===STATE.period?' active':''}">${p}</button>`).join('');
+
+    document.getElementById('chipRow').innerHTML = dateHtml + `<div class="fr-divider"></div>` + filtersHtml + `<div class="fr-divider"></div>` + periodHtml;
+
+    document.getElementById('dateFrom').addEventListener('change', onDateChange);
+    document.getElementById('dateTo').addEventListener('change', onDateChange);
+
+    filters.forEach((f, i) => {
+      const dd = document.getElementById(`fdd${i}`);
+      const panel = dd.querySelector('.dd-panel');
+      const current = f.key === 'pair' ? STATE.pair : (f.key === 'mm' ? STATE.mm : f.options[0]);
+      panel.addEventListener('click', e => e.stopPropagation());
+      panel.innerHTML = f.options.map(o => `<div class="dd-opt${o===current?' sel':''}" data-val="${esc(o)}">${esc(o)}<span class="ck">✓</span></div>`).join('');
+      dd.querySelector('.dd-trigger').addEventListener('click', e => {
+        e.stopPropagation();
+        const willOpen = !dd.classList.contains('open');
+        closeAllDd();
+        dd.classList.toggle('open', willOpen);
+      });
+      panel.querySelectorAll('.dd-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          panel.querySelectorAll('.dd-opt').forEach(o => o.classList.toggle('sel', o === opt));
+          dd.querySelector('.val').textContent = opt.dataset.val;
+          dd.classList.remove('open');
+          if (f.key === 'pair') { STATE.pair = opt.dataset.val; renderTopPairs(); renderLiquidity(); renderSpreads(); }
+          else if (f.key === 'mm') { STATE.mm = opt.dataset.val; renderKpi(); renderLiquidity(); }
+          showToast(`Фильтр применён: ${f.k} ${opt.dataset.val}`);
+        });
+      });
+    });
+
+    document.querySelectorAll('#chipRow .period-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        STATE.period = btn.textContent;
+        syncPeriodUI();
+        renderKpi(); renderTopPairs(); renderTraders();
+        showToast(`Период: ${btn.textContent} — KPI и виджеты пересчитаны`);
+      });
+    });
+  }
+
+  function onDateChange(){
+    const from = document.getElementById('dateFrom').value, to = document.getElementById('dateTo').value;
+    const days = Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000));
+    STATE.period = periodByDays(days);
+    syncPeriodUI();
+    renderKpi(); renderTopPairs(); renderTraders();
+    showToast(`Период по датам: ${from} — ${to} (~${STATE.period.toLowerCase()}) — KPI и виджеты пересчитаны`);
+  }
+
+  function renderTraders(){
+    const {scope, period} = STATE;
+    document.getElementById('tradersTitle').textContent = TRADERS_TITLE[scope];
+    let rows;
+    if (scope === 'ALL') {
+      const c = TRADERS_COUNT_PERIOD[period];
+      rows = [
+        {k:'Активные трейдеры за период', v:c.v, d:c.d},
+        {k:'Самый активный трейдер', link:`CL-7741 · ${TOP_TRADER_ORDERS_PERIOD[period]} ордеров`, hint:'переход в аккаунты'},
+        {k:'Новые трейдеры', v:NEW_TRADERS_PERIOD[period]},
+        {k:'Активные ордера в стакане сейчас', v:'1 482'},
+        {k:'Залежавшиеся ордера (long-pending)', link:'37', hint:'переход в ордера'}
+      ];
+    } else {
+      rows = TRADERS_TECHNICAL;
+    }
+    document.getElementById('tradersStats').innerHTML = rows.map((s, i) => {
+      const val = s.link ? `<span class="link" data-idx="${i}">${esc(s.link)}</span>` : `<span>${esc(s.v)}</span>${s.d ? `<span class="d">${esc(s.d)}</span>` : ''}`;
+      return `<div class="stat-row"><span class="k">${esc(s.k)}</span><span class="v">${val}</span></div>`;
+    }).join('');
+    document.querySelectorAll('#tradersStats .link').forEach(el => {
+      const s = rows[Number(el.dataset.idx)];
+      el.addEventListener('click', () => showToast(s.hint || `Переход: ${el.textContent}`));
+    });
+  }
+
+  function renderTopPairs(){
+    const {period, pair} = STATE;
+    let list = TOP_PAIRS_PERIOD[period];
+    if (pair !== 'Все пары') list = list.filter(p => p.sym === pair);
+    const body = document.getElementById('topPairsBody');
+    const hint = document.getElementById('topPairsHint');
+    if (!list.length) {
+      hint.textContent = '';
+      body.innerHTML = `<div class="empty-hint">Нет данных по паре ${esc(pair)} за выбранный период</div>`;
+      return;
+    }
+    const max = Math.max(...list.map(p => p.usd));
+    const total = list.reduce((s, p) => s + p.usd, 0);
+    hint.textContent = `$${total.toFixed(2)}M за период`;
+    body.innerHTML = list.map(p => `
+      <div class="bar-row">
+        <span class="sym">${esc(p.sym)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(p.usd / max * 100)}%"></div></div>
+        <div class="amt"><span>$${p.usd.toFixed(2)}M</span><span class="delta up">${esc(p.delta)}</span></div>
+      </div>
+    `).join('');
+  }
+
+  function fmtK(n){ return n < 100 ? n.toFixed(1) : Math.round(n); }
+
+  function renderLiquidity(){
+    const {pair, mm} = STATE;
+    let list = LIQUIDITY;
+    if (pair !== 'Все пары') list = list.filter(r => r.sym === pair);
+    const tbody = document.getElementById('liqBody');
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-hint">Нет данных по паре ${esc(pair)}</div></td></tr>`;
+      return;
+    }
+    const excl = mm === 'Без MM';
+    tbody.innerHTML = list.map(r => {
+      const factor = excl ? (1 - r.mm / 100) : 1;
+      return `<tr class="clickable" data-pair="${esc(r.sym)}"><td class="pair-sym">${esc(r.sym)}</td><td>${esc(r.ba)}</td><td>$${fmtK(r.d1 * factor)}K</td><td>$${fmtK(r.d2 * factor)}K</td><td>${excl ? '0%' : r.mm + '%'}</td></tr>`;
+    }).join('');
+    document.querySelectorAll('#liqBody tr').forEach(tr => {
+      tr.addEventListener('click', () => showToast(`Переход в Торги → Стакан (${tr.dataset.pair})`));
+    });
+  }
+
+  function renderSpreads(){
+    const {pair} = STATE;
+    let list = SPREADS;
+    if (pair !== 'Все пары') list = list.filter(r => r.sym === pair);
+    const tbody = document.getElementById('spreadBody');
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="2"><div class="empty-hint">Нет данных по паре ${esc(pair)}</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = list.map(r => `<tr><td class="pair-sym">${esc(r.sym)}</td><td>${esc(r.cur)}</td></tr>`).join('');
+  }
+
+  document.querySelectorAll('#scopeSeg button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#scopeSeg button').forEach(b => b.classList.toggle('active', b === btn));
+      STATE.scope = btn.dataset.scope;
+      renderKpi(); renderChips(); renderTraders();
+    });
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', function(){
+    this.classList.add('spin');
+    this.textContent = 'обновление…';
+    setTimeout(() => {
+      document.getElementById('updTime').textContent = new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+      this.classList.remove('spin');
+      this.textContent = 'обновить';
+      showToast('Данные обновлены');
+    }, 500);
+  });
+
+  renderKpiViewControl();
+  renderKpi(); renderChips(); renderTraders();
+  renderTopPairs(); renderLiquidity(); renderSpreads();
+})();
+</script>
+</body>
+</html>

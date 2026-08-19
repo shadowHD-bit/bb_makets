@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitadmin · Биржа · Ордерная книга</title>
+<style>
+  :root{
+    --text-strong-950:#171717;--text-sub-600:#5c5c5c;--text-soft-400:#a3a3a3;
+    --bg-white-0:#fff;--bg-weak-50:#f7f7f7;--bg-soft-200:#ebebeb;
+    --stroke-soft-200:#ebebeb;
+    --primary-base:#7246e6;--primary-alpha-06:#7246e60f;--primary-alpha-12:#7246e61f;
+    --state-success-base:#1fc16b;--state-success-light:#c2f5da;--state-success-dark:#0b4627;
+    --state-warning-base:#fa7319;--state-warning-lighter:#fff3eb;--state-warning-dark:#c77a12;
+    --state-error-lighter:#ffebec;--state-error-base:#fb3748;
+    --yellow-200:#ffecc0;
+    --radius-6:6px;--radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--radius-full:999px;
+    --shadow-x-small:0 1px 2px 0 rgba(10,13,20,.03);
+    --shadow-toggle:0 2px 4px 0 rgba(14,18,27,.03),0 6px 10px 0 rgba(14,18,27,.06);
+    --sidebar-w:280px;--topbar-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg-weak-50);color:var(--text-strong-950);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased}
+  .mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  button{font-family:inherit}
+
+  .shell{display:flex;min-height:100vh}
+
+  /* ================= SIDEBAR — статичная, некликабельная копия реального меню ================= */
+  .sidebar{width:var(--sidebar-w);flex:none;background:var(--bg-white-0);border-right:1px solid var(--stroke-soft-200);display:flex;flex-direction:column;padding:0 12px 12px;position:sticky;top:0;height:100vh;overflow-y:auto;user-select:none;pointer-events:none}
+  .sb-brand-row{display:flex;align-items:center;width:100%;height:var(--topbar-h);padding:0 8px}
+  .sb-brand-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary-base),#9b7bf0);color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;margin-right:12px}
+  .sb-brand-name{font-size:14px;font-weight:500;line-height:1.2}
+  .sb-brand-sub{font-size:12px;color:var(--text-soft-400)}
+  .sb-label{padding:8px 10px 8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-soft-400)}
+  .sb-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-8);font-size:14px;font-weight:500;line-height:20px;color:var(--text-sub-600);margin-bottom:1px}
+  .sb-item .ic{width:18px;height:18px;flex:none;color:var(--text-soft-400)}
+  .sb-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sb-item .chev{width:9px;height:9px;color:var(--text-soft-400);flex:none;transform:rotate(-90deg)}
+  .sb-item .chev.open{transform:none}
+  .sb-item.expanded{background:var(--bg-weak-50);color:var(--text-strong-950)}
+  .sb-tree{display:flex;flex-direction:column;gap:1px;margin:1px 0 6px}
+  .sb-child{display:flex;align-items:center;padding:7px 10px 7px 14px;border-radius:var(--radius-8);border-left:2px solid transparent;font-size:13px;color:var(--text-sub-600)}
+  .sb-child.active{background:var(--bg-weak-50);color:var(--primary-base);font-weight:500;border-left-color:var(--primary-base)}
+
+  /* ================= MAIN ================= */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:var(--topbar-h);flex:none;background:var(--bg-white-0);border-bottom:1px solid var(--stroke-soft-200);display:flex;align-items:center;gap:12px;padding:0 24px;position:sticky;top:0;z-index:20;pointer-events:none;user-select:none}
+  .tb-spacer{flex:1}
+  .tb-lang{height:34px;display:flex;align-items:center;gap:6px;padding:0 8px 0 10px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft-200);font-size:13px;font-weight:500;color:var(--text-sub-600)}
+  .tb-lang .lang-code{font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--text-soft-400);border:1px solid var(--stroke-soft-200);border-radius:4px;padding:1px 4px;line-height:1.4}
+  .tb-lang .chev{width:9px;height:9px;color:var(--text-soft-400);flex:none;transform:rotate(180deg)}
+  .tb-divider{width:1px;height:26px;background:var(--stroke-soft-200)}
+  .tb-user{display:flex;align-items:center;gap:9px}
+  .tb-avatar{position:relative;width:34px;height:34px;border-radius:50%;background:var(--yellow-200);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .tb-avatar .dot{position:absolute;right:-1px;bottom:-1px;width:8px;height:8px;border-radius:50%;background:var(--state-success-base);border:2px solid var(--bg-white-0)}
+  .tb-user-text{display:flex;flex-direction:column}
+  .tb-user-name{font-size:12.5px;font-weight:500}
+  .tb-user-email{font-size:11.5px;color:var(--text-soft-400)}
+
+  .content{padding:24px}
+
+  .page-head{border-radius:var(--radius-16);background:var(--bg-white-0);box-shadow:var(--shadow-x-small);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px}
+  .ph-left{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .ph-left h1{font-size:18px;font-weight:500;letter-spacing:-.27px;line-height:24px}
+  .ph-desc{font-size:14px;color:var(--text-sub-600);letter-spacing:-.084px;max-width:680px}
+  .ph-right{flex:none}
+
+  /* выбор диапазона дат — дропдаун с пресетами и календарём */
+  .drp{position:relative}
+  .drp-trigger{display:flex;align-items:center;gap:8px;border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);border-radius:var(--radius-10);padding:8px 12px;font:inherit;font-size:13px;font-weight:500;color:var(--text-strong-950);cursor:pointer}
+  .drp-trigger .ic{width:15px;height:15px;color:var(--text-soft-400);flex:none}
+  .drp-panel{position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);box-shadow:0 16px 40px rgba(14,18,27,.16);z-index:80;display:none;overflow:hidden;width:600px}
+  .drp.open .drp-panel{display:block}
+  .drp-body{display:flex}
+  .drp-presets{width:130px;flex:none;padding:10px;border-right:1px solid var(--stroke-soft-200);display:flex;flex-direction:column;gap:1px}
+  .drp-presets button{border:0;background:transparent;text-align:left;font:inherit;font-size:13px;color:var(--text-sub-600);padding:7px 8px;border-radius:var(--radius-8);cursor:pointer}
+  .drp-presets button:hover{background:var(--bg-weak-50)}
+  .drp-cal{flex:1;padding:14px}
+  .drp-cal-nav{display:flex;align-items:center;gap:8px}
+  .drp-nav-btn{border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);width:24px;height:24px;border-radius:var(--radius-6);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub-600);flex:none;font-size:13px}
+  .drp-nav-btn:hover{background:var(--bg-weak-50)}
+  .drp-grids{flex:1;display:flex;gap:20px}
+  .drp-month{flex:1;min-width:0}
+  .drp-month-title{text-align:center;font-size:13px;font-weight:500;margin-bottom:8px}
+  .drp-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:2px}
+  .drp-dow span{text-align:center;font-size:10px;font-weight:600;color:var(--text-soft-400);text-transform:uppercase}
+  .drp-days{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px}
+  .drp-day{display:flex;align-items:center;justify-content:center;height:28px;font-size:12.5px;color:var(--text-strong-950);cursor:pointer;position:relative}
+  .drp-day.muted{color:var(--text-soft-400)}
+  .drp-day.in-range::before{content:"";position:absolute;inset:0 0;background:var(--primary-alpha-12)}
+  .drp-day .n{position:relative;z-index:1}
+  .drp-day.edge .n{background:var(--primary-base);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+  .drp-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--stroke-soft-200)}
+  .drp-range-text{font-size:12.5px;color:var(--text-sub-600);font-family:ui-monospace,monospace}
+  .drp-footer-actions{display:flex;gap:8px}
+  .drp-footer-actions button{border:0;border-radius:var(--radius-8);padding:7px 14px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+  .drp-footer-actions .drp-reset{background:transparent;color:var(--text-soft-400)}
+  .drp-footer-actions .drp-apply{background:var(--primary-base);color:#fff}
+
+  /* контур */
+  .scope-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+  .seg{display:inline-flex;gap:4px;border-radius:var(--radius-10);padding:4px;background:var(--bg-weak-50)}
+  .seg button{border:0;background:transparent;border-radius:var(--radius-6);padding:6px 12px;font-size:14px;font-weight:500;color:var(--text-soft-400);cursor:pointer;font-family:inherit}
+  .seg button.active{background:var(--bg-white-0);color:var(--text-strong-950);box-shadow:var(--shadow-toggle)}
+
+  .section-label{margin:0 0 10px}
+  .section-label h2{font-size:14px;font-weight:500}
+  .section-label.kpi-label{display:flex;align-items:center;gap:10px}
+  .kpi-meta{flex:1;text-align:center;font-size:11.5px;color:var(--text-soft-400)}
+  .kpi-view-dd{flex:none}
+  .kpi-view-dd .dd-trigger{border-color:var(--stroke-soft-200);background:var(--bg-white-0);color:var(--text-sub-600)}
+  .kpi-view-dd .dd-trigger .ic{width:13px;height:13px;color:var(--text-sub-600)}
+  .kpi-view-dd .dd-panel{right:0;left:auto;min-width:160px}
+  .kpi-view-dd .dd-opt .ic{width:13px;height:13px;color:var(--text-soft-400);flex:none;margin-right:8px}
+  .kpi-view-dd .dd-opt{justify-content:flex-start}
+  .kpi-view-dd .dd-opt .opt-lbl{flex:1}
+
+  /* KPI — единая карточка, сегменты через border-left */
+  .kpi-strip{display:flex;overflow:hidden;border-radius:var(--radius-16);border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);box-shadow:var(--shadow-x-small);margin-bottom:18px}
+  .kpi-seg{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 14px;text-align:center;border-left:1px solid var(--stroke-soft-200)}
+  .kpi-seg:first-child{border-left:0}
+  .kpi-seg .lbl{font-size:12px;color:var(--text-soft-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .kpi-seg .val{margin-top:6px;font-size:24px;font-weight:500;line-height:28px;font-variant-numeric:tabular-nums}
+  .kpi-seg .delta{margin-top:2px;font-size:12px;font-weight:500;color:var(--text-soft-400)}
+  .kpi-seg .delta.up{color:var(--state-success-dark)}
+  .kpi-seg .delta.dn{color:var(--state-warning-dark)}
+  .kpi-strip.compact .kpi-seg{padding:12px 14px}
+  .kpi-strip.compact .kpi-seg .delta{display:none}
+  .kpi-hidden-hint{font-size:13px;color:var(--text-soft-400);margin-bottom:18px}
+
+  /* поиск */
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);background:var(--bg-white-0);padding:8px 12px;margin-bottom:14px;width:100%}
+  .search .ic{width:16px;height:16px;flex:none;color:var(--text-soft-400)}
+  .search input{border:0;outline:0;background:transparent;flex:1;font-size:14px;color:var(--text-strong-950);font:inherit}
+  .search input::placeholder{color:var(--text-soft-400)}
+  .search .go{font-size:13px;font-weight:500;color:var(--primary-base);flex:none;cursor:pointer;background:none;border:0;font-family:inherit}
+
+  /* фасеты — кастомные дропдауны */
+  .filters-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:18px;position:relative}
+  .dd{position:relative}
+  .dd-trigger{display:flex;align-items:center;gap:6px;border:1px solid var(--primary-base);background:var(--primary-alpha-06);border-radius:var(--radius-8);padding:6px 10px 6px 12px;font:inherit;cursor:pointer;color:var(--primary-base)}
+  .dd-trigger .k{color:var(--text-soft-400);font-size:13px;font-weight:500;white-space:nowrap}
+  .dd-trigger .val{font-size:13px;font-weight:500;white-space:nowrap}
+  .dd-trigger .chev{width:9px;height:9px;color:var(--primary-base);flex:none;transition:transform .15s}
+  .dd.open .dd-trigger .chev{transform:rotate(180deg)}
+  .dd-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;max-height:280px;overflow-y:auto;background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);box-shadow:0 10px 30px rgba(14,18,27,.14);padding:6px;z-index:60;display:none}
+  .dd.open .dd-panel{display:block}
+  .dd-opt{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:7px 10px;border-radius:var(--radius-8);font-size:13px;color:var(--text-strong-950);white-space:nowrap;cursor:pointer}
+  .dd-opt:hover{background:var(--bg-weak-50)}
+  .dd-opt.sel{color:var(--primary-base);font-weight:600}
+  .dd-opt .ck{width:13px;height:13px;color:var(--primary-base);opacity:0;flex:none}
+  .dd-opt.sel .ck{opacity:1}
+  .dd-opt.disabled{color:var(--text-soft-400);cursor:not-allowed;pointer-events:none}
+
+  /* вкладки */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--stroke-soft-200);margin-bottom:18px}
+  .tab-btn{border:0;background:transparent;font:inherit;font-size:14px;font-weight:500;color:var(--text-soft-400);padding:10px 4px;margin-right:22px;cursor:pointer;position:relative}
+  .tab-btn.active{color:var(--text-strong-950)}
+  .tab-btn.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--primary-base);border-radius:2px 2px 0 0}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  .panel{background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-12);overflow:hidden}
+  .panel header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--stroke-soft-200)}
+  .panel header h3{font-size:14px;font-weight:500}
+  .panel header .hint{margin-left:auto;font-size:12px;color:var(--text-soft-400)}
+
+  /* таблица ордеров */
+  .ord-scroll{overflow-x:auto}
+  .ord-row{display:grid;grid-template-columns:26px 1.3fr 1.3fr .8fr .7fr .6fr 1.1fr 1.2fr .9fr 1fr 32px;gap:10px;align-items:center;padding:10px 16px;font-size:12.5px;border-top:1px solid var(--stroke-soft-200)}
+  .ord-row.head-row{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400);border-top:0}
+  .ord-row:hover:not(.head-row){background:var(--bg-weak-50)}
+  .cell-main{font-weight:600;color:var(--text-strong-950)}
+  .cell-sub{font-size:11px;color:var(--text-soft-400);margin-top:1px}
+  .side-tag{font-weight:700}
+  .side-tag.buy{color:var(--state-success-base)}
+  .side-tag.sell{color:var(--state-error-base)}
+  .badge{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:middle}
+  .badge.mm{background:var(--primary-alpha-12);color:var(--primary-base)}
+  .progress{height:5px;border-radius:3px;background:var(--bg-weak-50);overflow:hidden;margin-top:5px}
+  .progress .fill{height:100%;background:var(--primary-base);border-radius:3px}
+  .status-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:var(--radius-full);white-space:nowrap}
+  .status-pill .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+  .status-pill.open{background:var(--primary-alpha-12);color:var(--primary-base)}
+  .status-pill.partial{background:var(--state-warning-lighter);color:var(--state-warning-base)}
+  .status-pill.cancelled{background:var(--state-error-lighter);color:var(--state-error-base)}
+  .status-pill.expired{background:var(--bg-weak-50);color:var(--text-soft-400)}
+  .chk{width:16px;height:16px;border:1.5px solid var(--stroke-soft-200);border-radius:5px;flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff}
+  .chk.on{background:var(--primary-base);border-color:var(--primary-base)}
+  .chk svg{width:10px;height:10px}
+  .row-menu-btn{border:0;background:transparent;color:var(--text-soft-400);cursor:pointer;width:26px;height:26px;border-radius:var(--radius-6);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .row-menu-btn:hover{background:var(--bg-weak-50)}
+  .row-menu{position:absolute;right:16px;background:var(--bg-white-0);border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);box-shadow:0 10px 30px rgba(14,18,27,.14);z-index:90;min-width:190px;padding:6px;display:none}
+  .row-menu.open{display:block}
+  .row-menu button{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;font-size:13px;padding:8px 10px;border-radius:var(--radius-8);cursor:pointer;color:var(--text-strong-950)}
+  .row-menu button:hover{background:var(--bg-weak-50)}
+  .row-menu button.danger{color:var(--state-error-base)}
+
+  .bulk-bar{display:none;align-items:center;gap:12px;padding:10px 16px;background:var(--primary-alpha-06);border-top:1px solid var(--stroke-soft-200);font-size:13px;color:var(--text-strong-950)}
+  .bulk-bar.show{display:flex}
+  .bulk-bar button{border:1px solid var(--state-error-base);background:var(--bg-white-0);color:var(--state-error-base);border-radius:var(--radius-8);padding:6px 12px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer}
+  .bulk-bar .clear{border:0;background:none;color:var(--text-soft-400);cursor:pointer;font:inherit;font-size:12.5px;margin-left:auto}
+
+  .empty-hint{padding:26px 16px;color:var(--text-soft-400);font-size:12.5px;text-align:center}
+
+  /* overlay/модалка отмены и drawer карточки */
+  .overlay{position:fixed;inset:0;background:rgba(17,17,17,.32);z-index:100;display:none}
+  .overlay.show{display:block}
+  .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:440px;max-width:92vw;background:var(--bg-white-0);border-radius:var(--radius-16);box-shadow:0 20px 50px rgba(14,18,27,.22);z-index:101;display:none}
+  .modal.show{display:block}
+  .modal-head{padding:18px 20px;border-bottom:1px solid var(--stroke-soft-200)}
+  .modal-head h3{font-size:15px;font-weight:500}
+  .modal-head p{font-size:12.5px;color:var(--text-soft-400);margin-top:4px}
+  .modal-body{padding:16px 20px}
+  .modal-body label{display:block;font-size:12px;font-weight:600;color:var(--text-sub-600);margin-bottom:6px}
+  .modal-body textarea{width:100%;min-height:88px;border:1px solid var(--stroke-soft-200);border-radius:var(--radius-8);padding:9px 11px;font:inherit;font-size:13px;color:var(--text-strong-950);resize:vertical}
+  .modal-body textarea:focus{outline:2px solid var(--primary-alpha-12);border-color:var(--primary-base)}
+  .modal-body .hint{font-size:11.5px;color:var(--text-soft-400);margin-top:6px}
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--stroke-soft-200)}
+  .modal-foot button{border-radius:var(--radius-8);padding:8px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+  .modal-foot .cancel-btn{border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);color:var(--text-sub-600)}
+  .modal-foot .confirm-btn{border:0;background:var(--state-error-base);color:#fff}
+  .modal-foot .confirm-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:92vw;background:var(--bg-white-0);z-index:101;box-shadow:-12px 0 30px rgba(14,18,27,.18);transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}
+  .drawer.show{transform:none}
+  .drawer-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--stroke-soft-200)}
+  .drawer-head h3{font-size:15px;font-weight:500;cursor:pointer}
+  .drawer-head .status-pill{margin-left:auto}
+  .drawer-close{border:0;background:var(--bg-weak-50);width:28px;height:28px;border-radius:var(--radius-8);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub-600);flex:none}
+  .drawer-body{padding:6px 18px 18px;overflow-y:auto;flex:1}
+  .drawer-section{margin-top:16px}
+  .drawer-section .st{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft-400);margin-bottom:8px}
+  .drow{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;padding:4px 0}
+  .drow .k{color:var(--text-soft-400)}
+  .drow .v{font-family:ui-monospace,monospace;font-weight:600;text-align:right}
+  .drow .v.link{color:var(--primary-base);cursor:pointer;font-family:Inter,sans-serif;font-weight:500}
+  .reason-box{border:1px solid var(--stroke-soft-200);border-radius:var(--radius-10);padding:11px 12px;font-size:12.5px;color:var(--text-sub-600);margin-top:8px}
+  .fill-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--stroke-soft-200);font-size:12px}
+  .fill-row:first-child{border-top:0}
+  .timeline{display:flex;flex-direction:column}
+  .tl-item{display:flex;gap:10px;padding:6px 0}
+  .tl-item .tl-dot{width:7px;height:7px;border-radius:50%;background:var(--primary-base);margin-top:5px;flex:none}
+  .tl-item .tl-txt{font-size:12.5px}
+  .tl-item .tl-time{font-size:11px;color:var(--text-soft-400)}
+  .drawer-actions{display:flex;gap:8px;margin-top:16px}
+  .drawer-actions button{flex:1;border:1px solid var(--stroke-soft-200);background:var(--bg-white-0);border-radius:var(--radius-8);padding:8px 10px;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--text-sub-600)}
+  .drawer-actions button:hover{background:var(--bg-weak-50)}
+  .drawer-actions button.danger{border-color:var(--state-error-base);color:var(--state-error-base)}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--text-strong-950);color:#fff;padding:11px 16px;border-radius:var(--radius-10);font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:200;display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.18s;max-width:360px}
+  .toast.show{opacity:1;transform:none}
+  .toast .d{width:6px;height:6px;border-radius:50%;background:var(--primary-base);flex:none}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ================= SIDEBAR — статичная, некликабельная копия реального меню ================= -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <div class="topbar" id="topbar"></div>
+
+    <div class="content">
+
+      <div class="page-head">
+        <div class="ph-left">
+          <h1>Ордерная книга</h1>
+          <p class="ph-desc">Очередь активных ордеров в стакане и история отмен - рабочее место с действиями, в отличие от «Торги и стакан» (только наблюдение). Отмена ордера, редактирование и удаление запрещены везде, кроме отмены с обязательной причиной.</p>
+        </div>
+        <div class="ph-right">
+          <div class="dd drp" id="dateRangeDd"></div>
+        </div>
+      </div>
+
+      <div class="scope-row">
+        <div class="seg" id="scopeSeg">
+          <button class="active" data-scope="ALL">Все</button>
+          <button data-scope="OURS">Наши</button>
+          <button data-scope="TECH">Технические</button>
+        </div>
+      </div>
+
+      <div class="section-label kpi-label">
+        <h2>KPI · сейчас</h2>
+        <span class="kpi-meta" id="kpiMeta"></span>
+        <div class="dd kpi-view-dd" id="kpiViewDd"></div>
+      </div>
+      <div class="kpi-strip" id="kpiStrip"></div>
+      <div class="kpi-hidden-hint" id="kpiHiddenHint" style="display:none">KPI скрыты - нажмите «Скрыто», чтобы развернуть.</div>
+
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab-btn active" data-tab="active">Активные ордера</button>
+        <button type="button" class="tab-btn" data-tab="cancelled">Отмененные</button>
+      </div>
+
+      <div class="search">
+        <span class="ic">⌕</span>
+        <input type="text" id="searchInput" placeholder="ID ордера (ORD-…) в текущей вкладке">
+        <button type="button" class="go" id="searchGo">Найти →</button>
+      </div>
+
+      <div class="filters-row" id="chipRow"></div>
+
+      <div class="tab-panel active" id="panel-active">
+        <div class="panel">
+          <header><h3>Очередь по всем клиентам</h3><span class="hint" id="activeHint"></span></header>
+          <div class="ord-scroll">
+            <div class="ord-row head-row">
+              <span></span><span>Ордер</span><span>Клиент</span><span>Пара</span><span>Сторона</span><span>Тип</span><span>Цена</span><span>Исполнено</span><span>Возраст</span><span>Статус</span><span></span>
+            </div>
+            <div id="activeBody"></div>
+          </div>
+          <div class="bulk-bar" id="bulkBar">
+            <span id="bulkCount"></span>
+            <button type="button" id="bulkCancelBtn">Отменить выбранные</button>
+            <button type="button" class="clear" id="bulkClearBtn">Снять выделение</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-cancelled">
+        <div class="panel">
+          <header><h3>История отмен за период</h3><span class="hint" id="cancelledHint"></span></header>
+          <div class="ord-scroll">
+            <div class="ord-row head-row" style="grid-template-columns:1.3fr 1.3fr .8fr .7fr .6fr 1.1fr 1.6fr 1fr 32px">
+              <span>Ордер</span><span>Клиент</span><span>Пара</span><span>Сторона</span><span>Тип</span><span>Цена</span><span>Отменен</span><span>Статус</span><span></span>
+            </div>
+            <div id="cancelledBody"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="modal" id="cancelModal">
+  <div class="modal-head">
+    <h3>Отменить ордер</h3>
+    <p id="cancelModalSub"></p>
+  </div>
+  <div class="modal-body">
+    <label for="cancelReasonInput">Причина отмены</label>
+    <textarea id="cancelReasonInput" placeholder="Например: аномальная цена, подозрение на ошибку клиента"></textarea>
+    <div class="hint">Причина обязательна и сохраняется вместе с личностью администратора, который отменил ордер.</div>
+  </div>
+  <div class="modal-foot">
+    <button type="button" class="cancel-btn" id="cancelModalClose">Закрыть</button>
+    <button type="button" class="confirm-btn" id="cancelModalConfirm" disabled>Отменить ордер</button>
+  </div>
+</div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3 id="drawerTitle">ORD-91244</h3>
+    <span class="status-pill" id="drawerStatus"></span>
+    <button type="button" class="drawer-close" id="drawerClose">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<div class="toast" id="toast"><span class="d"></span><span id="toastText"></span></div>
+
+<script>
+(function(){
+  "use strict";
+
+  function svg(inner){ return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`; }
+  const ic = {
+    grid: svg('<rect x="3" y="3" width="7" height="7" rx="1.3"/><rect x="14" y="3" width="7" height="7" rx="1.3"/><rect x="3" y="14" width="7" height="7" rx="1.3"/><rect x="14" y="14" width="7" height="7" rx="1.3"/>'),
+    process: svg('<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
+    clients: svg('<circle cx="9" cy="8" r="3"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><circle cx="18" cy="9" r="2.2"/><path d="M16.5 21v-1a5 5 0 0 0-1-3"/>'),
+    chart: svg('<path d="M4 20V10"/><path d="M11 20V4"/><path d="M18 20v-7"/>'),
+    wallet: svg('<rect x="3" y="6" width="18" height="13" rx="2.3"/><path d="M16 12h3"/><path d="M3 10h18"/>'),
+    vault: svg('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="12" r="3"/>'),
+    exchange: svg('<path d="M7 3v14"/><path d="M3 7l4-4 4 4"/><path d="M17 21V7"/><path d="M21 17l-4 4-4-4"/>'),
+    crypto: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 15.2c.5.7 1.4 1.1 2.5 1.1 1.7 0 3-1 3-2.3 0-3-5.5-1.5-5.5-4.5 0-1.3 1.3-2.3 3-2.3 1.1 0 2 .4 2.5 1.1"/><path d="M12 7v10"/>'),
+    gear: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    chev: svg('<path d="M6 9l6 6 6-6"/>'),
+    check: svg('<path d="M20 6L9 17l-5-5"/>'),
+    kpiFull: svg('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
+    kpiCompact: svg('<rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/>'),
+    kpiHidden: svg('<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-10-8-10-8a18.5 18.5 0 0 1 4.22-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>')
+  };
+
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sb-brand-row">
+      <div class="sb-brand-avatar">BI</div>
+      <div><div class="sb-brand-name">Bitbanker</div><div class="sb-brand-sub">Admin Panel</div></div>
+    </div>
+    <div class="sb-label">Рабочее место</div>
+    <div class="sb-item">${ic.grid}<span class="lbl">Обзор</span></div>
+    <div class="sb-item">${ic.process}<span class="lbl">Процессы</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.clients}<span class="lbl">Клиенты</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.chart}<span class="lbl">Аналитика</span><span class="chev">${ic.chev}</span></div>
+
+    <div class="sb-label">Финансовые продукты</div>
+    <div class="sb-item">${ic.wallet}<span class="lbl">ОПС / PSP</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item">${ic.vault}<span class="lbl">Депозитарий</span><span class="chev">${ic.chev}</span></div>
+    <div class="sb-item expanded">${ic.exchange}<span class="lbl">Биржа</span><span class="chev open">${ic.chev}</span></div>
+    <div class="sb-tree">
+      <div class="sb-child">Обзор биржи</div>
+      <div class="sb-child">Торги (стакан и сделки)</div>
+      <div class="sb-child active">Ордерная книга</div>
+      <div class="sb-child">Маркет-дата</div>
+      <div class="sb-child">Маркет-мейкеры биржи</div>
+      <div class="sb-child">Допуск клиентов</div>
+    </div>
+    <div class="sb-item">${ic.crypto}<span class="lbl">Криптоброкер</span><span class="chev">${ic.chev}</span></div>
+
+    <div class="sb-label">Управление платформой</div>
+    <div class="sb-item">${ic.gear}<span class="lbl">Настройки</span><span class="chev">${ic.chev}</span></div>
+  `;
+
+  document.getElementById('topbar').innerHTML = `
+    <div class="tb-spacer"></div>
+    <div class="tb-lang"><span class="lang-code">RU</span> Русский ${ic.chev}</div>
+    <div class="tb-divider"></div>
+    <div class="tb-user">
+      <div class="tb-avatar">SA<span class="dot"></span></div>
+      <div class="tb-user-text"><span class="tb-user-name">Super Admin</span><span class="tb-user-email">super-admin@admin.com</span></div>
+    </div>
+  `;
+
+  // ---------------------------------------------------------------
+  // P0 + P1 по birzha-ordernaya-kniga-trading-srs.md, все в прототипе - рабочее.
+  // Вкладка "Залежавшиеся" убрана целиком (P2, без плейсхолдера) - пороги
+  // возраста/отклонения цены не найдены нигде в trading, без них показывать
+  // очередь нечем. Контур "Партнерские" убран - признака партнера нет.
+  // Полностью убрано (P2, без плейсхолдеров): KPI-плашки, завязанные на пороги
+  // залежалости, алерт о провайдерах, действия "Связаться с клиентом" и
+  // "Эскалировать в кейс" (механизм тикетов/кейсов не проверялся), 4-eyes
+  // согласование при AML, экспорт, клиентский поиск (по имени/email/телефону).
+  // ---------------------------------------------------------------
+
+  const PAIR_LIST = ['BTC/USDT','ETH/USDT','USDT/RUB','TON/USDT','BTC/RUB','USDC/USDT'];
+  const CURRENT_ADMIN = 'SA (Super Admin)';
+  const TODAY = new Date(2026, 5, 12);
+
+  const ORDERS = [
+    {id:'ORD-91244', userId:'usr_a1e4', sym:'BTC/USDT', side:'BUY', type:'LIMIT', price:67250, amount:1.0, filled:0.42, status:'PARTIALLY_FILLED', isMM:false, created:'11.06.2026 09:14', dev:-1.2,
+      trades:[{id:'TRD-40021', price:67240, amount:0.25, time:'11.06.2026 10:02'}, {id:'TRD-40033', price:67255, amount:0.17, time:'11.06.2026 12:41'}],
+      events:[{t:'Ордер размещен', time:'11.06.2026 09:14'}, {t:'Исполнено 0.25', time:'11.06.2026 10:02'}, {t:'Исполнено 0.17', time:'11.06.2026 12:41'}]},
+    {id:'ORD-88012', userId:'usr_c390', sym:'USDT/RUB', side:'SELL', type:'LIMIT', price:97.80, amount:250000, filled:0, status:'OPEN', isMM:false, created:'06.06.2026 18:40', dev:18.4,
+      trades:[], events:[{t:'Ордер размещен', time:'06.06.2026 18:40'}]},
+    {id:'ORD-77531', userId:'usr_mm01', sym:'BTC/USDT', side:'SELL', type:'LIMIT', price:64330, amount:1.1, filled:0.2, status:'PARTIALLY_FILLED', isMM:true, created:'12.06.2026 07:02', dev:0.3,
+      trades:[{id:'TRD-40090', price:64330, amount:0.2, time:'12.06.2026 08:15'}],
+      events:[{t:'Ордер размещен', time:'12.06.2026 07:02'}, {t:'Исполнено 0.2', time:'12.06.2026 08:15'}]},
+    {id:'ORD-90850', userId:'usr_7b1d', sym:'TON/USDT', side:'BUY', type:'LIMIT', price:6.85, amount:500, filled:0, status:'OPEN', isMM:false, created:'12.06.2026 06:50', dev:-2.1,
+      trades:[], events:[{t:'Ордер размещен', time:'12.06.2026 06:50'}]},
+    {id:'ORD-90905', userId:'usr_mm02', sym:'USDT/RUB', side:'BUY', type:'LIMIT', price:97.20, amount:180000, filled:0, status:'OPEN', isMM:true, created:'12.06.2026 05:11', dev:-0.4,
+      trades:[], events:[{t:'Ордер размещен', time:'12.06.2026 05:11'}]}
+  ];
+
+  const CANCELLED = [
+    {id:'ORD-90200', userId:'usr_9c07', sym:'BTC/USDT', side:'SELL', type:'LIMIT', price:66100, amount:0.3, filled:0.1, status:'CANCELLED', isMM:false, closed:'10.06.2026 14:02', cancelReason:'USER_REQUESTED', adminCancelReason:null, adminCancelledBy:null,
+      trades:[{id:'TRD-39880', price:66100, amount:0.1, time:'10.06.2026 13:40'}],
+      events:[{t:'Ордер размещен', time:'09.06.2026 22:10'}, {t:'Исполнено 0.1', time:'10.06.2026 13:40'}, {t:'Ордер отменен', time:'10.06.2026 14:02'}]},
+    {id:'ORD-90055', userId:'usr_a1e4', sym:'ETH/USDT', side:'BUY', type:'LIMIT', price:2100, amount:2.0, filled:0, status:'CANCELLED', isMM:false, closed:'09.06.2026 11:20', cancelReason:'ADMIN_REQUESTED', adminCancelReason:'Аномальная цена, подозрение на ошибку клиента - согласовано по телефону', adminCancelledBy:CURRENT_ADMIN,
+      trades:[], events:[{t:'Ордер размещен', time:'08.06.2026 19:05'}, {t:'Ордер отменен', time:'09.06.2026 11:20'}]},
+    {id:'ORD-89950', userId:'usr_mm01', sym:'USDT/RUB', side:'SELL', type:'LIMIT', price:98.90, amount:120000, filled:0, status:'EXPIRED', isMM:true, closed:'08.06.2026 20:00', cancelReason:'EXPIRED', adminCancelReason:null, adminCancelledBy:null,
+      trades:[], events:[{t:'Ордер размещен', time:'07.06.2026 20:00'}, {t:'Истек срок действия', time:'08.06.2026 20:00'}]},
+    {id:'ORD-89800', userId:'usr_5f21', sym:'BTC/RUB', side:'SELL', type:'LIMIT', price:6100000, amount:0.05, filled:0, status:'CANCELLED', isMM:false, closed:'07.06.2026 16:45', cancelReason:'SELF_TRADE_PREVENTION', adminCancelReason:null, adminCancelledBy:null,
+      trades:[], events:[{t:'Ордер размещен', time:'07.06.2026 16:44'}, {t:'Ордер отменен', time:'07.06.2026 16:45'}]},
+    {id:'ORD-89710', userId:'usr_c390', sym:'ETH/USDT', side:'BUY', type:'MARKET', price:null, amount:0.6, filled:0.1, status:'CANCELLED', isMM:false, closed:'06.06.2026 09:30', cancelReason:'IOC_REMAINDER', adminCancelReason:null, adminCancelledBy:null,
+      trades:[{id:'TRD-39790', price:3401, amount:0.1, time:'06.06.2026 09:30'}],
+      events:[{t:'Ордер размещен', time:'06.06.2026 09:30'}, {t:'Исполнено 0.1', time:'06.06.2026 09:30'}, {t:'Ордер отменен', time:'06.06.2026 09:30'}]}
+  ];
+
+  const STATUS_LABEL = {OPEN:'Активен', PARTIALLY_FILLED:'Частично исполнен', CANCELLED:'Отменен', EXPIRED:'Истек'};
+  const STATUS_CLASS = {OPEN:'open', PARTIALLY_FILLED:'partial', CANCELLED:'cancelled', EXPIRED:'expired'};
+  const CANCEL_LABEL = {
+    USER_REQUESTED:'Клиент', ADMIN_REQUESTED:'Оператор', EXPIRED:'Система (истек срок)',
+    REPLACED:'Система (замена)', SELF_TRADE_PREVENTION:'Система (self-trade)', WOULD_BREAK_SPREAD:'Система (спред)',
+    IOC_REMAINDER:'Система (IOC)', FILL_OR_KILL:'Система (FOK)'
+  };
+
+  const STATE = {scope:'ALL', tab:'active', pair:'Все пары', side:'Все', type:'Все', fill:'Все', cancelledBy:'Все',
+    dateFrom:new Date(2026,5,5), dateTo:new Date(TODAY), kpiView:'full', selected:new Set()};
+
+  function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  let toastTimer;
+  function showToast(text){
+    const el = document.getElementById('toast');
+    document.getElementById('toastText').textContent = text;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  function closeAllDd(){ document.querySelectorAll('.dd.open').forEach(dd => dd.classList.remove('open')); }
+  document.addEventListener('click', () => { closeAllDd(); closeRowMenus(); });
+
+  function ddMarkup(id, label, value){
+    return `
+      <div class="dd" id="${id}">
+        <button type="button" class="dd-trigger"><span class="k">${esc(label)}</span><span class="val">${esc(value)}</span>${ic.chev}</button>
+        <div class="dd-panel"></div>
+      </div>`;
+  }
+
+  function scopeMatch(o){
+    if (STATE.scope === 'OURS') return !o.isMM;
+    if (STATE.scope === 'TECH') return o.isMM;
+    return true;
+  }
+
+  // ============ KPI ============
+  const SCOPE_LABEL = {ALL:'Все', OURS:'Наши', TECH:'Технические'};
+  const KPI_VIEWS = [
+    {key:'full', label:'Развернуто', icon:'kpiFull'},
+    {key:'compact', label:'Компактно', icon:'kpiCompact'},
+    {key:'hidden', label:'Скрыто', icon:'kpiHidden'}
+  ];
+
+  function computeKpi(){
+    const active = ORDERS.filter(scopeMatch);
+    const cancelled = CANCELLED.filter(scopeMatch);
+    if (STATE.scope === 'TECH') {
+      return [{lbl:'Активные квоты MM', val:String(active.length), delta:'заявки маркет-мейкера', cls:''}];
+    }
+    const activeVolume = active.reduce((s, o) => s + o.amount * (o.price || 1), 0);
+    const byOperator = cancelled.filter(o => o.cancelReason === 'ADMIN_REQUESTED').length;
+    return [
+      {lbl:'Активные ордера', val:String(active.length), delta:'в стакане сейчас', cls:''},
+      {lbl:'Отменено за период', val:String(cancelled.length), delta:`из них оператором: ${byOperator}`, cls:''},
+      {lbl:'Объем активных', val:`~$${(activeVolume/1000).toFixed(0)}K`, delta:'предварительная оценка', cls:''},
+      {lbl:'Медиана жизни ордера', val:'4.1 ч', delta:'среди закрытых за период', cls:''}
+    ];
+  }
+
+  function renderKpi(){
+    document.getElementById('kpiStrip').innerHTML = computeKpi().map(k => `
+      <div class="kpi-seg"><div class="lbl">${esc(k.lbl)}</div><div class="val">${esc(k.val)}</div><div class="delta ${k.cls}">${esc(k.delta)}</div></div>
+    `).join('');
+    document.getElementById('kpiMeta').textContent = `период: неделя * контур: ${SCOPE_LABEL[STATE.scope]}`;
+    applyKpiView();
+  }
+  function applyKpiView(){
+    const strip = document.getElementById('kpiStrip');
+    const hint = document.getElementById('kpiHiddenHint');
+    const hidden = STATE.kpiView === 'hidden';
+    hint.style.display = hidden ? 'block' : 'none';
+    strip.style.display = hidden ? 'none' : 'flex';
+    strip.classList.toggle('compact', STATE.kpiView === 'compact');
+  }
+  function renderKpiViewControl(){
+    const dd = document.getElementById('kpiViewDd');
+    const current = KPI_VIEWS.find(v => v.key === STATE.kpiView);
+    dd.innerHTML = `
+      <button type="button" class="dd-trigger"><span class="ic-wrap">${ic[current.icon]}</span><span class="val">${esc(current.label)}</span>${ic.chev}</button>
+      <div class="dd-panel"></div>`;
+    const panel = dd.querySelector('.dd-panel');
+    panel.addEventListener('click', e => e.stopPropagation());
+    panel.innerHTML = KPI_VIEWS.map(v => `<div class="dd-opt${v.key===STATE.kpiView?' sel':''}" data-key="${v.key}">${ic[v.icon]}<span class="opt-lbl">${esc(v.label)}</span><span class="ck">✓</span></div>`).join('');
+    dd.querySelector('.dd-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !dd.classList.contains('open');
+      closeAllDd();
+      dd.classList.toggle('open', willOpen);
+    });
+    panel.querySelectorAll('.dd-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        STATE.kpiView = opt.dataset.key;
+        dd.classList.remove('open');
+        renderKpiViewControl();
+        applyKpiView();
+      });
+    });
+  }
+
+  // ============ фасеты ============
+  function facetsFor(tab){
+    if (tab === 'active') {
+      return [
+        {key:'pair', k:'Пара:', options:['Все пары', ...PAIR_LIST]},
+        {key:'side', k:'Сторона:', options:['Все','Покупка','Продажа']},
+        {key:'type', k:'Тип ордера:', options:['Все','LIMIT','MARKET']},
+        {key:'fill', k:'Исполнение:', options:['Все','Без исполнений','Частично исполненные']}
+      ];
+    }
+    return [
+      {key:'pair', k:'Пара:', options:['Все пары', ...PAIR_LIST]},
+      {key:'side', k:'Сторона:', options:['Все','Покупка','Продажа']},
+      {key:'cancelledBy', k:'Кем отменен:', options:['Все','Клиент','Оператор','Система']}
+    ];
+  }
+
+  function renderChips(){
+    const facets = facetsFor(STATE.tab);
+    document.getElementById('chipRow').innerHTML = facets.map((f, i) => ddMarkup(`fdd${i}`, f.k, STATE[f.key])).join('');
+    facets.forEach((f, i) => {
+      const dd = document.getElementById(`fdd${i}`);
+      const panel = dd.querySelector('.dd-panel');
+      panel.addEventListener('click', e => e.stopPropagation());
+      panel.innerHTML = f.options.map(o => `<div class="dd-opt${o===STATE[f.key]?' sel':''}" data-val="${esc(o)}">${esc(o)}<span class="ck">✓</span></div>`).join('');
+      dd.querySelector('.dd-trigger').addEventListener('click', e => {
+        e.stopPropagation();
+        const willOpen = !dd.classList.contains('open');
+        closeAllDd();
+        dd.classList.toggle('open', willOpen);
+      });
+      panel.querySelectorAll('.dd-opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          panel.querySelectorAll('.dd-opt').forEach(o => o.classList.toggle('sel', o === opt));
+          dd.querySelector('.val').textContent = opt.dataset.val;
+          dd.classList.remove('open');
+          STATE[f.key] = opt.dataset.val;
+          showToast(`Фильтр применен: ${f.k} ${opt.dataset.val}`);
+          renderActive(); renderCancelled();
+        });
+      });
+    });
+  }
+
+  // ============ дата-пикер (шапка) ============
+  const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const DOW_NAMES = ['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
+  function fmtRu(d){ return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`; }
+  function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+  function addDays(d,n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+  function toISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+  const DATE_PRESETS = [
+    {label:'Сегодня', range:() => [new Date(TODAY), new Date(TODAY)]},
+    {label:'Неделя', range:() => [addDays(TODAY,-6), new Date(TODAY)]},
+    {label:'Месяц', range:() => [addDays(TODAY,-29), new Date(TODAY)]},
+    {label:'Квартал', range:() => [addDays(TODAY,-89), new Date(TODAY)]}
+  ];
+
+  let drpWorking = {start:STATE.dateFrom, end:STATE.dateTo};
+  let drpAnchor = {year:STATE.dateFrom.getFullYear(), month:STATE.dateFrom.getMonth()};
+
+  function buildMonthCells(year, month){
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const cells = [];
+    for (let i=0;i<startOffset;i++){ const day = daysInPrevMonth-startOffset+1+i; cells.push({date:new Date(year, month-1, day), muted:true}); }
+    for (let d=1; d<=daysInMonth; d++) cells.push({date:new Date(year, month, d), muted:false});
+    let next = 1;
+    while (cells.length % 7 !== 0) { cells.push({date:new Date(year, month+1, next), muted:true}); next++; }
+    return cells;
+  }
+  function renderMonth(year, month){
+    const cells = buildMonthCells(year, month);
+    const dowHtml = DOW_NAMES.map(d => `<span>${d}</span>`).join('');
+    const start = drpWorking.start, end = drpWorking.end;
+    const daysHtml = cells.map(c => {
+      const inRange = start && end && c.date >= (start<end?start:end) && c.date <= (start<end?end:start);
+      const isEdge = (start && sameDay(c.date,start)) || (end && sameDay(c.date,end));
+      const cls = ['drp-day', c.muted?'muted':'', inRange?'in-range':'', isEdge?'edge':''].filter(Boolean).join(' ');
+      return `<div class="${cls}" data-date="${toISO(c.date)}"><span class="n">${c.date.getDate()}</span></div>`;
+    }).join('');
+    return `<div class="drp-month-title">${MONTH_NAMES[month]} ${year}</div><div class="drp-dow">${dowHtml}</div><div class="drp-days">${daysHtml}</div>`;
+  }
+  function renderCalendar(){
+    const panel = document.querySelector('#dateRangeDd .drp-panel');
+    if (!panel) return;
+    let m2y = drpAnchor.year, m2m = drpAnchor.month+1;
+    if (m2m > 11) { m2m = 0; m2y++; }
+    panel.querySelector('[data-idx="0"]').innerHTML = renderMonth(drpAnchor.year, drpAnchor.month);
+    panel.querySelector('[data-idx="1"]').innerHTML = renderMonth(m2y, m2m);
+    panel.querySelectorAll('.drp-day').forEach(el => {
+      el.addEventListener('click', () => {
+        const [yy,mm,dd2] = el.dataset.date.split('-').map(Number);
+        const d = new Date(yy, mm-1, dd2);
+        if (!drpWorking.start || (drpWorking.start && drpWorking.end)) drpWorking = {start:d, end:null};
+        else drpWorking = d < drpWorking.start ? {start:d, end:drpWorking.start} : {start:drpWorking.start, end:d};
+        renderCalendar(); updateDrpRangeText();
+      });
+    });
+  }
+  function updateDrpRangeText(){
+    const panel = document.querySelector('#dateRangeDd .drp-panel');
+    if (!panel) return;
+    const {start,end} = drpWorking;
+    panel.querySelector('.drp-range-text').textContent = start && end ? `${fmtRu(start)} - ${fmtRu(end)}` : (start ? `${fmtRu(start)} - ...` : '...');
+  }
+  function renderDateRangeDd(){
+    const dd = document.getElementById('dateRangeDd');
+    dd.innerHTML = `
+      <button type="button" class="drp-trigger">${svg('<rect x="3" y="4.5" width="18" height="16" rx="2.3"/><path d="M8 2.5v4M16 2.5v4M3 9.5h18"/>')}<span class="val">${fmtRu(STATE.dateFrom)} - ${fmtRu(STATE.dateTo)}</span></button>
+      <div class="drp-panel">
+        <div class="drp-body">
+          <div class="drp-presets">${DATE_PRESETS.map(p => `<button type="button" data-preset="${esc(p.label)}">${esc(p.label)}</button>`).join('')}</div>
+          <div class="drp-cal">
+            <div class="drp-cal-nav">
+              <button type="button" class="drp-nav-btn" id="drpPrev">‹</button>
+              <div class="drp-grids"><div class="drp-month" data-idx="0"></div><div class="drp-month" data-idx="1"></div></div>
+              <button type="button" class="drp-nav-btn" id="drpNext">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="drp-footer">
+          <span class="drp-range-text"></span>
+          <div class="drp-footer-actions"><button type="button" class="drp-reset">Сбросить</button><button type="button" class="drp-apply">Применить</button></div>
+        </div>
+      </div>`;
+    dd.querySelector('.drp-panel').addEventListener('click', e => e.stopPropagation());
+    dd.querySelector('.drp-trigger').addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !dd.classList.contains('open');
+      closeAllDd();
+      if (willOpen) { drpWorking = {start:STATE.dateFrom, end:STATE.dateTo}; drpAnchor = {year:STATE.dateFrom.getFullYear(), month:STATE.dateFrom.getMonth()}; renderCalendar(); updateDrpRangeText(); }
+      dd.classList.toggle('open', willOpen);
+    });
+    dd.querySelectorAll('.drp-presets button').forEach(btn => {
+      btn.addEventListener('click', () => { const preset = DATE_PRESETS.find(p => p.label===btn.dataset.preset); const [s,e]=preset.range(); applyDateRange(s,e); });
+    });
+    document.getElementById('drpPrev').addEventListener('click', () => { drpAnchor.month--; if (drpAnchor.month<0){drpAnchor.month=11;drpAnchor.year--;} renderCalendar(); });
+    document.getElementById('drpNext').addEventListener('click', () => { drpAnchor.month++; if (drpAnchor.month>11){drpAnchor.month=0;drpAnchor.year++;} renderCalendar(); });
+    dd.querySelector('.drp-reset').addEventListener('click', () => { drpWorking = {start:STATE.dateFrom, end:STATE.dateTo}; renderCalendar(); updateDrpRangeText(); });
+    dd.querySelector('.drp-apply').addEventListener('click', () => { if (drpWorking.start && drpWorking.end) applyDateRange(drpWorking.start, drpWorking.end); });
+  }
+  function applyDateRange(start,end){
+    STATE.dateFrom = start; STATE.dateTo = end;
+    const dd = document.getElementById('dateRangeDd');
+    dd.querySelector('.drp-trigger .val').textContent = `${fmtRu(start)} - ${fmtRu(end)}`;
+    dd.classList.remove('open');
+    showToast(`Период: ${fmtRu(start)} - ${fmtRu(end)} - лента пересчитана`);
+    renderActive(); renderCancelled();
+  }
+
+  // ============ таблицы ============
+  function orderMatches(o, tab){
+    if (!scopeMatch(o)) return false;
+    if (STATE.pair !== 'Все пары' && o.sym !== STATE.pair) return false;
+    if (STATE.side === 'Покупка' && o.side !== 'BUY') return false;
+    if (STATE.side === 'Продажа' && o.side !== 'SELL') return false;
+    if (tab === 'active') {
+      if (STATE.type !== 'Все' && o.type !== STATE.type) return false;
+      if (STATE.fill === 'Без исполнений' && o.filled > 0) return false;
+      if (STATE.fill === 'Частично исполненные' && o.filled === 0) return false;
+    } else {
+      if (STATE.cancelledBy !== 'Все' && CANCEL_LABEL[o.cancelReason].split(' ')[0] !== STATE.cancelledBy) return false;
+    }
+    return true;
+  }
+
+  function devColor(dev){ return Math.abs(dev) >= 10 ? 'color:var(--state-warning-dark)' : ''; }
+
+  function renderActive(){
+    const list = ORDERS.filter(o => orderMatches(o, 'active'));
+    document.getElementById('activeHint').textContent = `${list.length} из ${ORDERS.filter(scopeMatch).length}`;
+    document.getElementById('activeBody').innerHTML = list.map(o => `
+      <div class="ord-row" data-id="${o.id}">
+        <span class="chk${STATE.selected.has(o.id)?' on':''}" data-act="sel">${STATE.selected.has(o.id) ? ic.check : ''}</span>
+        <span><span class="cell-main mono">${o.id}</span><span class="cell-sub">${o.created}</span></span>
+        <span><span class="cell-main mono">${o.userId}</span></span>
+        <span class="mono">${o.sym}${o.isMM ? '<span class="badge mm">MM</span>' : ''}</span>
+        <span class="side-tag ${o.side==='BUY'?'buy':'sell'}">${o.side==='BUY'?'Покупка':'Продажа'}</span>
+        <span>${o.type}</span>
+        <span><span class="cell-main mono">${o.price ? o.price.toLocaleString('ru-RU') : 'рыночная'}</span><span class="cell-sub" style="${devColor(o.dev)}">${o.dev>0?'+':''}${o.dev}% от рынка</span></span>
+        <span><span class="mono">${o.filled} / ${o.amount}</span><div class="progress"><div class="fill" style="width:${Math.round(o.filled/o.amount*100)}%"></div></div></span>
+        <span class="mono">${ageFrom(o.created)}</span>
+        <span><span class="status-pill ${STATUS_CLASS[o.status]}"><span class="d"></span>${STATUS_LABEL[o.status]}</span></span>
+        <span style="position:relative"><button type="button" class="row-menu-btn" data-act="menu">&#8942;</button></span>
+      </div>
+    `).join('') || `<div class="empty-hint">Нет ордеров по выбранным фильтрам</div>`;
+    wireRowEvents('activeBody', ORDERS);
+  }
+
+  function renderCancelled(){
+    const list = CANCELLED.filter(o => orderMatches(o, 'cancelled'));
+    document.getElementById('cancelledHint').textContent = `${list.length} из ${CANCELLED.filter(scopeMatch).length}`;
+    document.getElementById('cancelledBody').innerHTML = list.map(o => `
+      <div class="ord-row" data-id="${o.id}" style="grid-template-columns:1.3fr 1.3fr .8fr .7fr .6fr 1.1fr 1.6fr 1fr 32px">
+        <span><span class="cell-main mono">${o.id}</span><span class="cell-sub">${o.closed}</span></span>
+        <span><span class="cell-main mono">${o.userId}</span></span>
+        <span class="mono">${o.sym}${o.isMM ? '<span class="badge mm">MM</span>' : ''}</span>
+        <span class="side-tag ${o.side==='BUY'?'buy':'sell'}">${o.side==='BUY'?'Покупка':'Продажа'}</span>
+        <span>${o.type}</span>
+        <span class="mono">${o.price ? o.price.toLocaleString('ru-RU') : 'рыночная'}</span>
+        <span><span class="cell-main">${CANCEL_LABEL[o.cancelReason]}</span>${o.adminCancelReason ? `<span class="cell-sub">${esc(o.adminCancelReason)}</span>` : ''}</span>
+        <span><span class="status-pill ${STATUS_CLASS[o.status]}"><span class="d"></span>${STATUS_LABEL[o.status]}</span></span>
+        <span style="position:relative"><button type="button" class="row-menu-btn" data-act="menu">&#8942;</button></span>
+      </div>
+    `).join('') || `<div class="empty-hint">Нет отмен по выбранным фильтрам</div>`;
+    wireRowEvents('cancelledBody', CANCELLED);
+  }
+
+  function ageFrom(createdStr){
+    // грубая имитация "возраста" по разнице с TODAY для мок-дат в формате dd.mm.yyyy HH:MM
+    const [datePart, timePart] = createdStr.split(' ');
+    const [d,m,y] = datePart.split('.').map(Number);
+    const [hh,mm] = timePart.split(':').map(Number);
+    const created = new Date(y, m-1, d, hh, mm);
+    const diffMs = TODAY.getTime() + (23*3600+59*60)*1000 - created.getTime();
+    const h = Math.floor(diffMs / 3600000);
+    if (h < 24) return `${h} ч`;
+    return `${Math.floor(h/24)} д ${h%24} ч`;
+  }
+
+  function closeRowMenus(){ document.querySelectorAll('.row-menu').forEach(m => m.remove()); }
+
+  function wireRowEvents(bodyId, source){
+    const root = document.getElementById(bodyId);
+    root.querySelectorAll('.chk[data-act="sel"]').forEach(chk => {
+      chk.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = chk.closest('.ord-row').dataset.id;
+        if (STATE.selected.has(id)) STATE.selected.delete(id); else STATE.selected.add(id);
+        renderActive();
+        updateBulkBar();
+      });
+    });
+    root.querySelectorAll('.row-menu-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        closeRowMenus();
+        const id = btn.closest('.ord-row').dataset.id;
+        const order = source.find(o => o.id === id);
+        const isActive = order.status === 'OPEN' || order.status === 'PARTIALLY_FILLED';
+        const menu = document.createElement('div');
+        menu.className = 'row-menu open';
+        menu.innerHTML = `
+          <button type="button" data-a="open">Открыть карточку</button>
+          ${isActive ? '<button type="button" class="danger" data-a="cancel">Отменить ордер</button>' : ''}
+          <button type="button" data-a="book">Перейти в стакан</button>
+          <button type="button" data-a="client">Карточка клиента</button>
+          <button type="button" data-a="copy">Скопировать ID</button>
+        `;
+        document.body.appendChild(menu);
+        const r = btn.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top = `${r.bottom + 4}px`;
+        menu.style.left = `${r.right - 190}px`;
+        menu.addEventListener('click', e2 => e2.stopPropagation());
+        menu.querySelector('[data-a="open"]').addEventListener('click', () => { closeRowMenus(); openDrawer(id, source); });
+        if (isActive) menu.querySelector('[data-a="cancel"]').addEventListener('click', () => { closeRowMenus(); openCancelModal(id); });
+        menu.querySelector('[data-a="book"]').addEventListener('click', () => { closeRowMenus(); showToast(`Переход в Торги -> Стакан (${order.sym})`); });
+        menu.querySelector('[data-a="client"]').addEventListener('click', () => { closeRowMenus(); showToast(`Профиль клиента ${order.userId} - вне домена trading, переход в User 360`); });
+        menu.querySelector('[data-a="copy"]').addEventListener('click', () => { closeRowMenus(); showToast(`ID ${id} скопирован`); });
+      });
+    });
+    root.querySelectorAll('.ord-row').forEach(row => {
+      row.addEventListener('click', () => openDrawer(row.dataset.id, source));
+    });
+  }
+
+  function updateBulkBar(){
+    const bar = document.getElementById('bulkBar');
+    const n = STATE.selected.size;
+    bar.classList.toggle('show', n > 0);
+    document.getElementById('bulkCount').textContent = `Выбрано ${n}`;
+  }
+
+  // ============ отмена ============
+  let cancelTargetIds = [];
+  function openCancelModal(idOrIds){
+    cancelTargetIds = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+    document.getElementById('cancelModalSub').textContent = cancelTargetIds.length === 1
+      ? `Ордер ${cancelTargetIds[0]} - причина обязательна и попадет в историю отмен`
+      : `Ордеров к отмене: ${cancelTargetIds.length} - причина будет одна на все (tradingForceCancelOrders)`;
+    document.getElementById('cancelReasonInput').value = '';
+    document.getElementById('cancelModalConfirm').disabled = true;
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('cancelModal').classList.add('show');
+  }
+  function closeCancelModal(){
+    document.getElementById('overlay').classList.remove('show');
+    document.getElementById('cancelModal').classList.remove('show');
+  }
+  document.getElementById('cancelReasonInput').addEventListener('input', function(){
+    document.getElementById('cancelModalConfirm').disabled = this.value.trim().length === 0;
+  });
+  document.getElementById('cancelModalClose').addEventListener('click', closeCancelModal);
+  document.getElementById('cancelModalConfirm').addEventListener('click', () => {
+    const reason = document.getElementById('cancelReasonInput').value.trim();
+    if (!reason) return;
+    const nowStr = '12.06.2026 15:30';
+    cancelTargetIds.forEach(id => {
+      const idx = ORDERS.findIndex(o => o.id === id);
+      if (idx === -1) return;
+      const [order] = ORDERS.splice(idx, 1);
+      order.status = 'CANCELLED';
+      order.cancelReason = 'ADMIN_REQUESTED';
+      order.adminCancelReason = reason;
+      order.adminCancelledBy = CURRENT_ADMIN;
+      order.closed = nowStr;
+      order.events.push({t:'Ордер отменен', time:nowStr});
+      CANCELLED.unshift(order);
+      STATE.selected.delete(id);
+    });
+    closeCancelModal();
+    renderKpi(); renderActive(); renderCancelled(); updateBulkBar();
+    showToast(cancelTargetIds.length === 1 ? `Ордер ${cancelTargetIds[0]} отменен` : `Отменено ордеров: ${cancelTargetIds.length}`);
+  });
+
+  document.getElementById('bulkCancelBtn').addEventListener('click', () => openCancelModal([...STATE.selected]));
+  document.getElementById('bulkClearBtn').addEventListener('click', () => { STATE.selected.clear(); renderActive(); updateBulkBar(); });
+
+  // ============ карточка ордера (drawer) ============
+  function openDrawer(id, source){
+    const o = source.find(x => x.id === id);
+    if (!o) return;
+    document.getElementById('drawerTitle').textContent = o.id;
+    const statusEl = document.getElementById('drawerStatus');
+    statusEl.className = `status-pill ${STATUS_CLASS[o.status]}`;
+    statusEl.innerHTML = `<span class="d"></span>${STATUS_LABEL[o.status]}`;
+    const isActive = o.status === 'OPEN' || o.status === 'PARTIALLY_FILLED';
+    document.getElementById('drawerBody').innerHTML = `
+      <div class="drawer-section">
+        <div class="st">Ордер</div>
+        <div class="drow"><span class="k">Клиент</span><span class="v link" data-action="client">${o.userId}</span></div>
+        <div class="drow"><span class="k">Пара</span><span class="v">${o.sym}${o.isMM ? '<span class="badge mm">MM</span>' : ''}</span></div>
+        <div class="drow"><span class="k">Сторона / Тип</span><span class="v">${o.side==='BUY'?'Покупка':'Продажа'} · ${o.type}</span></div>
+        <div class="drow"><span class="k">Цена</span><span class="v">${o.price ? o.price.toLocaleString('ru-RU') : 'рыночная'}</span></div>
+        <div class="drow"><span class="k">Исполнено</span><span class="v">${o.filled} / ${o.amount}</span></div>
+        <div class="drow"><span class="k">Размещен</span><span class="v">${o.created || ''}</span></div>
+      </div>
+      ${!isActive ? `
+      <div class="drawer-section">
+        <div class="st">Отмена</div>
+        <div class="drow"><span class="k">Кем</span><span class="v">${CANCEL_LABEL[o.cancelReason]}</span></div>
+        ${o.adminCancelledBy ? `<div class="drow"><span class="k">Администратор</span><span class="v">${o.adminCancelledBy}</span></div>` : ''}
+        <div class="drow"><span class="k">Когда</span><span class="v">${o.closed}</span></div>
+        ${o.adminCancelReason ? `<div class="reason-box">${esc(o.adminCancelReason)}</div>` : ''}
+      </div>` : ''}
+      <div class="drawer-section">
+        <div class="st">Исполнения</div>
+        ${o.trades.length ? o.trades.map(t => `<div class="fill-row"><span class="mono">${t.id}</span><span class="mono">${t.price.toLocaleString('ru-RU')} × ${t.amount}</span><span class="cell-sub">${t.time}</span></div>`).join('') : '<div class="cell-sub" style="padding:6px 0">Исполнений пока нет</div>'}
+      </div>
+      <div class="drawer-section">
+        <div class="st">Таймлайн</div>
+        <div class="timeline">
+          ${o.events.map(e => `<div class="tl-item"><span class="tl-dot"></span><div><div class="tl-txt">${e.t}</div><div class="tl-time">${e.time}</div></div></div>`).join('')}
+        </div>
+      </div>
+      <div class="drawer-actions">
+        ${isActive ? `<button type="button" class="danger" id="drawerCancelBtn">Отменить ордер</button>` : ''}
+        <button type="button" id="drawerBookBtn">К стакану пары</button>
+      </div>
+    `;
+    document.querySelectorAll('#drawerBody [data-action="client"]').forEach(el => {
+      el.addEventListener('click', () => showToast(`Профиль клиента ${o.userId} - вне домена trading, переход в User 360`));
+    });
+    document.getElementById('drawerTitle').onclick = () => showToast(`ID ${o.id} скопирован`);
+    const cancelBtn = document.getElementById('drawerCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => { closeDrawer(); openCancelModal(o.id); });
+    document.getElementById('drawerBookBtn').addEventListener('click', () => { closeDrawer(); showToast(`Переход в Торги -> Стакан (${o.sym})`); });
+
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  }
+  function closeDrawer(){
+    document.getElementById('overlay').classList.remove('show');
+    document.getElementById('drawer').classList.remove('show');
+  }
+  document.getElementById('overlay').addEventListener('click', () => { closeDrawer(); closeCancelModal(); });
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+
+  // ============ вкладки, контур, поиск ============
+  function setTab(tab){
+    STATE.tab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${tab === 'active' ? 'active' : 'cancelled'}`));
+    renderChips();
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
+
+  document.querySelectorAll('#scopeSeg button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#scopeSeg button').forEach(b => b.classList.toggle('active', b === btn));
+      STATE.scope = btn.dataset.scope;
+      renderKpi(); renderActive(); renderCancelled();
+      showToast(`Контур: ${SCOPE_LABEL[STATE.scope]}`);
+    });
+  });
+
+  function doSearch(){
+    const q = document.getElementById('searchInput').value.trim().toUpperCase();
+    if (!q) return;
+    const source = STATE.tab === 'active' ? ORDERS : CANCELLED;
+    const found = source.find(o => o.id.toUpperCase() === q);
+    if (found) { openDrawer(found.id, source); return; }
+    showToast(`Не найдено в текущей вкладке по «${q}»`);
+  }
+  document.getElementById('searchGo').addEventListener('click', doSearch);
+  document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  renderChips();
+  renderDateRangeDd();
+  renderKpiViewControl();
+  renderKpi();
+  renderActive(); renderCancelled();
+})();
+</script>
+</body>
+</html>
