@@ -286,6 +286,17 @@ svg{display:block}
 .panel-h h3{font-size:13.5px;font-weight:600;margin:0}
 .panel-h .hint{font-size:11.5px;color:var(--text-soft);margin-top:1px}
 .panel-b{padding:16px}
+.panel-h.collapsible{cursor:pointer;user-select:none}
+.panel-chev{background:none;border:0;padding:4px;margin:0;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--text-soft);cursor:pointer;border-radius:var(--radius-8);transition:transform .15s}
+.panel-chev:hover{color:var(--text-strong);background:var(--bg-weak)}
+.panel-chev.open{transform:rotate(180deg)}
+.panel-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:12px 16px 12px}
+.panel[data-collapsed="true"] > .panel-h{border-bottom:0}
+.panel[data-collapsed="true"] > .panel-b,
+.panel[data-collapsed="true"] > .twrap,
+.panel[data-collapsed="true"] > .panel-actions,
+.panel[data-collapsed="true"] > .pagfoot,
+.panel[data-collapsed="true"] > .empty-state{display:none}
 
 .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .search{
@@ -785,8 +796,54 @@ const KYC_USAGE_LOG = {
     {id:1, at:'2026-08-18 11:22', client:'fp_8840', status:'success', failStage:null, failReason:null},
     {id:2, at:'2026-08-17 09:05', client:'fp_8801', status:'success', failStage:null, failReason:null},
     {id:3, at:'2026-08-16 14:40', client:'fp_8770', status:'failed', failStage:'sumsub_review', failReason:'Документ не распознан'},
+    {id:4, at:'2026-08-15 10:12', client:'fp_8712', status:'limited', failStage:'rate_limit_per_min', failReason:'Partner limit hit: rate_limit_per_min'},
+    {id:5, at:'2026-08-14 16:47', client:'fp_8655', status:'success', failStage:null, failReason:null},
+  ],
+  a4: [
+    {id:6, at:'2026-08-19 12:03', client:'vg_1204', status:'success', failStage:null, failReason:null},
+    {id:7, at:'2026-08-12 08:30', client:'vg_1180', status:'disabled', failStage:'flag_check', failReason:'enable_kyc_via_chainbridge is False'},
   ],
 };
+
+/** Сводка billable-проверок по провайдеру/периоду — формат совпадает с bb1 (provider/period/total/approved/resubmission_requested/rejected). */
+const BILLABLE_SUMMARY = {
+  a1: [
+    {provider:'sumsub', period:'2026-08', total:42, approved:35, resubmission_requested:4, rejected:3},
+    {provider:'iidx', period:'2026-08', total:128, approved:120, resubmission_requested:0, rejected:8},
+    {provider:'sumsub', period:'2026-07', total:31, approved:29, resubmission_requested:1, rejected:1},
+  ],
+  a4: [
+    {provider:'sumsub', period:'2026-08', total:9, approved:7, resubmission_requested:1, rejected:1},
+  ],
+};
+
+/** Мок-данные для «Выгрузка ошибок за период» — форматы колонок 1:1 с CSV из bb1. */
+const IIDX_CHECK_ERRORS = {
+  a1: [
+    {date:'18.08.2026 11:22', email:'client1@finpay-demo.kg', clientId:'fp_8770', check:'Комплексная проверка паспорта', reason:'Паспорт недействителен; score=62'},
+    {date:'17.08.2026 09:05', email:'client2@finpay-demo.kg', clientId:'fp_8801', check:'Проверка связки ФИО-телефон', reason:'Связка ФИО-телефон не подтверждена'},
+    {date:'16.08.2026 14:40', email:'client3@finpay-demo.kg', clientId:'fp_8712', check:'Получение ИНН', reason:'ИНН не найден'},
+  ],
+};
+const SBP_TOP_UP_ERRORS = {
+  a1: [
+    {code:'DailyQrlimitReached', reason:'Достигнут дневной лимит QR', count:5},
+    {code:'NeedCompleteKYC', reason:'Необходимо завершить KYC', count:2},
+    {code:'SbpQrAmountOutOfRange', reason:'Сумма QR вне допустимого диапазона', count:1},
+  ],
+};
+
+/** Скачать CSV в браузере (UTF-8 BOM — как в bb1, чтобы Excel не ломал кириллицу). */
+function downloadCsvFile(filename, headers, rows){
+  const escCsv = v=>{ const s = v==null?'':String(v); return /[",;\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const lines = [headers.join(','), ...rows.map(r=>r.map(escCsv).join(','))];
+  const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename;
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
 
 /* =========================================================================
    STATE + ROUTER
@@ -800,6 +857,7 @@ const state = {
   currentIndividualId: null,
   individualTab: 'kyc',         // kyc | partner
   accountDetailTab: 'kyc',      // kyc | partner
+  clientDetailTab: 'main',      // main | ops
   agentExportOpen: false,
   externalTab: 'clients',       // clients | sanctions
   sanctionsQuery: '',
@@ -811,8 +869,11 @@ const state = {
     individualQuery: '', individualKycStatus: '', individualKycLevel: '',
     individualCreatedFrom: null, individualCreatedTo: null,
     agentKycStatus: '', agentKycLevel: '',
+    billableFrom: null, billableTo: null,
+    opsStatus: '', opsQuery: '', opsFrom: null, opsTo: null,
   },
   exportOpen: false,
+  collapsed: {},         // key -> true, если панель свёрнута (по умолчанию все развёрнуты)
   dateUI: { open:false, target:'client', viewMonth:null, tempFrom:null, tempTo:null },
   openFilterMenu: null,   // 'partner' | 'status' | 'verif' | null
 };
@@ -870,6 +931,27 @@ const PROHIBITED_PERSONS = [
 function $(sel, root){ return (root||document).querySelector(sel); }
 function $all(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
 function esc(s){ return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/** Сворачиваемые панели — общий механизм. По умолчанию (нет ключа в state.collapsed) панель развёрнута. */
+function isCollapsed(key){ return !!state.collapsed[key]; }
+function panelChev(key){
+  const open = !isCollapsed(key);
+  return `<button class="panel-chev ${open?'open':''}" data-panel-toggle="${key}" title="${open?'Свернуть':'Развернуть'}">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>`;
+}
+/** Заголовок сворачиваемой панели: title — HTML заголовка (обычно <h3>...), key — ключ состояния. */
+function collapsibleHead(key, title){
+  return `<div class="panel-h collapsible" data-panel-toggle="${key}">${title}${panelChev(key)}</div>`;
+}
+function bindPanelToggles(){
+  $all('[data-panel-toggle]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const key = el.dataset.panelToggle;
+    state.collapsed[key] = !isCollapsed(key);
+    render();
+  }));
+}
 function agentById(id){ return agents.find(a=>a.id===id); }
 function clientById(id){ return clients.find(c=>c.id===id); }
 function fullName(c){ return [c.lastName,c.firstName,c.middleName].filter(Boolean).join(' ') || '—'; }
@@ -890,6 +972,11 @@ function kycStatusPill(s){
   const map = { PROCESSING:['b-info','PROCESSING'], SUCCESSFUL:['b-success','SUCCESSFUL'], NONE:['b-faded','NONE'] };
   const [cls,label] = map[s]||['b-faded', s];
   return `<span class="badge ${cls}" style="text-transform:uppercase;letter-spacing:.03em">${label}</span>`;
+}
+/** Статусы попытки в журнале использования моста — как в bb1 (PartnerKycAttemptLog): success/fail/limited/disabled. */
+function usageLogStatusBadge(s){
+  const map = { success:'b-success', fail:'b-error', limited:'b-warning', disabled:'b-faded' };
+  return `<span class="badge ${map[s]||'b-faded'}"><span class="d"></span>${esc(s)}</span>`;
 }
 const INDIVIDUAL_KYC_STATUS = ['PROCESSING','SUCCESSFUL','NONE'];
 const KYC_LEVELS = ['Level 1','Level 2','Level 3'];
@@ -929,6 +1016,62 @@ function inFilterDateRange(dateStr, fromDate, toDate){
   if(!d) return true;
   if(fromDate && d < fromDate) return false;
   if(toDate){ const to = new Date(toDate); to.setHours(23,59,59,999); if(d > to) return false; }
+  return true;
+}
+/**
+ * Мок операций клиента партнёра — поля 1:1 с реальной сущностью bb2
+ * PartnerSbpOperationEntity (sbpOperationId/status PENDING|CONFIRMED|FAILED/
+ * amount/paidAt/createdAt). У сущности нет разбивки по комиссии/распределению
+ * суммы — в БД её и не хранят (см. блок «Раздел Операция» в спеке), поэтому
+ * в таблице показаны только реально существующие поля. Детерминирован по id
+ * клиента, чтобы не пересчитывался на каждый render.
+ */
+function mockClientOperations(clientId){
+  let h=0; for(let i=0;i<String(clientId).length;i++){ h=(h*31+String(clientId).charCodeAt(i))>>>0; }
+  const count = h % 7; // 0..6 операций — часть клиентов честно без истории
+  const statuses = ['CONFIRMED','CONFIRMED','CONFIRMED','FAILED','PENDING'];
+  const ops = [];
+  for(let i=0;i<count;i++){
+    const seed = (h + i*97) >>> 0;
+    const status = statuses[seed % statuses.length];
+    const amount = 500 + (seed % 45000);
+    const day = String(Math.max(1, 20 - (i*3 + (seed%3)))).padStart(2,'0');
+    const hh = String(8 + (seed%14)).padStart(2,'0');
+    const mm = String(seed%60).padStart(2,'0');
+    const createdAt = `2026-08-${day} ${hh}:${mm}`;
+    ops.push({
+      sbpOperationId: 'sbp_' + (1000000 + seed%899999),
+      status,
+      amount,
+      createdAt,
+      paidAt: status==='CONFIRMED' ? createdAt : null,
+    });
+  }
+  return ops.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
+}
+function opStatusBadge(s){
+  const map = { PENDING:['b-warning','В ожидании'], CONFIRMED:['b-success','Подтверждена'], FAILED:['b-error','Отклонена'] };
+  const [cls,label] = map[s] || ['b-faded', s];
+  return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
+}
+/** "2026-08-19 11:22" из мока операций попадает в диапазон дат фильтра. */
+function opDateInRange(dtStr, fromDate, toDate){
+  if(!fromDate && !toDate) return true;
+  const d = new Date(String(dtStr).replace(' ','T'));
+  if(isNaN(d)) return true;
+  if(fromDate && d < fromDate) return false;
+  if(toDate){ const to = new Date(toDate); to.setHours(23,59,59,999); if(d > to) return false; }
+  return true;
+}
+/** "2026-08" (billable-период) попадает в диапазон дат фильтра. */
+function periodInRange(periodStr, fromDate, toDate){
+  if(!fromDate && !toDate) return true;
+  const m = /^(\d{4})-(\d{2})$/.exec(String(periodStr||''));
+  if(!m) return true;
+  const periodStart = new Date(Number(m[1]), Number(m[2])-1, 1);
+  const periodEnd = new Date(Number(m[1]), Number(m[2]), 0, 23,59,59,999);
+  if(fromDate && periodEnd < fromDate) return false;
+  if(toDate){ const to = new Date(toDate); to.setHours(23,59,59,999); if(periodStart > to) return false; }
   return true;
 }
 function agentStatusBadge(s){
@@ -1013,6 +1156,7 @@ function renderAccountsListPage(){
   const tabsHtml = `
     <button class="seg-tab ${state.accountsTab==='fizlica'?'active':''}" data-acctab="fizlica">Физлица</button>
     <button class="seg-tab ${state.accountsTab==='partners'?'active':''}" data-acctab="partners">Партнёрские аккаунты</button>
+    <button class="seg-tab locked" title="Вне рамок текущего прототипа">Санкционный список</button>
   `;
 
   const body = state.accountsTab==='fizlica' ? renderFizlicaTab() : renderPartnersTab();
@@ -1236,7 +1380,7 @@ function bindAccountsListPage(){
 
 function renderInto(){
   const activeEl = document.activeElement;
-  const isSearch = activeEl && (activeEl.id==='agentSearch' || activeEl.id==='clientSearch' || activeEl.id==='individualSearch');
+  const isSearch = activeEl && (activeEl.id==='agentSearch' || activeEl.id==='clientSearch' || activeEl.id==='individualSearch' || activeEl.id==='opsSearch');
   const caret = isSearch ? activeEl.selectionStart : null;
   render();
   if(isSearch){ const el=$('#'+activeEl.id); if(el){ el.focus(); el.setSelectionRange(caret,caret); } }
@@ -1247,7 +1391,10 @@ function renderAccountDetailPage(agentId){
   const a = agentById(agentId);
   if(!a) return `<div class="empty-state">Аккаунт не найден</div>`;
 
-  const isActive = a.status==='ACTIVE';
+  // Статус клиента (шапка) и статус партнёра (вкладка «Партнёрские») — два разных
+  // статуса, не путать. Тумблер «Активный»/отключение партнёрского API меняет
+  // только a.status (статус партнёра) и не должен трогать статус клиента в шапке.
+  const isClientActive = a.clientStatus !== 'BLOCKED';
   const created = a.createdAt || '19/08/26, 19:41';
   const updated = a.updatedAt || created;
   const activeTab = state.accountDetailTab || 'kyc';
@@ -1271,7 +1418,7 @@ function renderAccountDetailPage(agentId){
           <div class="rec-headrow" style="justify-content:space-between">
             <div class="rec-headrow" style="gap:12px">
               <h1>${esc(a.name)}</h1>
-              <span class="rec-pill ${isActive?'b-success':'b-faded'}">${isActive?'Активен':'Отключён'}</span>
+              <span class="rec-pill ${isClientActive?'b-success':'b-faded'}">${isClientActive?'Активен':'Отключён'}</span>
               <span class="rec-pill" style="background:var(--info-bg);color:var(--primary)">Партнёр</span>
             </div>
           </div>
@@ -1342,43 +1489,26 @@ function renderAccountPartnerTab(a){
   return `
     <div class="grid2">
       <div>
-        <div class="panel">
-          <div class="panel-h"><h3>Основная информация</h3><button class="btn btn-sm" id="btnEditPartnerInfo">Редактировать</button></div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-basic')}">
+          ${collapsibleHead('ap-basic', '<h3>Основная информация</h3>')}
+          <div class="panel-actions"><button class="btn btn-sm" id="btnEditPartnerInfo">Редактировать</button></div>
           <div class="panel-b">
             <div class="toggle-row" style="margin-bottom:14px">
               <div><div class="tt">Активный</div><div class="ts">Отключение закрывает доступ к партнёрскому API, настройки и данные сохраняются</div></div>
               <button class="switch ${isActive?'on':''}" id="btnToggleActive"><span class="knob"></span></button>
             </div>
-            <dl class="deflist">
-              <div><dt>Email</dt><dd>${esc(a.email)}</dd></div>
-              <div><dt>Внешний номер</dt><dd class="mono" style="font-size:12.5px">#${esc(a.partnerId)}</dd></div>
-
-              <div><dt>Telegram</dt><dd class="mono ${a.partnerChatId?'':'muted'}" style="font-size:12px">${esc(a.partnerChatId||'—')}</dd></div>
-              <div><dt>Номер телефона</dt><dd class="${a.phone?'':'muted'}">${esc(a.phone||'—')}</dd></div>
-
-              <div><dt>Тип аккаунта</dt><dd>AGENT</dd></div>
-              <div><dt>ИНН</dt><dd class="${a.inn?'':'muted'}">${esc(a.inn||'—')}</dd></div>
-
-              <div><dt>Зарегистрировано в</dt><dd>${esc(a.createdAt||'14.08.2026, 18:31:07')}</dd></div>
-              <div><dt>ID</dt><dd class="mono" style="font-size:11.5px">${esc(a.userId)}</dd></div>
-
-              <div><dt>Приглашен</dt><dd class="muted">—</dd></div>
-              <div><dt>Статус партнера</dt><dd>${a.status}</dd></div>
-
-              <div><dt>Имя партнера</dt><dd class="${a.partnerName?'':'muted'}">${esc(a.partnerName||'—')}</dd></div>
-              <div><dt>Внешний ID</dt><dd class="mono" style="font-size:12.5px">${esc(a.partnerId)}</dd></div>
-
+            <dl class="deflist" style="grid-template-columns:1fr 1fr">
+              <div><dt>Название партнёра</dt><dd>${esc(a.name)}</dd></div>
               <div><dt>Банк СБП</dt><dd>${esc(a.sbpBankName||'—')}</dd></div>
-              <div><dt>KYC</dt><dd>AGENT ${a.status}</dd></div>
-              <div><dt>Проверка</dt><dd>${a.status}</dd></div>
+
+              <div><dt>Статус партнёра</dt><dd>${a.status}</dd></div>
+              <div><dt>Дата становления партнёром</dt><dd>${esc(a.createdAt||'14.08.2026, 18:31:07')}</dd></div>
             </dl>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-h">
-            <div><h3>Разрешения и лимиты СБП</h3><div class="hint">Изменения каскадом действуют на всех клиентов партнёра</div></div>
-          </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-limits')}">
+          ${collapsibleHead('ap-limits', '<h3>Разрешения и лимиты СБП</h3>')}
           <div class="panel-b">
             <div class="toggle-row">
               <div><div class="tt">Пополнение по СБП</div><div class="ts">Партнёр может принимать пополнения через СБП</div></div>
@@ -1409,8 +1539,8 @@ function renderAccountPartnerTab(a){
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-h"><h3>Настройки KYC-моста</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-kycbridge')}">
+          ${collapsibleHead('ap-kycbridge', '<h3>Настройки KYC-моста</h3>')}
           <div class="panel-b">
             <div class="toggle-row">
               <div><div class="tt">Использовать KYC через ChainBridge</div><div class="ts">При выключении новые клиенты партнёра не смогут использовать СБП. Уже одобренные продолжат работать.</div></div>
@@ -1434,60 +1564,11 @@ function renderAccountPartnerTab(a){
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-h"><h3>Сводка billable-проверок</h3><button class="btn btn-sm" id="btnExportBillable">Экспорт CSV</button></div>
-          <div class="twrap">
-            <table class="grid">
-              <thead><tr><th>Provider</th><th>Период</th><th>Итого</th><th>Одобрено</th><th>Resubmission</th><th>Отказано</th></tr></thead>
-              <tbody><tr><td colspan="6"><div class="empty-state" style="padding:20px">Нет данных за выбранный период</div></td></tr></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-h"><h3>Журнал использования моста</h3><button class="btn btn-sm" id="btnExportKycUsage">Экспорт CSV</button></div>
-          <div class="twrap">
-            <table class="grid">
-              <thead><tr><th>Дата/время</th><th>Клиент</th><th>Статус</th><th>Этап отказа</th><th>Причина отказа</th></tr></thead>
-              <tbody>${(KYC_USAGE_LOG[a.id]||[]).length ? (KYC_USAGE_LOG[a.id]).map(u=>`
-                <tr>
-                  <td class="cell-sub">${esc(u.at)}</td>
-                  <td class="mono" style="font-size:12px">${esc(u.client)}</td>
-                  <td>${u.status==='success' ? '<span class="badge b-success"><span class="d"></span>success</span>' : '<span class="badge b-error"><span class="d"></span>failed</span>'}</td>
-                  <td class="${u.failStage?'':'muted'}">${esc(u.failStage||'—')}</td>
-                  <td class="${u.failReason?'':'muted'}">${esc(u.failReason||'—')}</td>
-                </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:20px">Нет данных за выбранный период</div></td></tr>`}</tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div class="panel">
-          <div class="panel-h"><h3>HMAC-секрет партнёрского API</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-commission')}">
+          ${collapsibleHead('ap-commission', '<h3>Комиссии</h3>')}
+          <div class="panel-actions"><button class="btn btn-sm" id="btnEditCommission">Изменить</button></div>
           <div class="panel-b">
-            <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
-            <div class="secretbox">
-              <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
-              <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
-              <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-h"><h3>Настройки Telegram-чата</h3></div>
-          <div class="panel-b">
-            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
-            <div class="hairline"></div>
-            <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
-            <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-h"><h3>Комиссии</h3><button class="btn btn-sm" id="btnEditCommission">Изменить</button></div>
-          <div class="panel-b">
-            <dl class="deflist" style="grid-template-columns:1fr 1fr">
+            <dl class="deflist cols3">
               <div><dt>Ставка платежа, %</dt><dd>${esc(a.paymentRate||'0')}</dd></div>
               <div><dt>Минимум комиссии платежа</dt><dd>${esc(a.paymentMin||'0')}</dd></div>
               <div><dt>Комиссия партнёра клиенту, %</dt><dd>${esc(a.partnerClientFeePct||'0')}</dd></div>
@@ -1501,25 +1582,101 @@ function renderAccountPartnerTab(a){
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-h"><h3>Автовыводы баланса</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-autowithdraw')}">
+          ${collapsibleHead('ap-autowithdraw', '<h3>Автовыводы баланса</h3>')}
           <div class="panel-b">
             <div class="toggle-row">
               <div><div class="tt">Автовывод включен</div></div>
               <button class="switch ${a.autoConvertToUsdt?'on':''}" data-toggle="autoConvertToUsdt"><span class="knob"></span></button>
             </div>
-            <div class="field" style="margin-top:12px"><label>Валюта</label><input value="Tether USD (USDT)" disabled></div>
-            <div class="field" style="margin-top:12px"><label>Сеть</label><input value="Tron (TRC20)" disabled></div>
+            <div class="field-grid" style="margin-top:12px">
+              <div class="field"><label>Валюта</label><input value="Tether USD (USDT)" disabled></div>
+              <div class="field"><label>Сеть</label><input value="Tron (TRC20)" disabled></div>
+            </div>
             <div class="field" style="margin-top:12px"><label>Адрес кошелька для автовывода партнера</label><input id="awWallet" value="${esc(a.autoWithdrawWallet||'')}"></div>
-            <div class="field" style="margin-top:12px"><label>Нижний порог автовывода: столько останется на счете после автовывода</label><input id="awLower" value="${esc(a.autoWithdrawLower||'')}"></div>
-            <div class="field" style="margin-top:12px"><label>Верхний порог автовывода: при превышении произойдет автовывод</label><input id="awUpper" value="${esc(a.autoWithdrawUpper||'')}"></div>
+            <div class="field-grid" style="margin-top:12px">
+              <div class="field"><label>Нижний порог автовывода: столько останется на счете после автовывода</label><input id="awLower" value="${esc(a.autoWithdrawLower||'')}"></div>
+              <div class="field"><label>Верхний порог автовывода: при превышении произойдет автовывод</label><input id="awUpper" value="${esc(a.autoWithdrawUpper||'')}"></div>
+            </div>
             <div class="ts" style="margin-top:8px">Комиссия за вывод — 3 USDT, минимальная сумма вывода — 5 USDT</div>
             <div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="btnSaveAutoWithdraw">Сохранить изменения</button></div>
           </div>
         </div>
+      </div>
 
-        <div class="panel">
-          <div class="panel-h"><h3>Выгрузка ошибок за период</h3></div>
+      <div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-hmac')}">
+          ${collapsibleHead('ap-hmac', '<h3>HMAC-секрет партнёрского API</h3>')}
+          <div class="panel-b">
+            <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
+            <div class="secretbox">
+              <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
+              <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
+              <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
+          ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
+          <div class="panel-b">
+            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
+            <div class="hairline"></div>
+            <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
+            <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
+          </div>
+        </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-billable')}">
+          ${collapsibleHead('ap-billable', '<h3>Сводка billable-проверок</h3>')}
+          <div class="panel-actions">
+            <div class="popwrap">
+              <button class="btn btn-sm" id="billableDateRangeBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                ${(state.filters.billableFrom && state.filters.billableTo) ? `${fmtRu(state.filters.billableFrom)} — ${fmtRu(state.filters.billableTo)}` : 'Период'}
+              </button>
+              ${(state.dateUI.open && state.dateUI.target==='billable') ? renderDatePopover() : ''}
+            </div>
+            <button class="btn btn-sm" id="btnExportBillable">Экспорт CSV</button>
+          </div>
+          <div class="twrap">
+            <table class="grid">
+              <thead><tr><th>Provider</th><th>Период</th><th>Итого</th><th>Одобрено</th><th>Resubmission</th><th>Отказано</th></tr></thead>
+              <tbody>${(function(){
+                const rows = (BILLABLE_SUMMARY[a.id]||[]).filter(s=>periodInRange(s.period, state.filters.billableFrom, state.filters.billableTo));
+                return rows.length ? rows.map(s=>`
+                <tr>
+                  <td class="mono" style="font-size:12px">${esc(s.provider)}</td>
+                  <td class="cell-sub">${esc(s.period)}</td>
+                  <td class="cell-strong">${s.total}</td>
+                  <td>${s.approved}</td>
+                  <td class="${s.resubmission_requested?'':'muted'}">${s.resubmission_requested}</td>
+                  <td class="${s.rejected?'':'muted'}">${s.rejected}</td>
+                </tr>`).join('') : `<tr><td colspan="6"><div class="empty-state" style="padding:20px">Нет данных за выбранный период</div></td></tr>`;
+              })()}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-usagelog')}">
+          ${collapsibleHead('ap-usagelog', '<h3>Журнал использования моста</h3>')}
+          <div class="panel-actions"><button class="btn btn-sm" id="btnExportKycUsage">Экспорт CSV</button></div>
+          <div class="twrap">
+            <table class="grid">
+              <thead><tr><th>Дата/время</th><th>Клиент</th><th>Статус</th><th>Этап отказа</th><th>Причина отказа</th></tr></thead>
+              <tbody>${(KYC_USAGE_LOG[a.id]||[]).length ? (KYC_USAGE_LOG[a.id]).map(u=>`
+                <tr>
+                  <td class="cell-sub">${esc(u.at)}</td>
+                  <td class="mono" style="font-size:12px">${esc(u.client)}</td>
+                  <td>${usageLogStatusBadge(u.status)}</td>
+                  <td class="${u.failStage?'':'muted'}">${esc(u.failStage||'—')}</td>
+                  <td class="${u.failReason?'':'muted'}">${esc(u.failReason||'—')}</td>
+                </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:20px">Нет данных за выбранный период</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-errors')}">
+          ${collapsibleHead('ap-errors', '<h3>Выгрузка ошибок за период</h3>')}
           <div class="panel-b">
             <div class="errexport-list">
               ${[
@@ -1545,23 +1702,21 @@ function renderAccountPartnerTab(a){
       </div>
     </div>
 
-    <div class="panel" style="margin-top:14px">
-      <div class="panel-h">
-        <div><h3>Внешние клиенты партнёра</h3><div class="hint">${clients.filter(c=>c.agentId===a.id).length} клиентов</div></div>
-        <div style="display:flex;gap:8px">
-          <div class="popwrap">
-            <button class="btn btn-sm" id="agentExportBtn">Экспорт
-              <svg width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
-            </button>
-            ${state.agentExportOpen ? `
-              <div class="dropmenu">
-                <button data-agent-export="csv">Экспорт в CSV</button>
-                <button data-agent-export="xlsx">Экспорт в Excel</button>
-                <button data-agent-export="pdf">Экспорт в PDF</button>
-              </div>` : ''}
-          </div>
-          <button class="btn btn-sm" id="btnOpenInExternal">Открыть во «Внешних клиентах» →</button>
+    <div class="panel" style="margin-top:14px" data-collapsed="${isCollapsed('ap-clients')}">
+      ${collapsibleHead('ap-clients', `<div><h3>Внешние клиенты партнёра</h3><div class="hint">${clients.filter(c=>c.agentId===a.id).length} клиентов</div></div>`)}
+      <div class="panel-actions">
+        <div class="popwrap">
+          <button class="btn btn-sm" id="agentExportBtn">Экспорт
+            <svg width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+          </button>
+          ${state.agentExportOpen ? `
+            <div class="dropmenu">
+              <button data-agent-export="csv">Экспорт в CSV</button>
+              <button data-agent-export="xlsx">Экспорт в Excel</button>
+              <button data-agent-export="pdf">Экспорт в PDF</button>
+            </div>` : ''}
         </div>
+        <button class="btn btn-sm" id="btnOpenInExternal">Открыть во «Внешних клиентах» →</button>
       </div>
       <div class="panel-b" id="partnerClientsBlock">${renderClientsTable(a.id)}</div>
     </div>
@@ -1571,6 +1726,7 @@ function renderAccountPartnerTab(a){
 
 function bindAccountDetailPage(){
   const a = agentById(state.currentAgentId);
+  bindPanelToggles();
   $('#backToAccounts')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='accounts-list'; render(); });
   $all('[data-account-tab]').forEach(t=>t.addEventListener('click', ()=>{ state.accountDetailTab = t.dataset.accountTab; render(); }));
   $('#accountPartnerLink')?.addEventListener('click', (e)=>{ e.preventDefault(); state.accountDetailTab='partner'; render(); });
@@ -1589,6 +1745,45 @@ function bindAccountDetailPage(){
   $('#copyAgentId')?.addEventListener('click', ()=>{
     if(navigator.clipboard){ navigator.clipboard.writeText(a.userId).catch(()=>{}); }
     toast('ID скопирован');
+  });
+
+  $('#billableDateRangeBtn')?.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(!(state.dateUI.open && state.dateUI.target==='billable')){
+      state.dateUI.target = 'billable';
+      state.dateUI.viewMonth = state.filters.billableFrom || new Date();
+      state.dateUI.tempFrom = state.filters.billableFrom; state.dateUI.tempTo = state.filters.billableTo;
+      state.dateUI.open = true;
+    } else {
+      state.dateUI.open = false;
+    }
+    render();
+  });
+  $all('[data-calnav]').forEach(b=>b.addEventListener('click', ()=>{
+    const dir = b.dataset.calnav==='prev' ? -1 : 1;
+    const v = state.dateUI.viewMonth || new Date();
+    state.dateUI.viewMonth = new Date(v.getFullYear(), v.getMonth()+dir, 1);
+    render();
+  }));
+  $all('[data-day]').forEach(cell=>cell.addEventListener('click', ()=>{
+    const [yy,mm,dd] = cell.dataset.day.split('-').map(Number);
+    const picked = d0(yy,mm,dd);
+    const u = state.dateUI;
+    if(!u.tempFrom || (u.tempFrom && u.tempTo)){ u.tempFrom = picked; u.tempTo = null; }
+    else { if(picked < u.tempFrom){ u.tempTo = u.tempFrom; u.tempFrom = picked; } else { u.tempTo = picked; } }
+    render();
+  }));
+  $all('[data-quick]').forEach(b=>b.addEventListener('click', ()=>{
+    const [from,to] = quickRanges()[b.dataset.quick];
+    state.dateUI.tempFrom = from; state.dateUI.tempTo = to; state.dateUI.viewMonth = from;
+    render();
+  }));
+  $('#dateReset')?.addEventListener('click', ()=>{
+    state.filters.billableFrom=null; state.filters.billableTo=null; state.dateUI.open=false; render();
+  });
+  $('#dateApply')?.addEventListener('click', ()=>{
+    state.filters.billableFrom = state.dateUI.tempFrom; state.filters.billableTo = state.dateUI.tempTo;
+    state.dateUI.open=false; render();
   });
 
   $all('.switch[data-toggle]').forEach(sw=>sw.addEventListener('click', ()=>{
@@ -1617,14 +1812,48 @@ function bindAccountDetailPage(){
   $('#btnEditCommission')?.addEventListener('click', ()=>openCommissionModal(a));
   $('#marketFeesLink')?.addEventListener('click', (e)=>{ e.preventDefault(); toast('Раздел «Настройки → Маркеты → Комиссии» — вне рамок текущего прототипа'); });
   $('#btnEditPartnerInfo')?.addEventListener('click', ()=>openEditPartnerInfoModal(a));
-  $('#btnExportBillable')?.addEventListener('click', ()=>toast('Нет данных для экспорта за выбранный период'));
+  $('#btnExportBillable')?.addEventListener('click', ()=>{
+    const rows = (BILLABLE_SUMMARY[a.id]||[]).filter(s=>periodInRange(s.period, state.filters.billableFrom, state.filters.billableTo));
+    downloadCsvFile(
+      `partner_${a.id}_kyc_billable_summary.csv`,
+      ['provider','period','total','approved','resubmission_requested','rejected'],
+      rows.map(s=>[s.provider, s.period, s.total, s.approved, s.resubmission_requested, s.rejected]),
+    );
+    toast(rows.length ? `Экспорт сводки billable-проверок — ${rows.length} строк` : 'Нет данных за период — выгружен пустой файл');
+  });
   $('#btnExportKycUsage')?.addEventListener('click', ()=>{
     const rows = KYC_USAGE_LOG[a.id]||[];
-    toast(rows.length ? `Экспорт журнала использования моста в CSV — ${rows.length} строк` : 'Нет данных для экспорта за выбранный период');
+    downloadCsvFile(
+      `partner_${a.id}_kyc_usage.csv`,
+      ['id','dt_create','partner_client_id','status','fail_stage','fail_reason'],
+      rows.map(u=>[u.id, u.at, u.client, u.status, u.failStage||'', u.failReason||'']),
+    );
+    toast(rows.length ? `Экспорт журнала использования моста — ${rows.length} строк` : 'Нет данных за период — выгружен пустой файл');
   });
   $all('[data-errdownload]').forEach(b=>b.addEventListener('click', ()=>{
-    const labels = {kyc:'ошибок KYC', sbp:'ошибок API СБП', users:'ошибок по пользователям'};
-    toast('Формируется выгрузка '+labels[b.dataset.errdownload]+' за период…');
+    const key = b.dataset.errdownload;
+    if(key==='sbp'){
+      const rows = SBP_TOP_UP_ERRORS[a.id]||[];
+      const total = rows.reduce((s,r)=>s+r.count,0);
+      const body = rows.map((r,i)=>[i+1, r.code, r.reason, r.count]);
+      body.push(['', 'ИТОГО (уникальных клиентов)', '', total]);
+      downloadCsvFile(
+        `sbp_top_up_errors_partner_${a.id}.csv`,
+        ['N','Код ошибки','Краткая расшифровка','Кол-во уникальных клиентов партнеров'],
+        body,
+      );
+      toast(rows.length ? `Экспорт ошибок API СБП — ${rows.length} типов ошибок` : 'Нет ошибок за период — выгружен пустой файл');
+    } else {
+      // 'kyc' и 'users' — в bb1 обе кнопки ведут на один и тот же формат/ручку
+      // (iidx-check-errors), см. спеку — это не два разных отчёта.
+      const rows = IIDX_CHECK_ERRORS[a.id]||[];
+      downloadCsvFile(
+        `iidx_check_errors_partner_${a.id}.csv`,
+        ['дата ошибки','почта клиента','id клиента партнера','проверка','краткая расшифровка'],
+        rows.map(r=>[r.date, r.email, r.clientId, r.check, r.reason]),
+      );
+      toast(rows.length ? `Экспорт ошибок — ${rows.length} строк` : 'Нет ошибок за период — выгружен пустой файл');
+    }
   }));
   $all('[data-errclear]').forEach(b=>b.addEventListener('click', ()=>toast('Период сброшен')));
 
@@ -1975,10 +2204,10 @@ function renderClientsTable(scopeAgentId){
     </table></div>`;
 }
 function bindClientsTableRows(){
-  $all('tr[data-client]').forEach(r=>r.addEventListener('click', ()=>{ state.currentClientId=r.dataset.client; state.view='external-detail'; render(); }));
+  $all('tr[data-client]').forEach(r=>r.addEventListener('click', ()=>{ state.currentClientId=r.dataset.client; state.clientDetailTab='main'; state.view='external-detail'; render(); }));
   $all('[data-client-link]').forEach(l=>l.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();
-    state.currentClientId=e.currentTarget.dataset.clientLink; state.view='external-detail'; render();
+    state.currentClientId=e.currentTarget.dataset.clientLink; state.clientDetailTab='main'; state.view='external-detail'; render();
   }));
   $all('[data-partner-link]').forEach(l=>l.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();
@@ -2077,13 +2306,6 @@ function renderExternalListPage(){
   const rangeLabel = (state.filters.createdFrom && state.filters.createdTo)
     ? `${fmtRu(state.filters.createdFrom)} — ${fmtRu(state.filters.createdTo)}` : 'Период';
 
-  const extTabsHtml = `
-    <button class="seg-tab ${state.externalTab==='clients'?'active':''}" data-exttab="clients">Клиенты</button>
-    <button class="seg-tab locked" title="Вне рамок текущего прототипа">Санкционный список</button>
-  `;
-
-  if(state.externalTab==='sanctions') return renderSanctionsBody(extTabsHtml);
-
   return `
     <div class="acc-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
@@ -2097,7 +2319,7 @@ function renderExternalListPage(){
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
               ${rangeLabel}
             </button>
-            ${state.dateUI.open ? renderDatePopover() : ''}
+            ${(state.dateUI.open && state.dateUI.target==='client') ? renderDatePopover() : ''}
           </div>
           <button class="btn" id="btnImportCsv">Импорт CSV</button>
           <button class="btn" id="btnAddClientGlobal">Завести вручную</button>
@@ -2115,8 +2337,6 @@ function renderExternalListPage(){
         </div>
       </div>
     </div>
-
-    <div class="toolbar" style="margin-bottom:14px"><div class="seg-tabs">${extTabsHtml}</div></div>
 
     ${renderKpiStrip()}
 
@@ -2347,11 +2567,15 @@ function bindExternalListPage(){
   /* date range popover */
   $('#dateRangeBtn')?.addEventListener('click', (e)=>{
     e.stopPropagation();
-    if(!state.dateUI.open){
+    if(!(state.dateUI.open && state.dateUI.target==='client')){
+      state.dateUI.target = 'client';
       state.dateUI.viewMonth = state.filters.createdFrom || new Date();
       state.dateUI.tempFrom = state.filters.createdFrom; state.dateUI.tempTo = state.filters.createdTo;
+      state.dateUI.open = true;
+    } else {
+      state.dateUI.open = false;
     }
-    state.dateUI.open = !state.dateUI.open; state.exportOpen=false; state.openFilterMenu=null; render();
+    state.exportOpen=false; state.openFilterMenu=null; render();
   });
   $all('[data-calnav]').forEach(b=>b.addEventListener('click', ()=>{
     const dir = b.dataset.calnav==='prev' ? -1 : 1;
@@ -2384,6 +2608,67 @@ function bindExternalListPage(){
 /* =========================================================================
    CLIENT DETAIL (full page)
    ========================================================================= */
+/**
+ * Вкладка «История операций» — построена на реальной сущности bb2
+ * PartnerSbpOperationEntity. У неё нет admin GraphQL query/mutation вообще
+ * (см. блок «Раздел Операция» в спеке) — таблица опережает бэкенд, но поля
+ * и статусы 1:1 с тем, что реально лежит в БД.
+ */
+function renderClientOperationsTab(c, a){
+  const f = state.filters;
+  const allOps = mockClientOperations(c.id);
+  const rows = allOps.filter(op=>{
+    if(f.opsStatus && op.status!==f.opsStatus) return false;
+    if(!opDateInRange(op.createdAt, f.opsFrom, f.opsTo)) return false;
+    if(f.opsQuery && !op.sbpOperationId.toLowerCase().includes(f.opsQuery.toLowerCase())) return false;
+    return true;
+  });
+  const statusLabel = f.opsStatus ? {PENDING:'В ожидании', CONFIRMED:'Подтверждена', FAILED:'Отклонена'}[f.opsStatus] : 'Все';
+  const rangeLabel = (f.opsFrom && f.opsTo) ? `${fmtRu(f.opsFrom)} — ${fmtRu(f.opsTo)}` : 'Период';
+
+  return `
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input id="opsSearch" placeholder="ID операции" value="${esc(f.opsQuery)}">
+      </div>
+      <div class="popwrap">
+        <button class="fbtn" id="opsStatusFilterBtn"><span class="flabel">Статус:</span><span class="fval">${esc(statusLabel)}</span><svg class="fchev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+        ${state.openFilterMenu==='opsStatus' ? `<div class="fmenu">
+          <button data-opsstatus-opt="" class="${!f.opsStatus?'sel':''}">Все</button>
+          <button data-opsstatus-opt="PENDING" class="${f.opsStatus==='PENDING'?'sel':''}">В ожидании</button>
+          <button data-opsstatus-opt="CONFIRMED" class="${f.opsStatus==='CONFIRMED'?'sel':''}">Подтверждена</button>
+          <button data-opsstatus-opt="FAILED" class="${f.opsStatus==='FAILED'?'sel':''}">Отклонена</button>
+        </div>` : ''}
+      </div>
+      <div class="popwrap">
+        <button class="btn" id="opsDateRangeBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          ${rangeLabel}
+        </button>
+        ${(state.dateUI.open && state.dateUI.target==='ops') ? renderDatePopover() : ''}
+      </div>
+      <button class="clearbtn" id="opsClear">Очистить все</button>
+    </div>
+    <div class="panel">
+      <div class="twrap">
+        <table class="grid">
+          <thead><tr><th>ID операции</th><th>Дата создания</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Статус</th></tr></thead>
+          <tbody>${rows.length ? rows.map(op=>`
+            <tr>
+              <td class="mono" style="font-size:12px">${esc(op.sbpOperationId)}</td>
+              <td class="cell-sub">${esc(op.createdAt)}</td>
+              <td class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</td>
+              <td class="cell-strong">${op.amount.toLocaleString('ru-RU')}</td>
+              <td>${opStatusBadge(op.status)}</td>
+            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="pagfoot"><span>Total: ${rows.length} lines</span><select class="select"><option>10</option><option>20</option><option>50</option></select></div>
+    </div>
+  `;
+}
+
 function renderClientDetail(clientId){
   const c = clientById(clientId);
   if(!c) return `<div class="empty-state">Клиент не найден</div>`;
@@ -2433,8 +2718,8 @@ function renderClientDetail(clientId){
 
   const delReqs = deletionRequests[c.id] || [];
   const delBlock = c.deletionRequested ? `
-    <div class="panel" style="margin-top:14px">
-      <div class="panel-h"><h3>Запросы на удаление</h3></div>
+    <div class="panel" style="margin-top:14px" data-collapsed="${isCollapsed('cd-delreq')}">
+      ${collapsibleHead('cd-delreq', '<h3>Запросы на удаление</h3>')}
       <div class="panel-b">
         ${delReqs.map(r=>`<div class="delnote" style="margin:0"><b>${r.status}</b> · запросил ${esc(r.requestedBy)} · ${esc(r.requestedAt)}</div>`).join('')}
         <div class="actionsbar" style="margin-top:12px">
@@ -2456,6 +2741,12 @@ function renderClientDetail(clientId){
   const fixedTag = (fixed)=> fixed
     ? `<span class="pin">🔒 зафиксировано вручную</span>`
     : `<span class="pin" style="background:var(--info-bg);color:var(--primary)">⚙️ автоматически</span>`;
+
+  const clientDetailTab = state.clientDetailTab || 'main';
+  const clientTabsHtml = `
+    <button class="seg-tab ${clientDetailTab==='main'?'active':''}" data-client-detail-tab="main">Основное</button>
+    <button class="seg-tab ${clientDetailTab==='ops'?'active':''}" data-client-detail-tab="ops">История операций</button>
+  `;
 
   return `
     <div class="rec-card">
@@ -2483,14 +2774,16 @@ function renderClientDetail(clientId){
           </div>
         </div>
       </div>
+      <div class="seg-tabs" style="margin-top:16px">${clientTabsHtml}</div>
     </div>
 
     ${delBlock}
 
+    ${clientDetailTab==='ops' ? renderClientOperationsTab(c, a) : `
     <div class="grid2">
       <div>
-        <div class="panel">
-          <div class="panel-h"><h3>Данные клиента партнёра</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('cd-clientdata')}">
+          ${collapsibleHead('cd-clientdata', '<h3>Данные клиента партнёра</h3>')}
           <div class="panel-b">
             <dl class="deflist">
               <div><dt>Имя клиента</dt><dd>${esc(fullName(c))}</dd></div>
@@ -2527,8 +2820,8 @@ function renderClientDetail(clientId){
         </div>
 
         ${a ? `
-        <div class="panel">
-          <div class="panel-h"><h3>Данные партнёра</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('cd-partnerdata')}">
+          ${collapsibleHead('cd-partnerdata', '<h3>Данные партнёра</h3>')}
           <div class="panel-b">
             <dl class="deflist">
               <div><dt>Id / email аккаунта партнёра в системе</dt><dd><a href="#" class="namelink" data-goto-agent="${a.id}">${esc(a.email)}</a></dd></div>
@@ -2538,8 +2831,8 @@ function renderClientDetail(clientId){
         </div>` : ''}
 
         ${hasAddr ? `
-        <div class="panel">
-          <div class="panel-h"><h3>Адрес регистрации</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('cd-address')}">
+          ${collapsibleHead('cd-address', '<h3>Адрес регистрации</h3>')}
           <div class="panel-b">
             <dl class="deflist cols3">
               <div><dt>Страна</dt><dd>${esc(addr.country||'—')}</dd></div>
@@ -2553,55 +2846,23 @@ function renderClientDetail(clientId){
           </div>
         </div>` : ''}
 
-        <div class="panel">
-          <div class="panel-h"><h3>История изменения данных</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('cd-history')}">
+          ${collapsibleHead('cd-history', '<h3>История изменения данных</h3>')}
           ${logsHtml}
         </div>
       </div>
 
       <div>
-        <div class="panel">
-          <div class="panel-h"><h3>Проверки (${ranChecks.length})</h3>${ranChecks.length?'<button class="btn btn-sm" id="btnRerunAllChecks">Перезапустить все</button>':''}</div>
+        <div class="panel" data-collapsed="${isCollapsed('cd-checks')}">
+          ${collapsibleHead('cd-checks', `<h3>Проверки (${ranChecks.length})</h3>`)}
+          ${ranChecks.length ? `<div class="panel-actions"><button class="btn btn-sm" id="btnRerunAllChecks">Перезапустить все</button></div>` : ''}
           <div class="panel-b">
             <div class="checklist">${checksRows||'<div class="empty-state" style="padding:12px">Проверки ещё не запускались</div>'}</div>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-h"><h3>Документы</h3></div>
-          <div class="panel-b">
-            ${(c.docs && c.docs.length) ? `
-            <div class="doclist" style="margin-bottom:12px">
-              ${c.docs.map(d=>`
-                <div class="docrow">
-                  <div class="doc-thumb" data-doc-preview="${esc(d)}" title="Предпросмотр">${d.endsWith('.pdf')?'📄':'🖼️'}</div>
-                  <div class="doc-name" data-doc-preview="${esc(d)}">${esc(d)}</div>
-                  <button class="icon-btn" data-doc-download="${esc(d)}" title="Скачать">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <button class="icon-btn danger" data-doc-delete="${esc(d)}" title="Удалить">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                </div>`).join('')}
-            </div>` : ''}
-            <button class="btn btn-sm" id="btnUploadDoc">Загрузить документ</button>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-h"><h3>Платёжные данные</h3></div>
-          <div class="panel-b">
-            <div class="ts" style="margin-bottom:10px">Автоматический вывод пополнений клиента</div>
-            <div class="field-grid">
-              <div class="field"><label>Сеть для автовывода</label><input id="pdNetwork" value="${esc(c.autoWithdrawNetwork||'')}" placeholder="Например, TRON (TRC20)"></div>
-              <div class="field"><label>Адрес счёта для автовывода</label><input id="pdWallet" value="${esc(c.autoWithdrawWallet||'')}" placeholder="—"></div>
-            </div>
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSavePaymentData">Сохранить</button></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-h"><h3>Допуски к пополнению</h3></div>
+        <div class="panel" data-collapsed="${isCollapsed('cd-access')}">
+          ${collapsibleHead('cd-access', '<h3>Допуски к пополнению</h3>')}
           <div class="panel-b">
             <div class="toggle-row">
               <div><div class="tt">Пополнение по СБП</div><div class="ts">Можно принимать оплату через СБП</div></div>
@@ -2627,8 +2888,42 @@ function renderClientDetail(clientId){
             </div>` : ''}
           </div>
         </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('cd-docs')}">
+          ${collapsibleHead('cd-docs', '<h3>Документы</h3>')}
+          <div class="panel-b">
+            ${(c.docs && c.docs.length) ? `
+            <div class="doclist" style="margin-bottom:12px">
+              ${c.docs.map(d=>`
+                <div class="docrow">
+                  <div class="doc-thumb" data-doc-preview="${esc(d)}" title="Предпросмотр">${d.endsWith('.pdf')?'📄':'🖼️'}</div>
+                  <div class="doc-name" data-doc-preview="${esc(d)}">${esc(d)}</div>
+                  <button class="icon-btn" data-doc-download="${esc(d)}" title="Скачать">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button class="icon-btn danger" data-doc-delete="${esc(d)}" title="Удалить">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>`).join('')}
+            </div>` : ''}
+            <button class="btn btn-sm" id="btnUploadDoc">Загрузить документ</button>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('cd-payment')}">
+          ${collapsibleHead('cd-payment', '<h3>Платёжные данные</h3>')}
+          <div class="panel-b">
+            <div class="ts" style="margin-bottom:10px">Автоматический вывод пополнений клиента</div>
+            <div class="field-grid">
+              <div class="field"><label>Сеть для автовывода</label><input id="pdNetwork" value="${esc(c.autoWithdrawNetwork||'')}" placeholder="Например, TRON (TRC20)"></div>
+              <div class="field"><label>Адрес счёта для автовывода</label><input id="pdWallet" value="${esc(c.autoWithdrawWallet||'')}" placeholder="—"></div>
+            </div>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSavePaymentData">Сохранить</button></div>
+          </div>
+        </div>
       </div>
     </div>
+    `}
   `;
 }
 
@@ -2639,7 +2934,64 @@ function logChange(c, field, oldV, newV, reason, actor){
 
 function bindClientDetail(){
   const c = clientById(state.currentClientId);
+  bindPanelToggles();
   $('#backToClients')?.addEventListener('click', ()=>{ state.view='external-list'; render(); });
+  $all('.popwrap').forEach(w=>w.addEventListener('click', e=>e.stopPropagation()));
+  $all('[data-client-detail-tab]').forEach(t=>t.addEventListener('click', ()=>{
+    state.clientDetailTab = t.dataset.clientDetailTab; state.openFilterMenu=null; state.dateUI.open=false; render();
+  }));
+
+  if(state.clientDetailTab==='ops'){
+    $('#opsSearch')?.addEventListener('input', e=>{ state.filters.opsQuery=e.target.value; renderInto(); });
+    $('#opsStatusFilterBtn')?.addEventListener('click', ()=>{
+      state.openFilterMenu = state.openFilterMenu==='opsStatus' ? null : 'opsStatus'; render();
+    });
+    $all('[data-opsstatus-opt]').forEach(b=>b.addEventListener('click', ()=>{
+      state.filters.opsStatus=b.dataset.opsstatusOpt; state.openFilterMenu=null; render();
+    }));
+    $('#opsDateRangeBtn')?.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(!(state.dateUI.open && state.dateUI.target==='ops')){
+        state.dateUI.target = 'ops';
+        state.dateUI.viewMonth = state.filters.opsFrom || new Date();
+        state.dateUI.tempFrom = state.filters.opsFrom; state.dateUI.tempTo = state.filters.opsTo;
+        state.dateUI.open = true;
+      } else {
+        state.dateUI.open = false;
+      }
+      render();
+    });
+    $all('[data-calnav]').forEach(b=>b.addEventListener('click', ()=>{
+      const dir = b.dataset.calnav==='prev' ? -1 : 1;
+      const v = state.dateUI.viewMonth || new Date();
+      state.dateUI.viewMonth = new Date(v.getFullYear(), v.getMonth()+dir, 1);
+      render();
+    }));
+    $all('[data-day]').forEach(cell=>cell.addEventListener('click', ()=>{
+      const [yy,mm,dd] = cell.dataset.day.split('-').map(Number);
+      const picked = d0(yy,mm,dd);
+      const u = state.dateUI;
+      if(!u.tempFrom || (u.tempFrom && u.tempTo)){ u.tempFrom = picked; u.tempTo = null; }
+      else { if(picked < u.tempFrom){ u.tempTo = u.tempFrom; u.tempFrom = picked; } else { u.tempTo = picked; } }
+      render();
+    }));
+    $all('[data-quick]').forEach(b=>b.addEventListener('click', ()=>{
+      const [from,to] = quickRanges()[b.dataset.quick];
+      state.dateUI.tempFrom = from; state.dateUI.tempTo = to; state.dateUI.viewMonth = from;
+      render();
+    }));
+    $('#dateReset')?.addEventListener('click', ()=>{
+      state.filters.opsFrom=null; state.filters.opsTo=null; state.dateUI.open=false; render();
+    });
+    $('#dateApply')?.addEventListener('click', ()=>{
+      state.filters.opsFrom = state.dateUI.tempFrom; state.filters.opsTo = state.dateUI.tempTo;
+      state.dateUI.open=false; render();
+    });
+    $('#opsClear')?.addEventListener('click', ()=>{
+      state.filters.opsStatus=''; state.filters.opsQuery=''; state.filters.opsFrom=null; state.filters.opsTo=null; render();
+    });
+    return;
+  }
   $('#btnUploadDoc')?.addEventListener('click', ()=>{
     c.docs = c.docs || [];
     const name = 'документ_'+(c.docs.length+1)+'.pdf';
@@ -2839,7 +3191,7 @@ function openEditPartnerInfoModal(a){
   openModal(`
     <div class="modal-h"><h3>Основная информация — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
     <div class="modal-b">
-      <div class="field"><label>Название партнёра</label><input id="epiName" value="${esc(a.partnerName||'')}" placeholder="ООО «Партнёр»"></div>
+      <div class="field"><label>Название партнёра</label><input id="epiName" value="${esc(a.name||'')}" placeholder="ООО «Партнёр»"></div>
       <div class="field" style="max-width:220px">
         <label>Банк СБП</label>
         <select id="epiBank">
@@ -2851,7 +3203,7 @@ function openEditPartnerInfoModal(a){
     <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="epiSave">Сохранить</button></div>
   `);
   $('#epiSave').addEventListener('click', ()=>{
-    a.partnerName = $('#epiName').value;
+    a.name = $('#epiName').value;
     a.sbpBankName = $('#epiBank').value;
     closeModal(); render(); toast('Основная информация обновлена');
   });
@@ -2980,28 +3332,61 @@ function openEditClientModal(c){
       <div class="toggle-row"><div class="tt">Пополнение по СБП</div><button class="switch ${c.sbpTopUp?'on':''}" id="ecSbp"><span class="knob"></span></button></div>
       <div class="toggle-row"><div class="tt">Пополнение по QR</div><button class="switch ${c.qrTopUp?'on':''}" id="ecQr"><span class="knob"></span></button></div>
 
+      <div class="hairline"></div>
       <div class="field"><label>Причина изменения <span class="req">*</span></label><textarea rows="2" id="ecReason" placeholder="Пишется в Аудит и в Историю изменения данных"></textarea></div>
+      <div class="field">
+        <label>Документ-основание</label>
+        <input type="file" id="ecDocument">
+        <div class="ts" style="margin-top:4px">Обязателен, если меняется хотя бы одно критичное поле: ФИО, дата рождения, номер и дата выдачи паспорта, страна выдачи. Правка телефона/email/ИНН/адреса документа не требует.</div>
+      </div>
     </div>
     <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="ecSave">Сохранить</button></div>
   `, true);
   $('#ecSbp').addEventListener('click', e=>e.currentTarget.classList.toggle('on'));
   $('#ecQr').addEventListener('click', e=>e.currentTarget.classList.toggle('on'));
   $('#ecSave').addEventListener('click', ()=>{
-    if(!$('#ecReason').value.trim()){ toast('Укажите причину изменения'); return; }
     const country = $('#ecCountry').value.trim();
     if(!country){ toast('Страна выдачи паспорта обязательна — от неё зависит маршрут проверок'); return; }
     const isForeign = country.toUpperCase()!=='RUS';
     if(isForeign && (!$('#ecLastNative').value.trim() || !$('#ecFirstNative').value.trim())){
       toast('При иностранном документе обязательны «Фамилия как в документе» и «Имя как в документе»'); return;
     }
-    const changedIdentity = c.lastName!==$('#ecLast').value || c.firstName!==$('#ecFirst').value ||
-      c.phoneNumber!==$('#ecPhone').value || c.passportNumber!==$('#ecPassport').value || c.birthDate!==$('#ecBirth').value ||
-      c.inn!==$('#ecInn').value;
 
-    c.lastName=$('#ecLast').value; c.firstName=$('#ecFirst').value; c.middleName=$('#ecMiddle').value;
-    c.email=$('#ecEmail').value; c.phoneNumber=$('#ecPhone').value;
-    c.inn=$('#ecInn').value; c.passportNumber=$('#ecPassport').value; c.passportIssuedDate=$('#ecPassportDate').value;
-    c.birthDate=$('#ecBirth').value; c.passportIssuingCountry=country;
+    // Критичные/identity-поля — как в bb2 (client-change-log.service.ts):
+    // CRITICAL_FIELDS не включает телефон, IDENTITY_FIELDS включает.
+    // ИНН, email, адрес, написание «как в документе» — ни туда, ни туда.
+    const newVals = {
+      lastName: $('#ecLast').value, firstName: $('#ecFirst').value, middleName: $('#ecMiddle').value,
+      birthDate: $('#ecBirth').value, passportNumber: $('#ecPassport').value,
+      passportIssuedDate: $('#ecPassportDate').value, passportIssuingCountry: country,
+      phoneNumber: $('#ecPhone').value,
+    };
+    const CRITICAL_FIELDS = ['lastName','firstName','middleName','birthDate','passportNumber','passportIssuedDate','passportIssuingCountry'];
+    const IDENTITY_FIELDS = [...CRITICAL_FIELDS, 'phoneNumber'];
+    const criticalChanged = CRITICAL_FIELDS.some(f=> c[f]!==newVals[f]);
+    const identityChanged = IDENTITY_FIELDS.some(f=> c[f]!==newVals[f]);
+
+    if(criticalChanged && !$('#ecReason').value.trim()){
+      toast('Причина обязательна — меняется критичное поле'); return;
+    }
+    if(criticalChanged && !$('#ecDocument').files.length){
+      toast('Документ-основание обязателен — меняется критичное поле'); return;
+    }
+
+    const FIELD_LABELS = {lastName:'Фамилия', firstName:'Имя', middleName:'Отчество', email:'Email', phoneNumber:'Телефон',
+      inn:'ИНН', passportNumber:'Номер паспорта', passportIssuedDate:'Дата выдачи паспорта', birthDate:'Дата рождения',
+      passportIssuingCountry:'Страна выдачи паспорта'};
+    const reason = $('#ecReason').value.trim();
+    [...IDENTITY_FIELDS, 'email', 'inn'].forEach(f=>{
+      const oldV = f==='email' ? c.email : (f==='inn' ? c.inn : c[f]);
+      const newV = f==='email' ? $('#ecEmail').value : (f==='inn' ? $('#ecInn').value : newVals[f]);
+      if(oldV!==newV) logChange(c, FIELD_LABELS[f]||f, oldV||'—', newV||'—', reason || 'Правка оператором');
+    });
+
+    c.lastName=newVals.lastName; c.firstName=newVals.firstName; c.middleName=newVals.middleName;
+    c.email=$('#ecEmail').value; c.phoneNumber=newVals.phoneNumber;
+    c.inn=$('#ecInn').value; c.passportNumber=newVals.passportNumber; c.passportIssuedDate=newVals.passportIssuedDate;
+    c.birthDate=newVals.birthDate; c.passportIssuingCountry=country;
     c.lastNameNative=$('#ecLastNative').value; c.firstNameNative=$('#ecFirstNative').value;
     c.registrationAddress = {
       country: $('#ecAddrCountry').value, postIndex: $('#ecAddrIndex').value, state: $('#ecAddrState').value,
@@ -3011,9 +3396,13 @@ function openEditClientModal(c){
     };
     c.sbpTopUp = $('#ecSbp').classList.contains('on');
     c.qrTopUp = $('#ecQr').classList.contains('on');
-    if(changedIdentity){ c.sbpTopUp=false; c.checkResult='PENDING'; c.status='PENDING'; }
+    if(identityChanged){
+      c.sbpTopUp = false; c.qrTopUp = false;
+      if(c.kycMethod && !c.kycMethod.endsWith('_edited')) c.kycMethod = c.kycMethod + '_edited';
+      logChange(c, 'sbpTopUp', 'true', 'false', criticalChanged ? 'Критичное поле изменено — допуск снят автоматически' : 'Правка данных — допуск снят автоматически');
+    }
     closeModal(); render();
-    toast(changedIdentity ? 'Сохранено — важные данные изменены, проверки перезапущены' : 'Сохранено');
+    toast(identityChanged ? 'Сохранено — допуск к пополнению снят, проверки нужно перезапустить' : 'Сохранено');
   });
 }
 
