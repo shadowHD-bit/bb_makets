@@ -808,9 +808,12 @@ const state = {
     clientStatus: '', clientChannel: '', clientVerification: '', clientPartner: '', clientQuery: '', onlyToDelete: false,
     clientCheckResult: '', clientKycMethod: '', clientPassportCountry: '',
     createdFrom: null, createdTo: null,
+    individualQuery: '', individualKycStatus: '', individualKycLevel: '',
+    individualCreatedFrom: null, individualCreatedTo: null,
+    agentKycStatus: '', agentKycLevel: '',
   },
   exportOpen: false,
-  dateUI: { open:false, viewMonth:null, tempFrom:null, tempTo:null },
+  dateUI: { open:false, target:'client', viewMonth:null, tempFrom:null, tempTo:null },
   openFilterMenu: null,   // 'partner' | 'status' | 'verif' | null
 };
 
@@ -888,6 +891,46 @@ function kycStatusPill(s){
   const [cls,label] = map[s]||['b-faded', s];
   return `<span class="badge ${cls}" style="text-transform:uppercase;letter-spacing:.03em">${label}</span>`;
 }
+const INDIVIDUAL_KYC_STATUS = ['PROCESSING','SUCCESSFUL','NONE'];
+const KYC_LEVELS = ['Level 1','Level 2','Level 3'];
+/** Партнёр — тоже аккаунт в едином реестре, но своего личного KYC-уровня/статуса
+ *  прототип отдельно не мокает — выводим по его агентскому статусу для наглядности в списке. */
+function agentKycMock(a){
+  const map = {
+    ACTIVE:{level:'Level 2', status:'SUCCESSFUL'},
+    SUSPENDED:{level:'Level 2', status:'SUCCESSFUL'},
+    ARCHIVED:{level:'Level 1', status:'SUCCESSFUL'},
+    EXPIRED:{level:'Level 1', status:'PROCESSING'},
+    INVITED:{level:'—', status:'NONE'},
+  };
+  return map[a.status] || {level:'—', status:'NONE'};
+}
+/** Единый формат ID по всему реестру — u-XXXXXXXX (как у партнёрского userId). */
+function shortUid(fullId){
+  return 'u-' + String(fullId||'').replace(/-/g,'').slice(0,8);
+}
+/** Мок агрегированного баланса — детерминирован по id, чтобы не прыгал между рендерами. */
+function mockBalance(seed){
+  let h=0; for(let i=0;i<String(seed).length;i++){ h = (h*31 + String(seed).charCodeAt(i)) >>> 0; }
+  if(h % 6 === 0) return '—';
+  const cur = h % 3 === 0 ? 'USDT' : 'RUB';
+  const amount = (h % 48000) + 300;
+  return `${amount.toLocaleString('ru-RU')} ${cur}`;
+}
+/** "19.08.26" → Date (для сравнения с фильтром по дате). */
+function parseRuShortDate(s){
+  const m = /^(\d{2})\.(\d{2})\.(\d{2})$/.exec(String(s||'').trim());
+  if(!m) return null;
+  return new Date(2000+Number(m[3]), Number(m[2])-1, Number(m[1]));
+}
+function inFilterDateRange(dateStr, fromDate, toDate){
+  if(!fromDate && !toDate) return true;
+  const d = parseRuShortDate(dateStr);
+  if(!d) return true;
+  if(fromDate && d < fromDate) return false;
+  if(toDate){ const to = new Date(toDate); to.setHours(23,59,59,999); if(d > to) return false; }
+  return true;
+}
 function agentStatusBadge(s){
   const map = { ACTIVE:['b-success','Активен'], SUSPENDED:['b-warning','Приостановлен'], ARCHIVED:['b-faded','В архиве'], EXPIRED:['b-faded','Истёк'], INVITED:['b-info','Приглашён'] };
   const [cls,label] = map[s] || ['b-faded', s];
@@ -942,10 +985,25 @@ function render(){
 function filteredAgents(){
   const f = state.filters;
   return agents.filter(a=>{
-    if(f.agentStatus && a.status!==f.agentStatus) return false;
+    const kyc = agentKycMock(a);
+    if(f.agentKycStatus && kyc.status!==f.agentKycStatus) return false;
+    if(f.agentKycLevel && kyc.level!==f.agentKycLevel) return false;
     if(f.agentQuery){
       const q = f.agentQuery.toLowerCase();
-      if(![a.name,a.email,a.partnerId,a.legalName].join(' ').toLowerCase().includes(q)) return false;
+      if(![a.name,a.email,a.partnerId,a.legalName,a.userId].join(' ').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+function filteredIndividuals(){
+  const f = state.filters;
+  return FIZLICA_MOCK.filter(r=>{
+    if(f.individualKycStatus && r.kycStatus!==f.individualKycStatus) return false;
+    if(f.individualKycLevel && r.kycLevel!==f.individualKycLevel) return false;
+    if(!inFilterDateRange(r.date, f.individualCreatedFrom, f.individualCreatedTo)) return false;
+    if(f.individualQuery){
+      const q = f.individualQuery.toLowerCase();
+      if(![r.name,r.email,r.phone,shortUid(r.fullId)].join(' ').toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -973,16 +1031,22 @@ function renderAccountsListPage(){
 
 function renderPartnersTab(){
   const list = filteredAgents();
+  const kycStatusLabel = state.filters.agentKycStatus || 'Все';
+  const kycLevelLabel = state.filters.agentKycLevel || 'Все';
   const rows = list.map(a=>{
+    const kyc = agentKycMock(a);
     return `
-      <tr data-agent="${a.id}">
-        <td><a href="#" class="namelink" data-agent-link="${a.id}">${esc(a.name)}</a><div class="cell-sub mono">${esc(a.userId)}</div></td>
+      <tr data-agent="${a.id}" style="cursor:default">
+        <td><a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-agent-link="${a.id}">${esc(a.userId)}</a></td>
+        <td>${esc(a.name)}</td>
+        <td class="${a.legalName?'':'muted'}">${esc(a.legalName||'—')}</td>
         <td>${esc(a.email)}</td>
-        <td class="muted">—</td>
-        <td class="muted">—</td>
-        <td><span class="tag">${esc(a.countryCode)}</span></td>
+        <td class="${a.phone?'':'muted'}">${esc(a.phone||'—')}</td>
+        <td>${kyc.level==='—'?'<span class="muted">—</span>':esc(kyc.level)}</td>
+        <td>${kycStatusPill(kyc.status)}</td>
+        <td class="${mockBalance(a.id)==='—'?'muted':'mono'}">${mockBalance(a.id)}</td>
       </tr>`;
-  }).join('') || `<tr><td colspan="5"><div class="empty-state"><div class="big">По запросу ничего не найдено</div>Попробуйте изменить фильтр или поисковую фразу</div></td></tr>`;
+  }).join('') || `<tr><td colspan="8"><div class="empty-state"><div class="big">По запросу ничего не найдено</div>Попробуйте изменить фильтр или поисковую фразу</div></td></tr>`;
 
   return `
     <div class="toolbar">
@@ -990,16 +1054,26 @@ function renderPartnersTab(){
         <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         <input id="agentSearch" placeholder="Поиск" value="${esc(state.filters.agentQuery)}">
       </div>
-      <select id="agentStatusFilter" class="select">
-        <option value="">Статус агента</option>
-        ${AGENT_STATUS.map(s=>`<option value="${s}" ${state.filters.agentStatus===s?'selected':''}>${s}</option>`).join('')}
-      </select>
+      <div class="popwrap">
+        <button class="fbtn" id="agentKycStatusFilterBtn"><span class="flabel">Статус KYC:</span><span class="fval">${esc(kycStatusLabel)}</span><svg class="fchev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+        ${state.openFilterMenu==='agentKycStatus' ? `<div class="fmenu">
+          <button data-agentkycstatus-opt="" class="${!state.filters.agentKycStatus?'sel':''}">Все</button>
+          ${INDIVIDUAL_KYC_STATUS.map(s=>`<button data-agentkycstatus-opt="${s}" class="${state.filters.agentKycStatus===s?'sel':''}">${s}</button>`).join('')}
+        </div>` : ''}
+      </div>
+      <div class="popwrap">
+        <button class="fbtn" id="agentKycLevelFilterBtn"><span class="flabel">Уровень KYC:</span><span class="fval">${esc(kycLevelLabel)}</span><svg class="fchev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+        ${state.openFilterMenu==='agentKycLevel' ? `<div class="fmenu">
+          <button data-agentkyclevel-opt="" class="${!state.filters.agentKycLevel?'sel':''}">Все</button>
+          ${KYC_LEVELS.map(s=>`<button data-agentkyclevel-opt="${s}" class="${state.filters.agentKycLevel===s?'sel':''}">${s}</button>`).join('')}
+        </div>` : ''}
+      </div>
       <button class="clearbtn" id="agentClear">Очистить все</button>
     </div>
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>Имя</th><th>Эл. почта</th><th>Псевдоним</th><th>Баланс</th><th>WL</th></tr></thead>
+          <thead><tr><th>ID</th><th>Партнёр</th><th>Наименование</th><th>Эл. почта</th><th>Телефон</th><th>Текущий KYC</th><th>Статус KYC</th><th>Баланс</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -1012,45 +1086,125 @@ function renderPartnersTab(){
 }
 
 function renderFizlicaTab(){
-  const rows = FIZLICA_MOCK.map(r=>`
-    <tr data-individual="${r.key}">
-      <td><a href="#" class="idlink" data-individual-link="${r.key}">${r.shortId}</a></td>
+  const list = filteredIndividuals();
+  const kycStatusLabel = state.filters.individualKycStatus || 'Все';
+  const kycLevelLabel = state.filters.individualKycLevel || 'Все';
+  const rangeLabel = (state.filters.individualCreatedFrom && state.filters.individualCreatedTo)
+    ? `${fmtRu(state.filters.individualCreatedFrom)} — ${fmtRu(state.filters.individualCreatedTo)}` : 'Период';
+  const rows = list.map(r=>{
+    const bal = mockBalance(r.key);
+    return `
+    <tr data-individual="${r.key}" style="cursor:default">
+      <td><a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-individual-link="${r.key}">${shortUid(r.fullId)}</a><div class="cell-sub">${r.date}</div></td>
       <td>${esc(r.name)}</td>
       <td>${esc(r.email)}</td>
-      <td>${esc(r.phone)}</td>
-      <td>${r.date}<div class="cell-sub">${r.time}</div></td>
-      <td>${r.kycLevel==='—'?'<span class="muted">—</span>':`<a href="#" class="namelink">${r.kycLevel}</a>`}</td>
+      <td class="${r.phone&&r.phone!=='—'?'':'muted'}">${esc(r.phone||'—')}</td>
+      <td>${r.kycLevel==='—'?'<span class="muted">—</span>':esc(r.kycLevel)}</td>
       <td>${kycStatusPill(r.kycStatus)}</td>
-    </tr>`).join('');
+      <td class="${bal==='—'?'muted':'mono'}">${bal}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7"><div class="empty-state"><div class="big">По запросу ничего не найдено</div>Попробуйте изменить фильтр или поисковую фразу</div></td></tr>`;
   return `
     <div class="toolbar">
       <div class="search">
         <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        <input placeholder="Поиск">
+        <input id="individualSearch" placeholder="Поиск" value="${esc(state.filters.individualQuery)}">
       </div>
-      <select class="select"><option>дд.мм.гггг — дд.мм.гггг</option></select>
-      <select class="select"><option>Статус KYC</option></select>
-      <button class="clearbtn">Сбросить</button>
+      <div class="popwrap">
+        <button class="fbtn" id="individualKycStatusFilterBtn"><span class="flabel">Статус KYC:</span><span class="fval">${esc(kycStatusLabel)}</span><svg class="fchev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+        ${state.openFilterMenu==='individualKycStatus' ? `<div class="fmenu">
+          <button data-individualkycstatus-opt="" class="${!state.filters.individualKycStatus?'sel':''}">Все</button>
+          ${INDIVIDUAL_KYC_STATUS.map(s=>`<button data-individualkycstatus-opt="${s}" class="${state.filters.individualKycStatus===s?'sel':''}">${s}</button>`).join('')}
+        </div>` : ''}
+      </div>
+      <div class="popwrap">
+        <button class="fbtn" id="individualKycLevelFilterBtn"><span class="flabel">Уровень KYC:</span><span class="fval">${esc(kycLevelLabel)}</span><svg class="fchev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+        ${state.openFilterMenu==='individualKycLevel' ? `<div class="fmenu">
+          <button data-individualkyclevel-opt="" class="${!state.filters.individualKycLevel?'sel':''}">Все</button>
+          ${KYC_LEVELS.map(s=>`<button data-individualkyclevel-opt="${s}" class="${state.filters.individualKycLevel===s?'sel':''}">${s}</button>`).join('')}
+        </div>` : ''}
+      </div>
+      <div class="popwrap">
+        <button class="btn" id="individualDateRangeBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          ${rangeLabel}
+        </button>
+        ${(state.dateUI.open && state.dateUI.target==='individual') ? renderDatePopover() : ''}
+      </div>
+      <button class="clearbtn" id="individualClear">Очистить все</button>
     </div>
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>ID</th><th>Полное имя</th><th>Эл. почта</th><th>Телефон</th><th>Дата</th><th>Текущее имя KYC</th><th>Текущий статус KYC</th></tr></thead>
+          <thead><tr><th>ID · Дата</th><th>Клиент</th><th>Эл. почта</th><th>Телефон</th><th>Текущий KYC</th><th>Статус KYC</th><th>Баланс</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <div class="pagfoot"><span>Total: ${FIZLICA_MOCK.length} lines</span><select class="select"><option>10</option></select></div>
+      <div class="pagfoot"><span>Total: ${list.length} lines</span><select class="select"><option>10</option></select></div>
     </div>
   `;
 }
 
 function bindAccountsListPage(){
-  $all('.seg-tab[data-acctab]').forEach(t=>t.addEventListener('click', ()=>{ state.accountsTab=t.dataset.acctab; render(); }));
+  $all('.seg-tab[data-acctab]').forEach(t=>t.addEventListener('click', ()=>{ state.accountsTab=t.dataset.acctab; state.openFilterMenu=null; state.dateUI.open=false; render(); }));
+  $all('.popwrap').forEach(w=>w.addEventListener('click', e=>e.stopPropagation()));
 
   if(state.accountsTab==='fizlica'){
-    $all('tr[data-individual]').forEach(r=>r.addEventListener('click', ()=>{
-      state.currentIndividualId=r.dataset.individual; state.individualTab='kyc'; state.view='individual-detail'; render();
+    $('#individualSearch')?.addEventListener('input', e=>{ state.filters.individualQuery=e.target.value; renderInto(); });
+    $('#individualKycStatusFilterBtn')?.addEventListener('click', ()=>{
+      state.openFilterMenu = state.openFilterMenu==='individualKycStatus' ? null : 'individualKycStatus'; render();
+    });
+    $all('[data-individualkycstatus-opt]').forEach(b=>b.addEventListener('click', ()=>{
+      state.filters.individualKycStatus=b.dataset.individualkycstatusOpt; state.openFilterMenu=null; render();
     }));
+    $('#individualKycLevelFilterBtn')?.addEventListener('click', ()=>{
+      state.openFilterMenu = state.openFilterMenu==='individualKycLevel' ? null : 'individualKycLevel'; render();
+    });
+    $all('[data-individualkyclevel-opt]').forEach(b=>b.addEventListener('click', ()=>{
+      state.filters.individualKycLevel=b.dataset.individualkyclevelOpt; state.openFilterMenu=null; render();
+    }));
+    $('#individualDateRangeBtn')?.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(!(state.dateUI.open && state.dateUI.target==='individual')){
+        state.dateUI.target = 'individual';
+        state.dateUI.viewMonth = state.filters.individualCreatedFrom || new Date();
+        state.dateUI.tempFrom = state.filters.individualCreatedFrom; state.dateUI.tempTo = state.filters.individualCreatedTo;
+        state.dateUI.open = true;
+      } else {
+        state.dateUI.open = false;
+      }
+      state.openFilterMenu=null; render();
+    });
+    $all('[data-calnav]').forEach(b=>b.addEventListener('click', ()=>{
+      const dir = b.dataset.calnav==='prev' ? -1 : 1;
+      const v = state.dateUI.viewMonth || new Date();
+      state.dateUI.viewMonth = new Date(v.getFullYear(), v.getMonth()+dir, 1);
+      render();
+    }));
+    $all('[data-day]').forEach(cell=>cell.addEventListener('click', ()=>{
+      const [yy,mm,dd] = cell.dataset.day.split('-').map(Number);
+      const picked = d0(yy,mm,dd);
+      const u = state.dateUI;
+      if(!u.tempFrom || (u.tempFrom && u.tempTo)){ u.tempFrom = picked; u.tempTo = null; }
+      else { if(picked < u.tempFrom){ u.tempTo = u.tempFrom; u.tempFrom = picked; } else { u.tempTo = picked; } }
+      render();
+    }));
+    $all('[data-quick]').forEach(b=>b.addEventListener('click', ()=>{
+      const [from,to] = quickRanges()[b.dataset.quick];
+      state.dateUI.tempFrom = from; state.dateUI.tempTo = to; state.dateUI.viewMonth = from;
+      render();
+    }));
+    $('#dateReset')?.addEventListener('click', ()=>{
+      state.filters.individualCreatedFrom=null; state.filters.individualCreatedTo=null; state.dateUI.open=false; render();
+    });
+    $('#dateApply')?.addEventListener('click', ()=>{
+      state.filters.individualCreatedFrom = state.dateUI.tempFrom; state.filters.individualCreatedTo = state.dateUI.tempTo;
+      state.dateUI.open=false; render();
+    });
+    $('#individualClear')?.addEventListener('click', ()=>{
+      state.filters.individualQuery=''; state.filters.individualKycStatus=''; state.filters.individualKycLevel='';
+      state.filters.individualCreatedFrom=null; state.filters.individualCreatedTo=null; render();
+    });
     $all('[data-individual-link]').forEach(l=>l.addEventListener('click', (e)=>{
       e.preventDefault(); e.stopPropagation();
       state.currentIndividualId=e.currentTarget.dataset.individualLink; state.individualTab='kyc'; state.view='individual-detail'; render();
@@ -1059,9 +1213,21 @@ function bindAccountsListPage(){
   }
 
   $('#agentSearch')?.addEventListener('input', e=>{ state.filters.agentQuery=e.target.value; renderInto(); });
-  $('#agentStatusFilter')?.addEventListener('change', e=>{ state.filters.agentStatus=e.target.value; render(); });
-  $('#agentClear')?.addEventListener('click', ()=>{ state.filters.agentQuery=''; state.filters.agentStatus=''; render(); });
-  $all('tr[data-agent]').forEach(r=>r.addEventListener('click', ()=>{ state.currentAgentId=r.dataset.agent; state.accountDetailTab='kyc'; state.view='account-detail'; render(); }));
+  $('#agentKycStatusFilterBtn')?.addEventListener('click', ()=>{
+    state.openFilterMenu = state.openFilterMenu==='agentKycStatus' ? null : 'agentKycStatus'; render();
+  });
+  $all('[data-agentkycstatus-opt]').forEach(b=>b.addEventListener('click', ()=>{
+    state.filters.agentKycStatus=b.dataset.agentkycstatusOpt; state.openFilterMenu=null; render();
+  }));
+  $('#agentKycLevelFilterBtn')?.addEventListener('click', ()=>{
+    state.openFilterMenu = state.openFilterMenu==='agentKycLevel' ? null : 'agentKycLevel'; render();
+  });
+  $all('[data-agentkyclevel-opt]').forEach(b=>b.addEventListener('click', ()=>{
+    state.filters.agentKycLevel=b.dataset.agentkyclevelOpt; state.openFilterMenu=null; render();
+  }));
+  $('#agentClear')?.addEventListener('click', ()=>{
+    state.filters.agentQuery=''; state.filters.agentKycStatus=''; state.filters.agentKycLevel=''; render();
+  });
   $all('[data-agent-link]').forEach(l=>l.addEventListener('click', (e)=>{
     e.preventDefault(); e.stopPropagation();
     state.currentAgentId=e.currentTarget.dataset.agentLink; state.accountDetailTab='kyc'; state.view='account-detail'; render();
@@ -1070,7 +1236,7 @@ function bindAccountsListPage(){
 
 function renderInto(){
   const activeEl = document.activeElement;
-  const isSearch = activeEl && (activeEl.id==='agentSearch' || activeEl.id==='clientSearch');
+  const isSearch = activeEl && (activeEl.id==='agentSearch' || activeEl.id==='clientSearch' || activeEl.id==='individualSearch');
   const caret = isSearch ? activeEl.selectionStart : null;
   render();
   if(isSearch){ const el=$('#'+activeEl.id); if(el){ el.focus(); el.setSelectionRange(caret,caret); } }
