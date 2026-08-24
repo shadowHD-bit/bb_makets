@@ -379,12 +379,14 @@ table.grid tbody tr:last-child td{border-bottom:0}
 .rec-meta .idcopy:hover{color:var(--text-sub)}
 .rec-meta .idcopy svg{opacity:.6;flex:0 0 12px}
 
-.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:1050px){.grid2{grid-template-columns:1fr}}
 
-.deflist{display:grid;grid-template-columns:repeat(2,1fr);gap:13px 20px}
-.deflist.cols3{grid-template-columns:repeat(3,1fr)}
-.deflist.cols4{grid-template-columns:repeat(4,1fr)}
+.deflist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 20px;min-width:0}
+.deflist.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.deflist.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.deflist dd{overflow-wrap:anywhere}
+@media (max-width:1180px){.deflist.cols4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kyc-preview-wrap{position:relative;max-height:560px;overflow:hidden}
 .kyc-preview-wrap::after{content:'';position:absolute;left:0;right:0;bottom:0;height:130px;background:linear-gradient(to bottom, transparent, var(--bg-app) 78%);pointer-events:none}
 .deflist dt{font-size:11px;color:var(--text-soft);font-weight:500;text-transform:uppercase;letter-spacing:.02em;margin-bottom:3px}
@@ -413,8 +415,8 @@ table.grid tbody tr:last-child td{border-bottom:0}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10)}
 .field .req{color:var(--error)}
 .field small{font-size:11px;color:var(--text-soft)}
-.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.field-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .hairline{border:0;border-top:1px solid var(--stroke-soft);margin:16px 0}
 
 .secretbox{display:flex;align-items:center;gap:8px;background:var(--bg-weak);border:1px solid var(--stroke-soft);border-radius:var(--radius-8);padding:9px 11px}
@@ -469,6 +471,55 @@ table.grid tbody tr:last-child td{border-bottom:0}
 .section-num .n{width:18px;height:18px;border-radius:99px;background:var(--primary-a14);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:10.5px}
 
 .jsonbox{background:#171717;color:#d9d9e3;border-radius:var(--radius-10);padding:12px 13px;font-family:var(--font-mono);font-size:11.5px;line-height:1.6;overflow-x:auto;white-space:pre}
+
+/* ---- op-parties: карточки отправителя/получателя ---- */
+.parties{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);gap:0;align-items:stretch}
+@media (max-width:820px){.parties{grid-template-columns:1fr}}
+.party{background:var(--bg-weak);border:1px solid var(--stroke-soft);border-radius:var(--radius-12);padding:16px;display:flex;flex-direction:column;gap:12px}
+.party-hd{display:flex;align-items:center;gap:11px}
+.party-avatar{width:36px;height:36px;border-radius:var(--radius-10);background:var(--primary-a10);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto}
+.party-hd .role{font-size:10.5px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.03em}
+.party-hd .name{font-size:14.5px;font-weight:600;color:var(--text-strong)}
+.party-hd .name.linkable{color:var(--primary);cursor:pointer;text-decoration:none}
+.party-hd .name.linkable:hover{text-decoration:underline}
+.party-badges{display:flex;gap:6px;flex-wrap:wrap}
+.party-rows{display:flex;flex-direction:column;gap:9px}
+.party-row .k{font-size:10.5px;color:var(--text-soft)}
+.party-row .v{font-size:13px;font-weight:500;color:var(--text-strong);word-break:break-word;display:block;text-decoration:none}
+.party-row .v.dim{color:var(--text-soft);font-weight:400;font-style:italic}
+.party-row a.v.linkable{color:var(--primary);font-weight:700;cursor:pointer}
+.party-row a.v.linkable:hover{text-decoration:underline}
+.party-link{margin-top:auto;padding-top:10px;border-top:1px dashed var(--stroke-med);font-size:12.5px;font-weight:600;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:6px}
+.party-link.disabled{color:var(--text-soft);cursor:not-allowed}
+.mid-divider{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-soft)}
+.mid-divider .line{width:1px;flex:1;background:var(--stroke-soft)}
+.mid-divider .arrow-ic{width:26px;height:26px;border-radius:50%;background:var(--bg-white);border:1px solid var(--stroke-soft);display:flex;align-items:center;justify-content:center;margin:8px 0;flex:0 0 auto}
+
+/* ---- op-fee: комиссии ---- */
+.fee-box{margin-top:16px;padding-top:16px;border-top:1px solid var(--stroke-soft)}
+.fee-box .fee-cols{display:grid;grid-template-columns:repeat(2,1fr);gap:0 40px}
+@media (max-width:820px){.fee-box .fee-cols{grid-template-columns:1fr}}
+.fee-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-top:1px dashed var(--stroke-soft)}
+.fee-row:first-child{border-top:none}
+.fee-row .flabel{color:var(--text-soft)}
+.fee-row .fval{font-weight:600;color:var(--text-strong)}
+.fee-row.total{border-top:1px solid var(--stroke-soft);margin-top:2px;padding-top:8px}
+
+/* ---- op-timeline: история и расчёт ---- */
+.op-timeline{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding-bottom:4px}
+.tl-step{display:flex;flex-direction:column;align-items:center;min-width:140px;position:relative}
+.tl-step .dot{width:13px;height:13px;border-radius:50%;border:3px solid var(--stroke-soft);background:var(--bg-white);z-index:1}
+.tl-step.done .dot{border-color:var(--success);background:var(--success)}
+.tl-step.current .dot{border-color:var(--primary);background:var(--primary)}
+.tl-step.failed .dot{border-color:#e34a4a;background:#e34a4a}
+.tl-step .bar{position:absolute;top:5px;left:50%;width:100%;height:2px;background:var(--stroke-soft)}
+.tl-step:last-child .bar{display:none}
+.tl-step.done .bar{background:var(--success)}
+.tl-step .lbl{margin-top:9px;font-size:12px;font-weight:600;text-align:center;color:var(--text-strong)}
+.tl-step .tlts{margin-top:2px;font-size:11px;color:var(--text-soft);text-align:center}
+.ledger-note{margin-top:16px;padding-top:16px;border-top:1px solid var(--stroke-soft);display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--text-soft)}
+.chip-list{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:var(--bg-soft);border:1px solid var(--stroke-soft);border-radius:var(--radius-6);padding:3px 9px;font-size:12px;color:var(--text-strong)}
 
 .toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:80}
 
@@ -674,7 +725,7 @@ let agents = [
 ];
 
 let clients = [
-  {id:'c1', agentId:'a1', externalId:'fp_8841', firstName:'Айбек', lastName:'Токтомушев', middleName:'', email:'', phoneNumber:'+996 555 88 41 20',
+  {id:'c1', agentId:'a1', externalId:'fp_8841', firstName:'Айбек', lastName:'Токтомушев', middleName:'', email:'', phoneNumber:'+996 555 88 41 20', telegramId:'@aibek_tok',
    status:'ACTIVE', verificationStatus:'APPROVED', sourceChannel:'API', kycMethod:'IIDX', checkResult:'OK', deletionRequested:false,
    sbpTopUp:true, qrTopUp:true, sbpTopUpFixed:false, sbpWithdrawal:false, sbpWithdrawalFixed:false, sbpBlockedByAntifraud:false, unpaidQrStreak:0,
    birthDate:'1994-03-11', passportNumber:'ID2049581', passportIssuedDate:'2019-05-02', passportIssuingCountry:'KGZ', inn:'',
@@ -712,7 +763,7 @@ let clients = [
    sbpTopUp:false, qrTopUp:false, sbpTopUpFixed:false, sbpWithdrawal:false, sbpWithdrawalFixed:false, sbpBlockedByAntifraud:false, unpaidQrStreak:0,
    birthDate:'', passportNumber:'', passportIssuedDate:'', passportIssuingCountry:'', inn:'',
    registrationAddress:{}, createdAt:'2026-06-10 08:15', checks:{}, deletionRequestedBy:'Анна Климова', deletionRequestedAt:'2026-06-14 12:02'},
-  {id:'c5', agentId:'a1', externalId:'fp_8801', firstName:'Бек', lastName:'Алиев', middleName:'', email:'bek.aliev@example.com', phoneNumber:'+996 555 90 12 44',
+  {id:'c5', agentId:'a1', externalId:'fp_8801', firstName:'Бек', lastName:'Алиев', middleName:'', email:'bek.aliev@example.com', phoneNumber:'+996 555 90 12 44', telegramId:'687452019',
    status:'ACTIVE', verificationStatus:'APPROVED', sourceChannel:'IFRAME', kycMethod:'SUMSUB', checkResult:'OK', deletionRequested:false,
    sbpTopUp:true, qrTopUp:true, sbpTopUpFixed:true, sbpWithdrawal:true, sbpWithdrawalFixed:true, sbpBlockedByAntifraud:false, unpaidQrStreak:0,
    birthDate:'1991-05-30', passportNumber:'ID1187744', passportIssuedDate:'2020-02-11', passportIssuingCountry:'KGZ', inn:'',
@@ -849,11 +900,12 @@ function downloadCsvFile(filename, headers, rows){
    STATE + ROUTER
    ========================================================================= */
 const state = {
-  view: 'accounts-list',        // accounts-list | account-detail | individual-detail | external-list | external-detail
+  view: 'accounts-list',        // accounts-list | account-detail | individual-detail | external-list | external-detail | operation-detail
   accountsTab: 'fizlica',       // fizlica | partners | sanctions
   infoOpen: false,
   currentAgentId: null,
   currentClientId: null,
+  currentOpId: null,
   currentIndividualId: null,
   individualTab: 'kyc',         // kyc | partner
   accountDetailTab: 'kyc',      // kyc | partner
@@ -1026,14 +1078,23 @@ function inFilterDateRange(dateStr, fromDate, toDate){
  * в таблице показаны только реально существующие поля. Детерминирован по id
  * клиента, чтобы не пересчитывался на каждый render.
  */
+const OP_TYPE_LABEL = { SBP:'Пополнение по СБП', QR:'Пополнение по QR', EXCHANGE:'Автоконвертация (обмен)' };
+const SBP_BANKS = ['Т-Банк','СберБанк','Альфа-Банк','ВТБ'];
 function mockClientOperations(clientId){
   let h=0; for(let i=0;i<String(clientId).length;i++){ h=(h*31+String(clientId).charCodeAt(i))>>>0; }
   const count = h % 7; // 0..6 операций — часть клиентов честно без истории
   const statuses = ['CONFIRMED','CONFIRMED','CONFIRMED','FAILED','PENDING'];
+  const c = clientById(clientId);
+  const types = [];
+  if(!c || c.sbpTopUp) types.push('SBP');
+  if(c && c.qrTopUp) types.push('QR');
+  if(!types.length) types.push('SBP');
+  const autoConvert = h % 3 === 0; // пример: у части клиентов площадка сама конвертирует пополнение в другую валюту
   const ops = [];
   for(let i=0;i<count;i++){
     const seed = (h + i*97) >>> 0;
     const status = statuses[seed % statuses.length];
+    const type = types[seed % types.length];
     const amount = 500 + (seed % 45000);
     const day = String(Math.max(1, 20 - (i*3 + (seed%3)))).padStart(2,'0');
     const hh = String(8 + (seed%14)).padStart(2,'0');
@@ -1042,17 +1103,55 @@ function mockClientOperations(clientId){
     ops.push({
       sbpOperationId: 'sbp_' + (1000000 + seed%899999),
       status,
+      type,
+      bankName: type==='SBP' ? SBP_BANKS[seed % SBP_BANKS.length] : null,
       amount,
       createdAt,
       paidAt: status==='CONFIRMED' ? createdAt : null,
     });
+    // пример: если у клиента включена автоконвертация, следом за подтверждённым пополнением
+    // площадка сама создаёт операцию обмена в валюту автовывода — показываем отдельной строкой
+    if(autoConvert && status==='CONFIRMED' && i===0){
+      const rate = 92.5 + (seed % 300)/100;
+      ops.push({
+        sbpOperationId: 'exc_' + (2000000 + seed%799999),
+        status:'CONFIRMED', type:'EXCHANGE', bankName:null,
+        amount, createdAt, paidAt: createdAt,
+        linkedOpId: 'sbp_' + (1000000 + seed%899999),
+        rate, fromCurrency:'RUB', toCurrency:'USDT',
+        fromAmount: amount, toAmount: +(amount/rate).toFixed(2),
+      });
+    }
   }
   return ops.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
+}
+/** Комиссии по операции — по ставкам из блока «Комиссии» партнёра. */
+function opFeeInfo(op, a){
+  const rate = Number(a?.paymentRate)||0;
+  const min = Number(a?.paymentMin)||0;
+  const partnerPct = Number(a?.partnerClientFeePct)||0;
+  const providerFee = Math.max(op.amount * rate/100, min);
+  const partnerFee = op.amount * partnerPct/100;
+  const bankFee = 0;
+  const totalFee = bankFee + providerFee + partnerFee;
+  const netAmount = Math.max(op.amount - totalFee, 0);
+  return { bankFee, providerFee, partnerFee, totalFee, netAmount };
 }
 function opStatusBadge(s){
   const map = { PENDING:['b-warning','В ожидании'], CONFIRMED:['b-success','Подтверждена'], FAILED:['b-error','Отклонена'] };
   const [cls,label] = map[s] || ['b-faded', s];
   return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
+}
+function opTypeBadge(t){
+  return `<span class="badge b-info"><span class="d"></span>${esc(OP_TYPE_LABEL[t]||t)}</span>`;
+}
+/** Детерминированный псевдо-UUID счёта — для мока таблицы проводок. */
+function pseudoAccountId(seedStr){
+  let h1=0,h2=0;
+  const s = String(seedStr);
+  for(let i=0;i<s.length;i++){ h1=(h1*31+s.charCodeAt(i))>>>0; h2=(h2*17+s.charCodeAt(i)+i)>>>0; }
+  const hex = (n,len)=> n.toString(16).padStart(len,'0').slice(0,len);
+  return `${hex(h1,8)}-${hex(h2,4)}-4${hex(h1^h2,3)}-a${hex(h2>>>4,3)}-${hex(h1,12)}`;
 }
 /** "2026-08-19 11:22" из мока операций попадает в диапазон дат фильтра. */
 function opDateInRange(dtStr, fromDate, toDate){
@@ -1122,6 +1221,7 @@ function render(){
     if(state.externalTab==='sanctions') bindSanctionsBody(); else bindExternalListPage();
   }
   else if(state.view==='external-detail'){ stage.innerHTML = renderClientDetail(state.currentClientId); bindClientDetail(); }
+  else if(state.view==='operation-detail'){ stage.innerHTML = renderOperationDetail(state.currentClientId, state.currentOpId); bindOperationDetail(); }
 }
 
 /* ---------- Аккаунты (list) ---------- */
@@ -2653,20 +2753,250 @@ function renderClientOperationsTab(c, a){
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>ID операции</th><th>Дата создания</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Статус</th></tr></thead>
-          <tbody>${rows.length ? rows.map(op=>`
+          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th></tr></thead>
+          <tbody>${rows.length ? rows.map(op=>{
+            const fee = opFeeInfo(op, a);
+            return `
             <tr>
-              <td class="mono" style="font-size:12px">${esc(op.sbpOperationId)}</td>
-              <td class="cell-sub">${esc(op.createdAt)}</td>
+              <td><a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a><div class="cell-sub">${esc(op.createdAt)}</div></td>
+              <td>${opTypeBadge(op.type)}</td>
               <td class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</td>
               <td class="cell-strong">${op.amount.toLocaleString('ru-RU')}</td>
+              <td class="muted">${fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
               <td>${opStatusBadge(op.status)}</td>
-            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
+            </tr>`;}).join('') : `<tr><td colspan="6"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
         </table>
       </div>
       <div class="pagfoot"><span>Total: ${rows.length} lines</span><select class="select"><option>10</option><option>20</option><option>50</option></select></div>
     </div>
   `;
+}
+
+function opPartyRow(r){
+  if(r.link && r.v){
+    return `<div class="party-row"><div class="k">${esc(r.k)}</div><a href="#" class="v mono linkable" data-party-goto="${esc(r.link.gotoId)}">${esc(r.v)}</a></div>`;
+  }
+  return `<div class="party-row"><div class="k">${esc(r.k)}</div><div class="v ${r.v?(r.mono?'mono':''):'dim'}">${r.v?esc(r.v):'—'}</div></div>`;
+}
+
+function opPartyHtml(p){
+  const badges = (p.badges||[]).map(b=>`<span class="badge b-faded">${esc(b)}</span>`).join('');
+  return `
+    <div class="party">
+      <div class="party-hd">
+        <div class="party-avatar">${esc(p.initials)}</div>
+        <div>
+          <div class="role">${esc(p.roleLabel)}</div>
+          <div class="name">${esc(p.name)}</div>
+        </div>
+      </div>
+      ${badges?`<div class="party-badges">${badges}</div>`:''}
+      <div class="party-rows">${p.rows.map(opPartyRow).join('')}</div>
+      ${p.link ? `<div class="party-link ${p.link.enabled?'':'disabled'}"${p.link.enabled?` data-party-goto="${esc(p.link.gotoId)}"`:''}>
+        ${p.link.enabled?'→':'🔒'} ${esc(p.link.label)}
+      </div>` : ''}
+    </div>`;
+}
+
+function opTimelineHtml(op){
+  const steps = op.status==='FAILED'
+    ? [['Создана','done',op.createdAt],['На проверке','done',op.createdAt],['В обработке','done',op.createdAt],['Отклонена','failed',op.paidAt||op.createdAt]]
+    : op.status==='PENDING'
+      ? [['Создана','done',op.createdAt],['На проверке','done',op.createdAt],['В обработке','current',op.createdAt],['Исполнена','upcoming','']]
+      : [['Создана','done',op.createdAt],['На проверке','done',op.createdAt],['В обработке','done',op.createdAt],['Исполнена','done',op.paidAt||op.createdAt]];
+  return steps.map(([lbl,cls,ts])=>`
+    <div class="tl-step ${cls}"><div class="bar"></div><div class="dot"></div><div class="lbl">${esc(lbl)}</div><div class="tlts">${esc(ts||'')}</div></div>
+  `).join('');
+}
+
+/** Проводки по операции. PENDING — заявка ещё не дошла до леджера, проводок нет.
+ *  FAILED — попытка была, но откатилась: часть/все проводки видны в статусе DECLINED. */
+function opLedgerRows(op, c, a){
+  if(op.status==='PENDING') return [];
+  const accClient = pseudoAccountId('acc-'+c.id);
+  const accPartner = pseudoAccountId('acc-'+(a?a.id:'no-partner'));
+  const st = (i)=> op.status==='FAILED' ? (i>=2?'DECLINED':'CONFIRMED') : 'CONFIRMED'; // зачисление партнёру и списание с клиента откатились, комиссия/приход от банка остались
+  if(op.type==='EXCHANGE'){
+    return [
+      {account:accClient, type:'DEBIT', amount:`${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency}`, status:st(0)},
+      {account:accClient, type:'CREDIT', amount:`${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}`, status:st(1)},
+    ];
+  }
+  const fee = opFeeInfo(op, a);
+  return [
+    {account:accClient, type:'DEBIT', amount:`${fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(0)},
+    {account:accClient, type:'CREDIT', amount:`${op.amount.toLocaleString('ru-RU')} RUB`, status:st(1)},
+    {account:accClient, type:'DEBIT', amount:`${fee.netAmount.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(2)},
+    {account:accPartner, type:'CREDIT', amount:`${fee.netAmount.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(3)},
+  ];
+}
+
+const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', EXCHANGE:'EXCHANGE' };
+
+function renderOperationDetail(clientId, opId){
+  const c = clientById(clientId);
+  if(!c) return `<div class="empty-state">Клиент не найден</div>`;
+  const a = agentById(c.agentId);
+  const op = mockClientOperations(clientId).find(o=>o.sbpOperationId===opId);
+  if(!op) return `<div class="empty-state">Операция не найдена</div>`;
+
+  const fee = opFeeInfo(op, a);
+  const fmtMoney = (n,cur)=> n.toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' ' + (cur||'RUB');
+  const isExchange = op.type==='EXCHANGE';
+
+  const clientInitials = (fullName(c).match(/\S/)? fullName(c).split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase() : '—');
+
+  const sender = {
+    roleLabel:'Отправитель', name: fullName(c), initials: clientInitials,
+    badges:['Клиент партнёра'],
+    rows:[
+      {k:'ID клиента', v:c.id, link:{gotoId:c.id}},
+      {k:'Телефон', v:c.phoneNumber},
+      {k:'Банк отправителя', v:op.bankName},
+    ],
+  };
+  const receiver = {
+    roleLabel:'Получатель', name:'Счёт партнёра', initials:'💳',
+    badges: a ? [a.name] : [],
+    rows:[
+      {k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null},
+      {k:'Внешний ID клиента', v:c.externalId},
+    ],
+    link: a ? {label:'Открыть виртуальный счёт', enabled:true, gotoId:a.id} : null,
+  };
+
+  const ledgerRows = opLedgerRows(op, c, a);
+
+  const metaJson = isExchange
+    ? {source:'bb', bb_type:'exchange', rate:op.rate}
+    : {source:'bb', bb_type: op.type==='SBP'?'sbp':'qr'};
+
+  return `
+    <div class="rec-card">
+      <div class="rec-top">
+        <a href="#" class="rec-back" id="backToOps">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div style="flex:1">
+          <div class="rec-headrow" style="justify-content:space-between">
+            <div class="rec-headrow" style="gap:12px">
+              <h1>Операция ${esc(op.sbpOperationId)}</h1>
+              ${opTypeBadge(op.type)}
+              ${opStatusBadge(op.status)}
+            </div>
+          </div>
+          <div class="rec-meta">
+            <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
+            <span>Клиент: <a href="#" class="namelink" id="opGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
+            <span>Дата создания: ${esc(op.createdAt)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Основное</h3></div>
+      <div class="panel-b">
+        <dl class="deflist" style="grid-template-columns:1fr;margin-bottom:14px">
+          <div><dt>Сумма${isExchange?'':', RUB'}</dt><dd class="cell-strong" style="font-size:17px">${isExchange ? `${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency} → ${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}` : op.amount.toLocaleString('ru-RU')}</dd></div>
+        </dl>
+        <dl class="deflist cols3">
+          <div><dt>Направление</dt><dd>Входящая</dd></div>
+          <div><dt>Платёжная система</dt><dd class="mono" style="font-size:12.5px">${esc(PAYMENT_SYSTEM_CODE[op.type]||op.type)}</dd></div>
+          <div><dt>Поставщик</dt><dd class="${op.bankName?'':'muted'}">${op.bankName?esc(op.bankName):'—'}</dd></div>
+          <div><dt>Дата</dt><dd>${esc(op.createdAt)}</dd></div>
+          <div><dt>Исполнено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>
+          <div><dt>Обновлено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Расчёт</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Списано</dt><dd class="cell-strong">${isExchange?fmtMoney(op.fromAmount,op.fromCurrency):fmtMoney(op.amount)}</dd></div>
+          <div><dt>Зачислено</dt><dd class="cell-strong">${isExchange?fmtMoney(op.toAmount,op.toCurrency):fmtMoney(fee.netAmount)}</dd></div>
+          <div><dt>Курс конвертации</dt><dd>${isExchange?op.rate.toLocaleString('ru-RU',{maximumFractionDigits:2}):'1'}</dd></div>
+        </dl>
+        <div class="hairline" style="margin:14px 0"></div>
+        <div class="section-num" style="margin-bottom:10px">Комиссии</div>
+        <dl class="deflist cols3">
+          <div><dt>Банковская комиссия отправителя</dt><dd>${fmtMoney(fee.bankFee)}</dd></div>
+          <div><dt>Комиссия провайдера</dt><dd>${fmtMoney(fee.providerFee)}</dd></div>
+          <div><dt>Итого удержано</dt><dd class="cell-strong">${fmtMoney(fee.totalFee)}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Участники операции</h3></div>
+      <div class="panel-b">
+        <div class="parties">
+          ${opPartyHtml(sender)}
+          <div class="mid-divider"><div class="line"></div><div class="arrow-ic">→</div><div class="line"></div></div>
+          ${opPartyHtml(receiver)}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Детали операции</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>ID операции</dt><dd class="mono" style="font-size:11.5px">${esc(op.sbpOperationId)}</dd></div>
+          <div><dt>Назначение платежа</dt><dd>${isExchange?'Автоконвертация суммы пополнения':'Пополнение баланса клиента партнёра'}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Метаданные</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Источник средств</dt><dd class="muted">—</dd></div>
+          <div><dt>Назначение платежа</dt><dd>${isExchange?`Автоконвертация ${op.fromAmount} ${op.fromCurrency}`:`Поступление ${op.amount} RUB`}</dd></div>
+          <div><dt>Примечание</dt><dd class="muted">—</dd></div>
+        </dl>
+        <details open style="margin-top:14px">
+          <summary class="section-num" style="cursor:pointer;display:inline-flex">Сырые метаданные</summary>
+          <div class="jsonbox" style="margin-top:8px">${esc(JSON.stringify(metaJson,null,2))}</div>
+        </details>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>История и расчёт</h3></div>
+      <div class="panel-b">
+        <div class="op-timeline">${opTimelineHtml(op)}</div>
+      </div>
+      ${ledgerRows.length ? `
+      <div class="twrap">
+        <table class="grid">
+          <thead><tr><th>Счёт</th><th>Тип</th><th>Сумма</th><th>Статус</th></tr></thead>
+          <tbody>${ledgerRows.map(r=>`
+            <tr>
+              <td class="mono" style="font-size:12px;color:var(--primary)">${esc(r.account)}</td>
+              <td>${esc(r.type)}</td>
+              <td class="cell-strong">${esc(r.amount)}</td>
+              <td style="${r.status==='DECLINED'?'color:#e34a4a;font-weight:600':''}">${esc(r.status)}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>` : `<div class="empty-state" style="padding:0 16px 16px">Заявка ещё не дошла до леджера — проводок пока нет</div>`}
+    </div>
+  `;
+}
+
+function bindOperationDetail(){
+  $('#backToOps')?.addEventListener('click', ()=>{ state.view='external-detail'; state.clientDetailTab='ops'; render(); });
+  $('#opGotoClient')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='external-detail'; state.clientDetailTab='main'; render(); });
+  $all('[data-party-goto]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const id = e.currentTarget.dataset.partyGoto;
+    if(!id) return;
+    if(clientById(id)){ state.currentClientId=id; state.view='external-detail'; state.clientDetailTab='main'; render(); }
+    else if(agentById(id)){ state.currentAgentId=id; state.accountDetailTab='partner'; state.view='account-detail'; render(); }
+  }));
 }
 
 function renderClientDetail(clientId){
@@ -2792,6 +3122,8 @@ function renderClientDetail(clientId){
               <div><dt>Номер телефона</dt><dd class="${c.phoneNumber?'':'muted'}">${esc(c.phoneNumber||'—')}</dd></div>
               <div><dt>Внешний ID</dt><dd>${esc(c.externalId||'—')}</dd></div>
 
+              <div><dt>Telegram ID</dt><dd class="${c.telegramId?'':'muted'}">${esc(c.telegramId||'—')}</dd></div>
+
               <div><dt>ID</dt><dd class="mono" style="font-size:11.5px">${esc(c.id)}</dd></div>
               <div><dt>ID партнера</dt><dd class="mono" style="font-size:11.5px">${a?esc(a.userId):'—'}</dd></div>
 
@@ -2909,18 +3241,6 @@ function renderClientDetail(clientId){
             <button class="btn btn-sm" id="btnUploadDoc">Загрузить документ</button>
           </div>
         </div>
-
-        <div class="panel" data-collapsed="${isCollapsed('cd-payment')}">
-          ${collapsibleHead('cd-payment', '<h3>Платёжные данные</h3>')}
-          <div class="panel-b">
-            <div class="ts" style="margin-bottom:10px">Автоматический вывод пополнений клиента</div>
-            <div class="field-grid">
-              <div class="field"><label>Сеть для автовывода</label><input id="pdNetwork" value="${esc(c.autoWithdrawNetwork||'')}" placeholder="Например, TRON (TRC20)"></div>
-              <div class="field"><label>Адрес счёта для автовывода</label><input id="pdWallet" value="${esc(c.autoWithdrawWallet||'')}" placeholder="—"></div>
-            </div>
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSavePaymentData">Сохранить</button></div>
-          </div>
-        </div>
       </div>
     </div>
     `}
@@ -2942,6 +3262,10 @@ function bindClientDetail(){
   }));
 
   if(state.clientDetailTab==='ops'){
+    $all('[data-op-link]').forEach(el=>el.addEventListener('click', (e)=>{
+      e.preventDefault();
+      state.currentOpId = el.dataset.opLink; state.view='operation-detail'; render();
+    }));
     $('#opsSearch')?.addEventListener('input', e=>{ state.filters.opsQuery=e.target.value; renderInto(); });
     $('#opsStatusFilterBtn')?.addEventListener('click', ()=>{
       state.openFilterMenu = state.openFilterMenu==='opsStatus' ? null : 'opsStatus'; render();
@@ -3088,12 +3412,6 @@ function bindClientDetail(){
         render(); toast('Блокировка антифрода снята');
       }
     });
-  });
-
-  $('#btnSavePaymentData')?.addEventListener('click', ()=>{
-    c.autoWithdrawNetwork = $('#pdNetwork').value;
-    c.autoWithdrawWallet = $('#pdWallet').value;
-    render(); toast('Платёжные данные сохранены');
   });
 
   $all('[data-check]').forEach(b=>b.addEventListener('click', ()=>openCheckDetailsModal(b.dataset.check, c)));
@@ -3288,14 +3606,15 @@ function openEditClientModal(c){
         <div class="field"><label>Имя</label><input id="ecFirst" value="${esc(c.firstName)}"></div>
         <div class="field"><label>Отчество</label><input id="ecMiddle" value="${esc(c.middleName)}"></div>
       </div>
-      <div class="field-grid">
+      <div class="field-grid cols3">
         <div class="field"><label>Email</label><input id="ecEmail" value="${esc(c.email)}"></div>
         <div class="field"><label>Телефон</label><input id="ecPhone" value="${esc(c.phoneNumber)}"></div>
+        <div class="field"><label>Telegram ID</label><input id="ecTelegram" value="${esc(c.telegramId)}" placeholder="Вводится вручную оператором"></div>
       </div>
       <div class="field-grid cols3">
         <div class="field"><label>ИНН</label><input id="ecInn" value="${esc(c.inn)}"></div>
         <div class="field"><label>Номер паспорта</label><input id="ecPassport" value="${esc(c.passportNumber)}"></div>
-        <div class="field"><label>Дата выдачи паспорта (ГГГГ-ММ-ДД)</label><input id="ecPassportDate" value="${esc(c.passportIssuedDate)}"></div>
+        <div class="field"><label>Дата выдачи паспорта</label><input id="ecPassportDate" value="${esc(c.passportIssuedDate)}"></div>
       </div>
       <div class="field-grid">
         <div class="field"><label>Дата рождения (ГГГГ-ММ-ДД)</label><input id="ecBirth" value="${esc(c.birthDate)}"></div>
@@ -3307,7 +3626,7 @@ function openEditClientModal(c){
       </div>
 
       <div class="hairline"></div>
-      <div class="section-num"><span class="n">адр</span>Адрес регистрации</div>
+      <div class="section-num">Адрес регистрации</div>
       <div class="field-grid cols3">
         <div class="field"><label>Страна</label><input id="ecAddrCountry" value="${esc(addr.country)}"></div>
         <div class="field"><label>Индекс</label><input id="ecAddrIndex" value="${esc(addr.postIndex)}"></div>
@@ -3375,17 +3694,18 @@ function openEditClientModal(c){
 
     const FIELD_LABELS = {lastName:'Фамилия', firstName:'Имя', middleName:'Отчество', email:'Email', phoneNumber:'Телефон',
       inn:'ИНН', passportNumber:'Номер паспорта', passportIssuedDate:'Дата выдачи паспорта', birthDate:'Дата рождения',
-      passportIssuingCountry:'Страна выдачи паспорта'};
+      passportIssuingCountry:'Страна выдачи паспорта', telegramId:'Telegram ID'};
     const reason = $('#ecReason').value.trim();
-    [...IDENTITY_FIELDS, 'email', 'inn'].forEach(f=>{
-      const oldV = f==='email' ? c.email : (f==='inn' ? c.inn : c[f]);
-      const newV = f==='email' ? $('#ecEmail').value : (f==='inn' ? $('#ecInn').value : newVals[f]);
+    const newTelegramId = $('#ecTelegram').value.trim();
+    [...IDENTITY_FIELDS, 'email', 'inn', 'telegramId'].forEach(f=>{
+      const oldV = f==='email' ? c.email : (f==='inn' ? c.inn : (f==='telegramId' ? c.telegramId : c[f]));
+      const newV = f==='email' ? $('#ecEmail').value : (f==='inn' ? $('#ecInn').value : (f==='telegramId' ? newTelegramId : newVals[f]));
       if(oldV!==newV) logChange(c, FIELD_LABELS[f]||f, oldV||'—', newV||'—', reason || 'Правка оператором');
     });
 
     c.lastName=newVals.lastName; c.firstName=newVals.firstName; c.middleName=newVals.middleName;
     c.email=$('#ecEmail').value; c.phoneNumber=newVals.phoneNumber;
-    c.inn=$('#ecInn').value; c.passportNumber=newVals.passportNumber; c.passportIssuedDate=newVals.passportIssuedDate;
+    c.inn=$('#ecInn').value; c.telegramId=newTelegramId; c.passportNumber=newVals.passportNumber; c.passportIssuedDate=newVals.passportIssuedDate;
     c.birthDate=newVals.birthDate; c.passportIssuingCountry=country;
     c.lastNameNative=$('#ecLastNative').value; c.firstNameNative=$('#ecFirstNative').value;
     c.registrationAddress = {
