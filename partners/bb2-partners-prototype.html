@@ -841,6 +841,9 @@ function sbpInnBlockReason(c){
 }
 
 let changeLogs = {
+  c1: [
+    {when:'12.06.2026 10:15', field:'Дата выдачи паспорта', oldV:'2018-11-20', newV:'2019-05-02', reason:'Клиент подал новый паспорт после замены', actor:'Super Admin', doc:'паспорт_новый.pdf'},
+  ],
   c3: [
     {when:'10.06.2026 09:41', field:'status', oldV:'PENDING', newV:'RESTRICTED', reason:'Auto: провалены IDX-проверки (TERRORISM, BANKRUPTCY, PHONE_VALIDATION_SBP)', actor:'Система'},
     {when:'10.06.2026 09:40', field:'sbpTopUp', oldV:'true', newV:'false', reason:'Изменение важных данных клиента. Флаг «Пополнение по СБП» сброшен.', actor:'Система'},
@@ -3172,7 +3175,7 @@ function renderClientDetail(clientId){
               <td>${esc(l.field)}</td>
               <td class="muted">${esc(l.oldV)}</td>
               <td class="cell-strong">${esc(l.newV)}</td>
-              <td class="cell-sub">${esc(l.reason)}</td>
+              <td class="cell-sub">${esc(l.reason)}${l.doc ? `<div style="margin-top:3px"><a href="#" class="namelink" data-log-doc="${esc(l.doc)}" style="font-size:11.5px">📎 ${esc(l.doc)}</a></div>` : ''}</td>
             </tr>`).join('')}
         </tbody>
       </table>
@@ -3380,9 +3383,9 @@ function renderClientDetail(clientId){
   `;
 }
 
-function logChange(c, field, oldV, newV, reason, actor){
+function logChange(c, field, oldV, newV, reason, actor, doc){
   changeLogs[c.id] = changeLogs[c.id] || [];
-  changeLogs[c.id].unshift({ when: new Date().toLocaleString('ru-RU').slice(0,17), field, oldV, newV, reason, actor: actor||'Super Admin' });
+  changeLogs[c.id].unshift({ when: new Date().toLocaleString('ru-RU').slice(0,17), field, oldV, newV, reason, actor: actor||'Super Admin', doc: doc||null });
 }
 
 function bindClientDetail(){
@@ -3459,6 +3462,7 @@ function bindClientDetail(){
   });
   $all('[data-doc-preview]').forEach(el=>el.addEventListener('click', ()=>openDocPreviewModal(el.dataset.docPreview)));
   $all('[data-doc-download]').forEach(b=>b.addEventListener('click', ()=>toast('Скачивание: '+b.dataset.docDownload)));
+  $all('[data-log-doc]').forEach(l=>l.addEventListener('click', (e)=>{ e.preventDefault(); openDocPreviewModal(e.currentTarget.dataset.logDoc); }));
   $all('[data-doc-delete]').forEach(b=>b.addEventListener('click', ()=>{
     const docName = b.dataset.docDelete;
     openConfirmModal({
@@ -3830,10 +3834,12 @@ function openEditClientModal(c){
       passportIssuingCountry:'Страна выдачи паспорта', telegramId:'Telegram ID'};
     const reason = $('#ecReason').value.trim();
     const newTelegramId = $('#ecTelegram').value.trim();
+    const docFile = $('#ecDocument').files[0];
+    const docName = docFile ? docFile.name : null;
     [...IDENTITY_FIELDS, 'email', 'inn', 'telegramId'].forEach(f=>{
       const oldV = f==='email' ? c.email : (f==='inn' ? c.inn : (f==='telegramId' ? c.telegramId : c[f]));
       const newV = f==='email' ? $('#ecEmail').value : (f==='inn' ? $('#ecInn').value : (f==='telegramId' ? newTelegramId : newVals[f]));
-      if(oldV!==newV) logChange(c, FIELD_LABELS[f]||f, oldV||'—', newV||'—', reason || 'Правка оператором');
+      if(oldV!==newV) logChange(c, FIELD_LABELS[f]||f, oldV||'—', newV||'—', reason || 'Правка оператором', null, CRITICAL_FIELDS.includes(f) ? docName : null);
     });
 
     c.lastName=newVals.lastName; c.firstName=newVals.firstName; c.middleName=newVals.middleName;
