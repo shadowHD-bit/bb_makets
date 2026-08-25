@@ -521,6 +521,23 @@ table.grid tbody tr:last-child td{border-bottom:0}
 .chip-list{display:flex;gap:6px;flex-wrap:wrap}
 .chip{background:var(--bg-soft);border:1px solid var(--stroke-soft);border-radius:var(--radius-6);padding:3px 9px;font-size:12px;color:var(--text-strong)}
 
+/* ---- комментарии оператора ---- */
+.comment-item{display:flex;gap:11px;padding:12px 0;border-top:1px solid var(--stroke-soft)}
+.comment-item:first-child{border-top:none;padding-top:0}
+.comment-avatar{width:28px;height:28px;border-radius:var(--radius-8);background:var(--bg-soft);color:var(--text-sub);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex:0 0 auto}
+.comment-body{flex:1;min-width:0}
+.comment-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-soft);margin-bottom:3px}
+.comment-meta b{color:var(--text-strong);font-weight:600}
+.comment-text{font-size:13px;color:var(--text-strong);white-space:pre-wrap;overflow-wrap:anywhere}
+.comment-actions{display:flex;gap:2px;margin-left:auto;opacity:0;transition:opacity .12s}
+.comment-item:hover .comment-actions{opacity:1}
+.comment-actions button{background:none;border:0;padding:3px;color:var(--text-soft);cursor:pointer;border-radius:var(--radius-6);display:flex}
+.comment-actions button:hover{background:var(--bg-weak);color:var(--text-strong)}
+.comment-edit-row{display:flex;gap:8px;margin-top:6px}
+.comment-edit-row textarea{flex:1;border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:7px 10px;font-size:12.5px;font-family:inherit;resize:vertical;min-height:44px}
+.comment-input{display:flex;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke-soft)}
+.comment-input textarea{flex:1;border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:9px 12px;font-size:13px;font-family:inherit;resize:vertical;min-height:38px}
+
 .toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:80}
 
 .loading-stage{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:100px 20px;color:var(--text-sub)}
@@ -833,6 +850,17 @@ let changeLogs = {
   ],
 };
 let deletionRequests = { c4: [{status:'PENDING', requestedBy:'Анна Климова', requestedAt:'14.06.2026 12:02'}] };
+let operationComments = {};
+/** Комментарии к операции — сидируются один раз при первом обращении, дальше живут в operationComments. */
+function getOpComments(opId){
+  if(!operationComments[opId]){
+    operationComments[opId] = [
+      {id:'oc1', author:'Оператор #7', initials:'О7', when:'17.08.2026 09:16', text:'Проверил документы по источнику средств, соответствуют назначению платежа.', own:false},
+      {id:'oc2', author:'Оператор #3 (AML)', initials:'О3', when:'17.08.2026 09:20', text:'Клиент ранее проходил верификацию, риск низкий.', own:false},
+    ];
+  }
+  return operationComments[opId];
+}
 let checkDetailSamples = {
   PROHIBITED_PERSON: {request:{last_name:'Токтомушев', first_name:'Айбек', birth_date:'1994-03-11'}, response:{passed:true, result:'ok', matched_persons:[]}},
   SANCTIONS_IIDX: {request:{last_name:'Пулатов', first_name:'Данияр', birth_date:'1989-11-02'}, response:{passed:false, result:'fail', reason:'Совпадение в санкционном списке (checkIndividualSanction)'}},
@@ -2846,24 +2874,47 @@ function renderOperationDetail(clientId, opId){
 
   const clientInitials = (fullName(c).match(/\S/)? fullName(c).split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase() : '—');
 
-  const sender = {
-    roleLabel:'Отправитель', name: fullName(c), initials: clientInitials,
-    badges:['Клиент партнёра'],
-    rows:[
-      {k:'ID клиента', v:c.id, link:{gotoId:c.id}},
-      {k:'Телефон', v:c.phoneNumber},
-      {k:'Банк отправителя', v:op.bankName},
-    ],
-  };
-  const receiver = {
-    roleLabel:'Получатель', name:'Счёт партнёра', initials:'💳',
-    badges: a ? [a.name] : [],
-    rows:[
-      {k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null},
-      {k:'Внешний ID клиента', v:c.externalId},
-    ],
-    link: a ? {label:'Открыть виртуальный счёт', enabled:true, gotoId:a.id} : null,
-  };
+  let sender, receiver;
+  if(isExchange){
+    // автоконвертация идёт внутри счёта самого партнёра — списание и зачисление это один и тот же владелец,
+    // просто два суб-счёта в разных валютах, отправителя-клиента тут нет
+    const vaSeed = pseudoAccountId('va-'+(a?a.id:'no-partner')).slice(0,8).toUpperCase();
+    sender = {
+      roleLabel:'Счёт списания', name: a?a.name:'Партнёр', initials:'💳',
+      badges:[op.fromCurrency],
+      rows:[
+        {k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null},
+        {k:'Счёт', v: `VA-${vaSeed} (${op.fromCurrency})`, mono:true},
+      ],
+    };
+    receiver = {
+      roleLabel:'Счёт зачисления', name: a?a.name:'Партнёр', initials:'💳',
+      badges:[op.toCurrency],
+      rows:[
+        {k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null},
+        {k:'Счёт', v: `VA-${vaSeed} (${op.toCurrency})`, mono:true},
+      ],
+      link: a ? {label:'Открыть виртуальный счёт', enabled:true, gotoId:a.id} : null,
+    };
+  } else {
+    sender = {
+      roleLabel:'Отправитель', name: fullName(c), initials: clientInitials,
+      badges:['Клиент партнёра'],
+      rows:[
+        {k:'ID клиента', v:c.id, link:{gotoId:c.id}},
+        {k:'Телефон', v:c.phoneNumber},
+      ],
+    };
+    receiver = {
+      roleLabel:'Получатель', name:'Счёт партнёра', initials:'💳',
+      badges: a ? [a.name] : [],
+      rows:[
+        {k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null},
+        {k:'Внешний ID клиента', v:c.externalId},
+      ],
+      link: a ? {label:'Открыть виртуальный счёт', enabled:true, gotoId:a.id} : null,
+    };
+  }
 
   const ledgerRows = opLedgerRows(op, c, a);
 
@@ -2984,7 +3035,71 @@ function renderOperationDetail(clientId, opId){
         </table>
       </div>` : `<div class="empty-state" style="padding:0 16px 16px">Заявка ещё не дошла до леджера — проводок пока нет</div>`}
     </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Комментарии оператора</h3></div>
+      <div class="panel-b">
+        ${renderOpComments(op.sbpOperationId)}
+      </div>
+    </div>
   `;
+}
+
+function renderOpComments(opId){
+  const comments = getOpComments(opId);
+  const list = comments.length ? comments.map(cm=>`
+    <div class="comment-item">
+      <div class="comment-avatar">${esc(cm.initials)}</div>
+      <div class="comment-body">
+        <div class="comment-meta">
+          <b>${esc(cm.author)}</b> · ${esc(cm.when)}
+          ${cm.own ? `<div class="comment-actions">
+            <button data-comment-edit="${esc(cm.id)}" title="Редактировать">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button data-comment-delete="${esc(cm.id)}" title="Удалить">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>` : ''}
+        </div>
+        <div class="comment-text">${esc(cm.text)}</div>
+      </div>
+    </div>`).join('') : `<div class="empty-state" style="padding:16px 0">Комментариев пока нет</div>`;
+  return `
+    ${list}
+    <div class="comment-input">
+      <textarea id="opNewComment" placeholder="Добавить комментарий для коллег-операторов…"></textarea>
+      <button class="btn btn-primary" id="opCommentSend" style="align-self:flex-end">Отправить</button>
+    </div>
+  `;
+}
+
+function openEditCommentModal(opId, cm){
+  openModal(`
+    <div class="modal-h"><h3>Редактировать комментарий</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Текст комментария</label><textarea rows="4" id="ecmText">${esc(cm.text)}</textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="ecmSave">Сохранить</button></div>
+  `);
+  $('#ecmSave').addEventListener('click', ()=>{
+    const text = $('#ecmText').value.trim();
+    if(!text){ toast('Комментарий не может быть пустым'); return; }
+    cm.text = text;
+    closeModal(); render();
+  });
+}
+
+function openDeleteCommentModal(opId, cm){
+  openModal(`
+    <div class="modal-h"><h3>Удалить комментарий?</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b"><div style="font-size:13px;color:var(--text-sub)">Комментарий будет удалён без возможности восстановления.</div></div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-danger" id="dcmOk">Удалить</button></div>
+  `);
+  $('#dcmOk').addEventListener('click', ()=>{
+    operationComments[opId] = getOpComments(opId).filter(x=>x.id!==cm.id);
+    closeModal(); render();
+  });
 }
 
 function bindOperationDetail(){
@@ -2996,6 +3111,25 @@ function bindOperationDetail(){
     if(!id) return;
     if(clientById(id)){ state.currentClientId=id; state.view='external-detail'; state.clientDetailTab='main'; render(); }
     else if(agentById(id)){ state.currentAgentId=id; state.accountDetailTab='partner'; state.view='account-detail'; render(); }
+  }));
+
+  const opId = state.currentOpId;
+  $('#opCommentSend')?.addEventListener('click', ()=>{
+    const text = $('#opNewComment').value.trim();
+    if(!text) return;
+    getOpComments(opId).push({
+      id:'oc'+Date.now(), author:'Super Admin', initials:'SA',
+      when:new Date().toLocaleString('ru-RU').slice(0,17), text, own:true,
+    });
+    render();
+  });
+  $all('[data-comment-edit]').forEach(b=>b.addEventListener('click', ()=>{
+    const cm = getOpComments(opId).find(x=>x.id===b.dataset.commentEdit);
+    if(cm) openEditCommentModal(opId, cm);
+  }));
+  $all('[data-comment-delete]').forEach(b=>b.addEventListener('click', ()=>{
+    const cm = getOpComments(opId).find(x=>x.id===b.dataset.commentDelete);
+    if(cm) openDeleteCommentModal(opId, cm);
   }));
 }
 
