@@ -1532,7 +1532,38 @@ function fieldMapSection(){
     +   '<td>'+sevBadge('CRITICAL')+'</td>'
     +   '<td>'+statusBadge('SUCCESS')+'</td>'
     +   '<td><span class="idlink">a60…018</span></td>'
-    + '</tr></tbody></table></div></div>';
+    + '</tr></tbody></table></div>'
+    + '<div class="note-inline" style="padding:0 12px 10px">Относительное время под датой («2 минуты назад») - '
+    + 'требование из референсного дизайна, не поле контракта. На первых этапах можно не добавлять - без него '
+    + 'список тоже рабочий, просто чуть менее наглядный на глаз. С относительным временем видно свежесть события '
+    + 'сразу, не вычисляя разницу от точной даты в уме - особенно заметно на списке из полусотни строк. '
+    + 'Считается на клиенте от <code>createdAt</code>: <code>сейчас - createdAt</code> в секундах → «только что» '
+    + '(&lt;60с), «N минут назад» (&lt;1ч), «N часов назад» (&lt;1сут), «вчера» (ровно 1 сутки), иначе «N дней назад». '
+    + 'Не хранится и не приходит с бэкенда - пересчитывается при каждом рендере, потому что точка отсчёта '
+    + '(«сейчас») постоянно движется.</div></div>';
+
+  // шапка карточки: заголовок - составной (Действие + Сущность, не одно поле
+  // контракта), остальное - прямые поля. Воспроизводит ту же разметку
+  // (.rec-card/.rec-top/.rec-headrow/.rec-meta), что и renderDetail()
+  const headExample = '<div class="panel" style="padding:18px 20px">'
+    + '<div class="rec-headrow" style="gap:10px">'
+    +   '<h1>Изменение · Тариф</h1>'
+    +   '<span class="rec-pill b-error">Критическая</span>'
+    +   '<span class="rec-pill b-success">Успешно</span>'
+    + '</div>'
+    + '<div class="rec-meta" style="margin-top:6px">'
+    +   '<span class="rec-date" style="margin:0">27.08.2026, 02:22:57</span>'
+    +   '<span class="idcopy">ID: LOG-CD8032F3</span>'
+    + '</div>'
+    + '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--stroke-soft);display:flex;flex-direction:column;gap:8px">'
+    +   '<div><span class="mono" style="font-size:11.5px;color:var(--text-soft)">Заголовок</span> - составной, '
+    +     'не поле контракта: '+fmLbl('','target.eventAction')+' + '+fmLbl('','target.eventEntity.name')+'</div>'
+    +   '<div><span class="mono" style="font-size:11.5px;color:var(--text-soft)">Критичность</span> (бейдж) '+fmLbl('','target.eventSeverity')+'</div>'
+    +   '<div><span class="mono" style="font-size:11.5px;color:var(--text-soft)">Статус</span> (бейдж) '+fmLbl('','result.status')+'</div>'
+    +   '<div><span class="mono" style="font-size:11.5px;color:var(--text-soft)">Дата</span> '+fmLbl('','createdAt')+'</div>'
+    +   '<div><span class="mono" style="font-size:11.5px;color:var(--text-soft)">ID</span> '+fmLbl('','publicId')+'</div>'
+    + '</div>'
+    + '</div>';
 
   const cardExample = ''
     + panel('Основная информация', dlMapped(4,[
@@ -1602,7 +1633,9 @@ function fieldMapSection(){
       + 'полю на экране, а не к тексту запроса.</p></div>')
     + '<div class="doc-section-lbl" style="margin-top:20px">1. Строка в основной таблице</div>'
     + rowExample
-    + '<div class="doc-section-lbl" style="margin-top:20px">2. Блоки карточки события</div>'
+    + '<div class="doc-section-lbl" style="margin-top:20px">2. Шапка карточки события</div>'
+    + headExample
+    + '<div class="doc-section-lbl" style="margin-top:20px">3. Блоки карточки события</div>'
     + '<div class="fieldmap-example">' + cardExample + '</div>';
 }
 
