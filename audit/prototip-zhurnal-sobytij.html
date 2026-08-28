@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
@@ -919,7 +919,7 @@ function rnd(){ _seed = (_seed*1664525 + 1013904223) % 4294967296; return _seed/
 function pick(a){ return a[Math.floor(rnd()*a.length)]; }
 
 const PEOPLE = [
-  {name:'Станислав Фатеев', email:'testfsa@fexpost.com', id:'e581519c-3bab-4088-8ae3-da5303c388c5'},
+  {name:'Станислав Орлов', email:'testfsa@fexpost.com', id:'e581519c-3bab-4088-8ae3-da5303c388c5'},
   {name:'Игорь Соколов', email:'i.sokolov@gmail.com', id:'7b02c1a4-55de-4a11-9c30-1de0f7a91b22'},
   {name:'Анна Петрова', email:'anna.p@mail.ru', id:'9f31a2c7-1188-4f0b-b1aa-6d0c3e55a017'},
   {name:'Ольга Соколова', email:'o.sokolova@bk.ru', id:'kr402f19-9a4c-4c2e-9e77-b21f0a5c3311'},
@@ -2180,28 +2180,32 @@ function renderDetail(){
     ['Причина ошибки', ev.failureReason||'—', ev.failureReason?'':'muted', true],
   ]));
 
-  /* ——— признаки заполненности: решают open/collapsed, а не тип события ——— */
-  const actorFilled = ev.actorType!=='SYSTEM' && a.id!=='anonymous' && (a.name || a.email);
-  const targetFilled = !!ev.target.id || (ev.ownerId && ev.ownerId!==a.id);
+  /* ——— признаки заполненности: теперь решают только текст подсказки в шапке
+     свёрнутой секции, не open/collapsed - все секции ниже «Результата» всегда
+     свёрнуты по умолчанию ——— */
   const changesFilled = !!ev.changes;
   const contextFilled = !!(ev.ip || ev.origin || ev.ua || ev.deviceId);
 
-  /* ——— 1. Кто сделал / вошёл — всегда поля, дашборд заполненности решает open/collapsed ——— */
+  /* ——— 1. Кто сделал / вошёл — всегда свёрнуто по умолчанию (заполненность
+     решает только текст в подсказке, а не открыт ли блок). В подсказке
+     всегда виден тип актора (Клиент/Администратор/Система) - это должно
+     читаться, даже не разворачивая секцию ——— */
   const actorLinkAttr = ev.actorType==='ADMIN' ? 'data-noop' : 'data-acct-link="'+esc(a.id)+'"';
+  const actorTypeLabel = ACTOR_TYPE_LABEL[ev.actorType];
   let actorHint, actorBody;
   if(ev.actorType==='SYSTEM'){
-    actorHint = 'Система · '+a.sysLabel;
+    actorHint = actorTypeLabel + ' · ' + a.sysLabel;
     actorBody = dl(4,[
       ['Инициатор', 'Системный процесс', 'muted', true],
       ['Идентификатор', a.id, 'mono'],
-      ['Тип актора', ACTOR_TYPE_LABEL[ev.actorType]],
+      ['Тип актора', actorTypeLabel],
     ]);
   } else if(a.id==='anonymous'){
-    actorHint = 'Не авторизован';
+    actorHint = actorTypeLabel + ' · не авторизован';
     actorBody = dl(4,[
       ['Клиент', '<span class="muted">Не определён</span>', '', true],
       ['Роль на момент события', '—', 'muted'],
-      ['Тип актора', ACTOR_TYPE_LABEL[ev.actorType]],
+      ['Тип актора', actorTypeLabel],
       ['Идентификатор', 'anonymous', 'mono'],
     ]);
   } else {
@@ -2209,44 +2213,51 @@ function renderDetail(){
     // всегда кликабельная ссылка на карточку (для клиента - реальный переход,
     // для админа - пока заглушка, карточки администратора в системе нет)
     const actorPrimary = a.name || a.email || a.id;
-    actorHint = actorPrimary;
+    actorHint = actorTypeLabel + ' · ' + actorPrimary;
     actorBody = dl(4,[
       [ev.actorType==='ADMIN'?'Администратор':'Клиент',
         '<a href="#" class="namelink" '+actorLinkAttr+'>'+esc(actorPrimary)+'</a>'
         + (a.name&&a.email?'<div class="cell-sub">'+esc(a.email)+'</div>':''), '', true],
       ['Роль на момент события', a.role||'—', a.role?'':'muted'],
-      ['Тип актора', ACTOR_TYPE_LABEL[ev.actorType]],
+      ['Тип актора', actorTypeLabel],
       ['Идентификатор', a.id, 'mono'],
     ]);
   }
   // заголовок один на все ~400+ паттернов, без спецкейса под конкретную пару
   // сущность+действие ("вход" от "сделал" здесь ничем принципиально не отличается,
   // а завязываться на конкретные ent/act в заголовке - не масштабируется)
-  const secActor = detailSection('Кто сделал', actorFilled?'':actorHint, actorBody, actorFilled);
+  const secActor = detailSection('Кто сделал', actorHint, actorBody, false);
 
-  /* ——— 2. Над чем ——— */
-  const secTarget = detailSection('Над чем', targetFilled?'':'Нет данных', dl(3,[
+  /* ——— 2. Над чем — тоже всегда свёрнуто, в подсказке всегда тип сущности,
+     даже если самого объекта (id) нет ——— */
+  const secTarget = detailSection('Над чем', ENTITY_LABEL[t.ent]||t.ent, dl(3,[
     ['Тип объекта', ENTITY_LABEL[t.ent]||t.ent],
     // ID везде в карточке - целиком (Идентификатор актора, Объект, Технические
     // детали); сокращаем только в списке событий, там это про плотность строк
     ['Объект', ev.target.id ? '<a href="#" class="namelink mono" data-noop>'+esc(ev.target.id)+'</a>' : '—', ev.target.id?'':'muted', true],
     ['Клиент', ev.ownerId ? '<a href="#" class="namelink" data-acct-link="'+esc(ev.ownerId)+'">'+esc(ev.ownerId)+'</a>' : '—', ev.ownerId?'mono':'muted', true],
-  ]), targetFilled);
+  ]), false);
 
   /* ——— 3. Что изменилось — колонка «Поле» без перевода: имена полей мутации
-     не переводятся, это не закрытый справочник как категория/сущность ——— */
-  const secChanges = detailSection('Что изменилось', changesFilled?'':'Нет изменений',
+     не переводятся, это не закрытый справочник как категория/сущность.
+     Всегда свёрнуто; подсказка - "Нет данных" (единое написание с Контекстом
+     и Связанными записями) или количество изменённых полей ——— */
+  const changesHint = changesFilled
+    ? ev.changes.length+' '+plural(ev.changes.length,'поле','поля','полей')+' изменено'
+    : 'Нет данных';
+  const secChanges = detailSection('Что изменилось', changesHint,
     changesFilled
       ? '<div class="twrap"><table class="grid"><thead><tr><th>Поле</th><th>Было</th><th>Стало</th></tr></thead><tbody>'
         + ev.changes.map(c=>'<tr><td><span class="mono">'+esc(c.field)+'</span></td>'
           + '<td>'+(c.from?'<span class="diffold">'+esc(c.from)+'</span>':'<span class="muted">не передано</span>')+'</td>'
           + '<td><span class="mono">'+esc(c.to)+'</span></td></tr>').join('')
         + '</tbody></table></div>'
-      : '<div class="empty-state"><div class="big">Нет изменений</div>Пара «было → стало» для этого события не пришла</div>',
-    changesFilled);
+      : '<div class="empty-state"><div class="big">Нет данных</div>Пара «было → стало» для этого события не пришла</div>',
+    false);
 
-  /* ——— 4. Контекст ——— */
-  const secContext = detailSection('Контекст', contextFilled?'':'Нет данных',
+  /* ——— 4. Контекст — всегда свёрнуто, подсказка "Нет данных" либо источник ——— */
+  const contextHint = contextFilled ? SOURCE_LABEL[ev.source] : 'Нет данных';
+  const secContext = detailSection('Контекст', contextHint,
     dl(4,[
       ['Источник', esc(SOURCE_LABEL[ev.source])+(ev.origin?'<div class="cell-sub">'+esc(ev.origin)+'</div>':''), '', true],
       ['IP-адрес', ev.ip||'—', ev.ip?'mono':'muted'],
@@ -2255,7 +2266,7 @@ function renderDetail(){
     ]) + dl(4,[
       ['ID устройства', ev.deviceId||'—', ev.deviceId?'mono':'muted'],
     ]),
-    contextFilled);
+    false);
 
   /* ——— секции «Связанные сущности» (metadata.relatedEntities/riskAssessment)
      здесь больше нет - убрана сознательно. По коду публикации выяснилось:
@@ -2300,14 +2311,17 @@ function renderDetail(){
  *  карточку той записи, поэтому биндится в bindDetail(). */
 function siblingsPanel(ev){
   const sibs = EVENTS.filter(e=>e.correlationId===ev.correlationId && e.id!==ev.id);
-  const body = sibs.length
+  const filled = sibs.length>0;
+  const body = filled
     ? sibs.map(s=>'<div class="sib-row" data-ev="'+s.id+'">'
         + '<div style="min-width:0"><div class="cell-strong" style="font-size:12.5px">'+esc(eventTitle(s.type))+'</div>'
         + '<div class="cell-sub">'+fmtDateShort(s.when)+'</div></div>'
         + statusBadge(s.status)
         + '</div>').join('')
     : '<p style="margin:0;font-size:12.5px;color:var(--text-soft)">Других записей по этому действию нет — пришла только одна строка в журнале.</p>';
-  return panel('Связанные записи', body);
+  const hint = filled ? sibs.length+' '+plural(sibs.length,'запись','записи','записей') : 'Нет данных';
+  // как и остальные вспомогательные секции - свёрнуто по умолчанию
+  return detailSection('Связанные записи', hint, body, false);
 }
 
 /* =========================================================================
