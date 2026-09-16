@@ -1006,9 +1006,9 @@ const FIZLICA_MOCK = [
 function individualByKey(key){ return FIZLICA_MOCK.find(r=>r.key===key); }
 
 const PROHIBITED_PERSONS = [
-  {id:1, lastName:'Абдуллаев', firstName:'Рустам', middleName:'Каримович', birthDate:'12.04.1978', bornPlace:'г. Худжанд', category:'Терроризм'},
-  {id:2, lastName:'Нурматова', firstName:'Гульнара', middleName:'', birthDate:'03.09.1985', bornPlace:'г. Ош', category:'Санкции ООН'},
-  {id:3, lastName:'Петров', firstName:'Игорь', middleName:'Сергеевич', birthDate:'21.11.1969', bornPlace:'г. Москва', category:'Отмывание денег'},
+  {id:1, lastName:'Абдуллаев', firstName:'Рустам', middleName:'Каримович', birthDate:'12.04.1978', bornPlace:'г. Худжанд', country:'Таджикистан', category:'Терроризм'},
+  {id:2, lastName:'Нурматова', firstName:'Гульнара', middleName:'', birthDate:'03.09.1985', bornPlace:'г. Ош', country:'Киргизия', category:'Санкции ООН'},
+  {id:3, lastName:'Петров', firstName:'Игорь', middleName:'Сергеевич', birthDate:'21.11.1969', bornPlace:'г. Москва', country:'Россия', category:'Отмывание денег'},
 ];
 
 function $(sel, root){ return (root||document).querySelector(sel); }
@@ -1287,10 +1287,12 @@ function renderAccountsListPage(){
   const tabsHtml = `
     <button class="seg-tab ${state.accountsTab==='fizlica'?'active':''}" data-acctab="fizlica">Физлица</button>
     <button class="seg-tab ${state.accountsTab==='partners'?'active':''}" data-acctab="partners">Партнёрские аккаунты</button>
-    <button class="seg-tab locked" title="Вне рамок текущего прототипа">Санкционный список</button>
+    <button class="seg-tab ${state.accountsTab==='sanctions'?'active':''}" data-acctab="sanctions">Санкционный список</button>
   `;
 
-  const body = state.accountsTab==='fizlica' ? renderFizlicaTab() : renderPartnersTab();
+  const body = state.accountsTab==='fizlica' ? renderFizlicaTab()
+    : state.accountsTab==='partners' ? renderPartnersTab()
+    : renderAccountsSanctionsTab();
 
   return `
     <div class="acc-card">
@@ -1420,6 +1422,45 @@ function renderFizlicaTab(){
   `;
 }
 
+/** Санкционный список — общий локальный реестр запрещённых лиц (проверка PROHIBITED_PERSON). Импорт полностью заменяет список; экспорт отдаёт его в том же CSV-формате для ручной правки и повторной загрузки. */
+function renderAccountsSanctionsTab(){
+  const q = (state.sanctionsQuery||'').toLowerCase();
+  const list = PROHIBITED_PERSONS.filter(p=>{
+    if(!q) return true;
+    return [p.lastName,p.firstName,p.middleName,p.country].join(' ').toLowerCase().includes(q);
+  });
+  const rows = list.map(p=>`
+    <tr>
+      <td class="mono">${esc(p.id)}</td>
+      <td>${esc(p.firstName)}</td>
+      <td class="${p.middleName?'':'muted'}">${esc(p.middleName||'—')}</td>
+      <td>${esc(p.lastName)}</td>
+      <td>${esc(p.country||'—')}</td>
+    </tr>`).join('') || `<tr><td colspan="5"><div class="empty-state"><div class="big">По запросу ничего не найдено</div>Попробуйте изменить фильтр или поисковую фразу</div></td></tr>`;
+
+  return `
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input id="sanctionsAccSearch" placeholder="ФИО, страна рождения…" value="${esc(state.sanctionsQuery||'')}">
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn" id="btnExportSanctionsAcc"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M7 10l5 5 5-5M4 21h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Экспорт CSV</button>
+        <button class="btn" id="btnImportSanctionsAcc">Импорт CSV</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="twrap">
+        <table class="grid">
+          <thead><tr><th>ID</th><th>Имя</th><th>Отчество</th><th>Фамилия</th><th>Страна рождения</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="pagfoot"><span>Total: ${list.length} lines</span><select class="select"><option>10</option></select></div>
+    </div>
+  `;
+}
+
 function bindAccountsListPage(){
   $all('.seg-tab[data-acctab]').forEach(t=>t.addEventListener('click', ()=>{ state.accountsTab=t.dataset.acctab; state.openFilterMenu=null; state.dateUI.open=false; render(); }));
   $all('.popwrap').forEach(w=>w.addEventListener('click', e=>e.stopPropagation()));
@@ -1487,6 +1528,21 @@ function bindAccountsListPage(){
     return;
   }
 
+  if(state.accountsTab==='sanctions'){
+    $('#sanctionsAccSearch')?.addEventListener('input', e=>{ state.sanctionsQuery=e.target.value; renderInto(); });
+    $('#btnExportSanctionsAcc')?.addEventListener('click', ()=>{
+      toast('Список запрещённых лиц экспортирован в CSV');
+    });
+    $('#btnImportSanctionsAcc')?.addEventListener('click', ()=>{
+      openConfirmModal({
+        title:'Импортировать список запрещённых лиц?', body:'Текущий список будет полностью заменён загруженным файлом. Все внешние клиенты уйдут на переповерку.',
+        confirmLabel:'Импортировать', danger:true,
+        onConfirm:()=>{ toast('Список импортирован — переповерка клиентов поставлена в очередь'); }
+      });
+    });
+    return;
+  }
+
   $('#agentSearch')?.addEventListener('input', e=>{ state.filters.agentQuery=e.target.value; renderInto(); });
   $('#agentKycStatusFilterBtn')?.addEventListener('click', ()=>{
     state.openFilterMenu = state.openFilterMenu==='agentKycStatus' ? null : 'agentKycStatus'; render();
@@ -1511,7 +1567,7 @@ function bindAccountsListPage(){
 
 function renderInto(){
   const activeEl = document.activeElement;
-  const isSearch = activeEl && (activeEl.id==='agentSearch' || activeEl.id==='clientSearch' || activeEl.id==='individualSearch' || activeEl.id==='opsSearch');
+  const isSearch = activeEl && (activeEl.id==='agentSearch' || activeEl.id==='clientSearch' || activeEl.id==='individualSearch' || activeEl.id==='opsSearch' || activeEl.id==='sanctionsAccSearch' || activeEl.id==='sanctionsSearch');
   const caret = isSearch ? activeEl.selectionStart : null;
   render();
   if(isSearch){ const el=$('#'+activeEl.id); if(el){ el.focus(); el.setSelectionRange(caret,caret); } }
