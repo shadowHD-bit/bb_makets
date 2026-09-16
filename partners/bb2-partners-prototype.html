@@ -684,6 +684,7 @@ const VERIFICATION_STATUS = ['PENDING','APPROVED','REJECTED'];
 const CHECK_RESULT_LIST = ['OK','HAS_RISK','PENDING'];
 const KYC_METHOD_LIST = ['IIDX','SUMSUB','MANUAL'];
 const CHECK_TYPES = [
+  {code:'REQUIRED_DATA', label:'Наличие обязательных данных', by:'Локально, нулевой шаг'},
   {code:'PROHIBITED_PERSON', label:'Запрещённые персоны', by:'Локально, по файлу'},
   {code:'PASSPORT_COMPLEX', label:'Паспорт — комплексная проверка', by:'IIDX'},
   {code:'PHONE_VALIDATION_SBP', label:'Подтверждение связки ФИО-телефон', by:'IIDX'},
@@ -697,8 +698,8 @@ const CHECK_TYPES = [
   {code:'FSIN_WANTED', label:'Розыск ФСИН', by:'IIDX checkFsinWanted'},
 ];
 /** Состав проверок по маршруту клиента — паспорт РФ (5) vs иностранный документ (9, §4.3). */
-const RU_ROUTE_CHECK_CODES = ['PROHIBITED_PERSON', 'PASSPORT_COMPLEX', 'PHONE_VALIDATION_SBP', 'TERRORISM', 'BANKRUPTCY'];
-const FOREIGN_ROUTE_CHECK_CODES = ['PHONE_STARTS_RU', 'PROHIBITED_PERSON', 'SANCTIONS_IIDX', 'FOREIGN_AGENT', 'MVD_WANTED', 'FSSP_WANTED', 'FSIN_WANTED', 'TERRORISM', 'PHONE_VALIDATION_SBP'];
+const RU_ROUTE_CHECK_CODES = ['REQUIRED_DATA', 'PROHIBITED_PERSON', 'PASSPORT_COMPLEX', 'PHONE_VALIDATION_SBP', 'TERRORISM', 'BANKRUPTCY'];
+const FOREIGN_ROUTE_CHECK_CODES = ['REQUIRED_DATA', 'PHONE_STARTS_RU', 'PROHIBITED_PERSON', 'SANCTIONS_IIDX', 'FOREIGN_AGENT', 'MVD_WANTED', 'FSSP_WANTED', 'FSIN_WANTED', 'TERRORISM', 'PHONE_VALIDATION_SBP'];
 function checkCodesForClient(c){
   return (c.passportIssuingCountry||'').toUpperCase()==='RUS' ? RU_ROUTE_CHECK_CODES : FOREIGN_ROUTE_CHECK_CODES;
 }
@@ -779,7 +780,9 @@ let clients = [
    status:'PENDING', verificationStatus:'PENDING', sourceChannel:'MANUAL', kycMethod:'MANUAL', checkResult:'PENDING', deletionRequested:true,
    sbpTopUp:false, qrTopUp:false, sbpTopUpFixed:false, sbpWithdrawal:false, sbpWithdrawalFixed:false, sbpBlockedByAntifraud:false, unpaidQrStreak:0,
    birthDate:'', passportNumber:'', passportIssuedDate:'', passportIssuingCountry:'', inn:'',
-   registrationAddress:{}, createdAt:'2026-06-10 08:15', checks:{}, deletionRequestedBy:'Анна Климова', deletionRequestedAt:'2026-06-14 12:02'},
+   registrationAddress:{}, createdAt:'2026-06-10 08:15', checks:{
+     REQUIRED_DATA:{status:'FAILED', at:'2026-06-10 08:16'},
+   }, deletionRequestedBy:'Анна Климова', deletionRequestedAt:'2026-06-14 12:02'},
   {id:'c5', agentId:'a1', externalId:'fp_8801', firstName:'Бек', lastName:'Алиев', middleName:'', email:'bek.aliev@example.com', phoneNumber:'+996 555 90 12 44', telegramId:'687452019',
    status:'ACTIVE', verificationStatus:'APPROVED', sourceChannel:'IFRAME', kycMethod:'SUMSUB', checkResult:'OK', deletionRequested:false,
    sbpTopUp:true, qrTopUp:true, sbpTopUpFixed:true, sbpWithdrawal:true, sbpWithdrawalFixed:true, sbpBlockedByAntifraud:false, unpaidQrStreak:0,
@@ -865,6 +868,10 @@ function getOpComments(opId){
   return operationComments[opId];
 }
 let checkDetailSamples = {
+  REQUIRED_DATA: {
+    request:{external_id:'pm_2210', email:'client@example.com', checked_for:['SANCTIONS_IIDX','FOREIGN_AGENT','MVD_WANTED','FSSP_WANTED','FSIN_WANTED','TERRORISM','PHONE_VALIDATION_SBP']},
+    response:{passed:false, missing_fields:['Имя','Телефон','Дата рождения','Номер паспорта','Дата выдачи паспорта','Страна выдачи паспорта'], message:'Не хватает данных для запуска проверок по маршруту клиента. Ни один запрос во внешний сервис не отправлен.'},
+  },
   PROHIBITED_PERSON: {request:{last_name:'Токтомушев', first_name:'Айбек', birth_date:'1994-03-11'}, response:{passed:true, result:'ok', matched_persons:[]}},
   SANCTIONS_IIDX: {request:{last_name:'Пулатов', first_name:'Данияр', birth_date:'1989-11-02'}, response:{passed:false, result:'fail', reason:'Совпадение в санкционном списке (checkIndividualSanction)'}},
   TERRORISM: {request:{last_name:'Пулатов', first_name:'Данияр', birth_date:'1989-11-02'}, response:{passed:false, result:'fail', reason:'Совпадение по частичному соответствию ФИО'}},
