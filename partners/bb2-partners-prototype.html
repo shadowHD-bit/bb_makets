@@ -856,6 +856,13 @@ let changeLogs = {
   ],
 };
 let deletionRequests = { c4: [{status:'PENDING', requestedBy:'Анна Климова', requestedAt:'14.06.2026 12:02'}] };
+/** Ручное разрешение «зависшей» (PENDING без ответа провайдера) операции оператором.
+ *  sbpOperationId -> {status:'CONFIRMED'|'FAILED', reason, actor, when} */
+let operationStatusOverrides = {};
+function resolveHungOperation(op, newStatus, reason){
+  const when = new Date().toLocaleString('ru-RU').slice(0,17);
+  operationStatusOverrides[op.sbpOperationId] = { status:newStatus, reason, actor:'Super Admin', when };
+}
 let operationComments = {};
 /** Комментарии к операции — сидируются один раз при первом обращении, дальше живут в operationComments. */
 function getOpComments(opId){
@@ -960,7 +967,7 @@ const state = {
     individualCreatedFrom: null, individualCreatedTo: null,
     agentKycStatus: '', agentKycLevel: '',
     billableFrom: null, billableTo: null,
-    opsStatus: '', opsQuery: '', opsFrom: null, opsTo: null,
+    opsStatus: '', opsQuery: '', opsFrom: null, opsTo: null, opsNoResponse: false,
   },
   exportOpen: false,
   collapsed: {},         // key -> true, если панель свёрнута (по умолчанию все развёрнуты)
@@ -1161,7 +1168,12 @@ function mockClientOperations(clientId){
       });
     }
   }
-  return ops.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
+  const resolved = ops.map(op=>{
+    const ov = operationStatusOverrides[op.sbpOperationId];
+    if(!ov) return op;
+    return { ...op, status: ov.status, paidAt: ov.status==='CONFIRMED' ? (op.paidAt || op.createdAt) : op.paidAt, resolvedByOperator: ov };
+  });
+  return resolved.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
 }
 /** Комиссии по операции — по ставкам из блока «Комиссии» партнёра. */
 function opFeeInfo(op, a){
@@ -2813,6 +2825,7 @@ function renderClientOperationsTab(c, a){
   const allOps = mockClientOperations(c.id);
   const rows = allOps.filter(op=>{
     if(f.opsStatus && op.status!==f.opsStatus) return false;
+    if(f.opsNoResponse && !(op.status==='PENDING' && !op.resolvedByOperator)) return false;
     if(!opDateInRange(op.createdAt, f.opsFrom, f.opsTo)) return false;
     if(f.opsQuery && !op.sbpOperationId.toLowerCase().includes(f.opsQuery.toLowerCase())) return false;
     return true;
@@ -2842,14 +2855,16 @@ function renderClientOperationsTab(c, a){
         </button>
         ${(state.dateUI.open && state.dateUI.target==='ops') ? renderDatePopover() : ''}
       </div>
+      <label class="checkfilter"><input type="checkbox" id="opsNoResponse" ${f.opsNoResponse?'checked':''}> Без ответа</label>
       <button class="clearbtn" id="opsClear">Очистить все</button>
     </div>
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th></tr></thead>
+          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Действие</th></tr></thead>
           <tbody>${rows.length ? rows.map(op=>{
             const fee = opFeeInfo(op, a);
+            const isHung = op.status==='PENDING';
             return `
             <tr>
               <td><a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a><div class="cell-sub">${esc(op.createdAt)}</div></td>
@@ -2858,7 +2873,12 @@ function renderClientOperationsTab(c, a){
               <td class="cell-strong">${op.amount.toLocaleString('ru-RU')}</td>
               <td class="muted">${fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
               <td>${opStatusBadge(op.status)}</td>
-            </tr>`;}).join('') : `<tr><td colspan="6"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
+              <td>${isHung ? `
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-sm btn-primary" data-op-approve="${esc(op.sbpOperationId)}">Подтвердить</button>
+                  <button class="btn btn-sm btn-danger" data-op-decline="${esc(op.sbpOperationId)}">Отклонить</button>
+                </div>` : `<span class="muted">—</span>`}</td>
+            </tr>`;}).join('') : `<tr><td colspan="7"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
         </table>
       </div>
       <div class="pagfoot"><span>Total: ${rows.length} lines</span><select class="select"><option>10</option><option>20</option><option>50</option></select></div>
@@ -3001,6 +3021,11 @@ function renderOperationDetail(clientId, opId){
               ${opTypeBadge(op.type)}
               ${opStatusBadge(op.status)}
             </div>
+            ${op.status==='PENDING' ? `
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" id="opApprove">Подтвердить</button>
+              <button class="btn btn-danger" id="opDecline">Отклонить</button>
+            </div>` : ''}
           </div>
           <div class="rec-meta">
             <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
@@ -3180,6 +3205,34 @@ function bindOperationDetail(){
   }));
 
   const opId = state.currentOpId;
+  const opClient = clientById(state.currentClientId);
+  const opForActions = mockClientOperations(state.currentClientId).find(o=>o.sbpOperationId===opId);
+  $('#opApprove')?.addEventListener('click', ()=>{
+    if(!opForActions || !opClient) return;
+    openConfirmModal({
+      title:'Подтвердить операцию '+opForActions.sbpOperationId,
+      body:'Ответ от провайдера не пришёл вовремя. Подтверждение эмулирует успешный ответ провайдера (status: success) — клиенту будет зачислена сумма и отправлен events-вебхук партнёру.',
+      confirmLabel:'Подтвердить',
+      onConfirm:(reason)=>{
+        resolveHungOperation(opForActions, 'CONFIRMED', reason);
+        logChange(opClient, 'Операция '+opForActions.sbpOperationId, 'PENDING', 'CONFIRMED', reason);
+        render(); toast('Операция подтверждена');
+      }
+    });
+  });
+  $('#opDecline')?.addEventListener('click', ()=>{
+    if(!opForActions || !opClient) return;
+    openConfirmModal({
+      title:'Отклонить операцию '+opForActions.sbpOperationId,
+      body:'Ответ от провайдера не пришёл вовремя. Отклонение эмулирует неуспешный ответ провайдера (status: failed) — операция будет закрыта без зачисления.',
+      confirmLabel:'Отклонить', danger:true,
+      onConfirm:(reason)=>{
+        resolveHungOperation(opForActions, 'FAILED', reason);
+        logChange(opClient, 'Операция '+opForActions.sbpOperationId, 'PENDING', 'FAILED', reason);
+        render(); toast('Операция отклонена');
+      }
+    });
+  });
   $('#opCommentSend')?.addEventListener('click', ()=>{
     const text = $('#opNewComment').value.trim();
     if(!text) return;
@@ -3511,8 +3564,37 @@ function bindClientDetail(){
       state.dateUI.open=false; render();
     });
     $('#opsClear')?.addEventListener('click', ()=>{
-      state.filters.opsStatus=''; state.filters.opsQuery=''; state.filters.opsFrom=null; state.filters.opsTo=null; render();
+      state.filters.opsStatus=''; state.filters.opsQuery=''; state.filters.opsFrom=null; state.filters.opsTo=null; state.filters.opsNoResponse=false; render();
     });
+    $('#opsNoResponse')?.addEventListener('change', e=>{ state.filters.opsNoResponse=e.target.checked; render(); });
+    $all('[data-op-approve]').forEach(b=>b.addEventListener('click', ()=>{
+      const op = mockClientOperations(c.id).find(o=>o.sbpOperationId===b.dataset.opApprove);
+      if(!op) return;
+      openConfirmModal({
+        title:'Подтвердить операцию '+op.sbpOperationId,
+        body:'Ответ от провайдера не пришёл вовремя. Подтверждение эмулирует успешный ответ провайдера (status: success) — партнёру будет зачислена сумма и отправлен events-вебхук.',
+        confirmLabel:'Подтвердить',
+        onConfirm:(reason)=>{
+          resolveHungOperation(op, 'CONFIRMED', reason);
+          logChange(c, 'Операция '+op.sbpOperationId, 'PENDING', 'CONFIRMED', reason);
+          render(); toast('Операция подтверждена');
+        }
+      });
+    }));
+    $all('[data-op-decline]').forEach(b=>b.addEventListener('click', ()=>{
+      const op = mockClientOperations(c.id).find(o=>o.sbpOperationId===b.dataset.opDecline);
+      if(!op) return;
+      openConfirmModal({
+        title:'Отклонить операцию '+op.sbpOperationId,
+        body:'Ответ от провайдера не пришёл вовремя. Отклонение эмулирует неуспешный ответ провайдера (status: failed) — операция будет закрыта без зачисления.',
+        confirmLabel:'Отклонить', danger:true,
+        onConfirm:(reason)=>{
+          resolveHungOperation(op, 'FAILED', reason);
+          logChange(c, 'Операция '+op.sbpOperationId, 'PENDING', 'FAILED', reason);
+          render(); toast('Операция отклонена');
+        }
+      });
+    }));
     return;
   }
   $('#btnUploadDoc')?.addEventListener('click', ()=>{
