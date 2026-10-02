@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Партнёрские аккаунты — прототип</title>
 <style>
 :root{
@@ -207,8 +208,9 @@ svg{display:block}
 .kpi .delta{font-size:11.5px;color:var(--success);margin-top:3px;font-weight:500}
 .kpi .delta.flat{color:var(--text-soft)}
 
-.kpistrip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-16);box-shadow:var(--shadow-xs);margin-bottom:16px;overflow:hidden}
-.kpistrip-cell{padding:16px 10px;text-align:center;border-left:1px solid var(--stroke-soft)}
+.kpistrip{display:flex;background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-16);box-shadow:var(--shadow-xs);margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.kpistrip::-webkit-scrollbar{display:none}
+.kpistrip-cell{flex:1 1 160px;min-width:140px;padding:16px 10px;text-align:center;border-left:1px solid var(--stroke-soft)}
 .kpistrip-cell:first-child{border-left:0}
 .kpistrip-cell .lbl{font-size:11.5px;color:var(--text-soft);margin-bottom:7px}
 .kpistrip-cell .val{font-size:20px;font-weight:600;letter-spacing:-.01em}
@@ -291,6 +293,7 @@ svg{display:block}
 .panel-chev:hover{color:var(--text-strong);background:var(--bg-weak)}
 .panel-chev.open{transform:rotate(180deg)}
 .panel-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:12px 16px 12px}
+.panel-b-row{display:flex;gap:8px;align-items:center;padding-top:10px}
 .panel[data-collapsed="true"] > .panel-h{border-bottom:0}
 .panel[data-collapsed="true"] > .panel-b,
 .panel[data-collapsed="true"] > .twrap,
@@ -550,6 +553,52 @@ table.grid tbody tr:last-child td{border-bottom:0}
 
 .helper-note{font-size:11.5px;color:var(--text-soft);background:var(--bg-weak);border-radius:var(--radius-8);padding:8px 10px;display:flex;gap:7px;align-items:flex-start}
 .helper-note b{color:var(--text-sub)}
+
+/* ============================================================ адаптив */
+/* Вкладки экрана (RECORD_TABS и т.п.) могут не влезать по ширине и на десктопе —
+   скролл внутри самой полосы вкладок, а не перенос/обрезание страницы. */
+.seg-tabs{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+.seg-tabs::-webkit-scrollbar{height:0}
+
+.mobile-nav{display:none}
+
+@media (max-width:960px){
+  /* Сайдбар инертный (1:1 реплика, не навигация) — на планшете/мобиле прячем,
+     вместо него внизу экрана — нижнее меню с реально рабочими разделами */
+  .side{display:none}
+  .mobile-nav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:var(--bg-white);border-top:1px solid var(--stroke-soft);
+    box-shadow:0 -2px 10px rgba(14,18,27,.06);padding:6px 10px calc(6px + env(safe-area-inset-bottom));
+  }
+  .main{padding-bottom:62px}
+  .mnav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:0;padding:8px 4px;border-radius:var(--radius-10);
+    color:var(--text-soft);cursor:pointer;
+  }
+  .mnav-item .ic{width:19px;height:19px}
+  .mnav-item .ic svg{width:19px;height:19px}
+  .mnav-item .lbl{font-size:10.5px;font-weight:500;line-height:1.1;text-align:center}
+  .mnav-item.active{color:var(--primary)}
+  .mnav-item:active{background:var(--bg-weak)}
+  .stage{padding:14px 14px 32px}
+  .topbar{padding:0 14px}
+}
+
+@media (max-width:680px){
+  .field-grid,.field-grid.cols3{grid-template-columns:1fr}
+  .deflist,.deflist.cols3,.deflist.cols4{grid-template-columns:1fr}
+  .kpistrip-cell{flex:0 0 130px;min-width:130px}
+  .secretbox{flex-wrap:wrap}
+  .secretbox .val{word-break:break-all}
+  .toggle-row{flex-wrap:wrap;row-gap:8px}
+  .modal-f{flex-wrap:wrap}
+  .modal-f button{flex:1 1 auto}
+  .rec-top h1{font-size:17px}
+  table.grid tbody td,table.grid thead th{padding:9px 10px}
+}
+
 </style>
 </head>
 <body>
@@ -616,6 +665,16 @@ table.grid tbody tr:last-child td{border-bottom:0}
       </div>
     </div>
   </aside>
+
+  <!-- ============ Нижнее меню — замена сайдбара на мобиле/планшете, только реально рабочие разделы ============ -->
+  <nav class="mobile-nav">
+    <button class="mnav-item" id="navAccountsMobile">
+      <span class="ic">{{ICON_PERSON}}</span><span class="lbl">Аккаунты</span>
+    </button>
+    <button class="mnav-item" id="navExternalMobile">
+      <span class="ic">{{ICON_FOLDER}}</span><span class="lbl">Внешние клиенты</span>
+    </button>
+  </nav>
 
   <div class="main">
     <!-- ============ TOPBAR — matches the real bb2 topbar screenshot; inert ============ -->
@@ -705,13 +764,97 @@ function checkCodesForClient(c){
 }
 const RECORD_TABS = ['KYC','Тарифы','KYT','Счета','История операций','Журнал событий','Адреса кошельков','ОТС-сделки','Банковские депозиты','Ордера'];
 
+/* Обязательные поля при создании клиента через партнёрский API.
+   Полный список = все поля UpsertPartnerClientRequest, кроме client_id/sign (всегда обязательны технически).
+   Дефолт (что обязательно сейчас у всех партнёров без переопределения) = PARTNER_API_CREATE_REQUIRED_FIELDS
+   из бэкенда: phone, passport, passport_issue_date, country_of_passport_issue.
+   Остальные поля бэкенд сейчас не требует ни у кого — партнёр может включить каждое из них себе отдельно.
+   requiredFields:null у агента = используется дефолт целиком (см. dorabotki-partnyorskij-api-01-10-2026.md, п.6). */
+const REQUIRED_FIELDS_DEFAULT = ['phone','passport','passport_issue_date','country_of_passport_issue'];
+const REQUIRED_FIELDS_GROUPS = [
+  { group:'Контакты', fields:[
+    {key:'email', label:'Email'},
+    {key:'phone', label:'Телефон'},
+    {key:'telegram_id', label:'Telegram ID'},
+  ]},
+  { group:'ФИО', fields:[
+    {key:'last_name', label:'Фамилия'},
+    {key:'first_name', label:'Имя'},
+    {key:'patronymic', label:'Отчество'},
+    {key:'last_name_native', label:'Фамилия как в документе (иностранцы)'},
+    {key:'first_name_native', label:'Имя как в документе (иностранцы)'},
+  ]},
+  { group:'Паспорт', fields:[
+    {key:'birth_date', label:'Дата рождения'},
+    {key:'passport', label:'Номер паспорта'},
+    {key:'passport_issue_date', label:'Дата выдачи паспорта'},
+    {key:'country_of_passport_issue', label:'Страна выдачи паспорта'},
+  ]},
+  { group:'Прочее', fields:[
+    {key:'inn', label:'ИНН'},
+    {key:'file_ids', label:'Документы (сканы)'},
+  ]},
+  { group:'Адрес регистрации', fields:[
+    {key:'registration_country', label:'Страна'},
+    {key:'registration_index', label:'Индекс'},
+    {key:'registration_city', label:'Город'},
+    {key:'registration_city_en', label:'Город (латиницей)'},
+    {key:'registration_street', label:'Улица'},
+    {key:'registration_street_en', label:'Улица (латиницей)'},
+    {key:'registration_state', label:'Регион/штат'},
+    {key:'registration_building', label:'Корпус'},
+    {key:'registration_house', label:'Дом'},
+    {key:'registration_apartment', label:'Квартира'},
+  ]},
+];
+const REQUIRED_FIELDS_ALL = REQUIRED_FIELDS_GROUPS.flatMap(g=>g.fields.map(f=>f.key));
+const REQUIRED_FIELDS_LABELS = Object.fromEntries(REQUIRED_FIELDS_GROUPS.flatMap(g=>g.fields.map(f=>[f.key, f.label])));
+
+/* Чтение значения поля клиента по ключу обязательного поля партнёрского API —
+   для проверки, у кого из уже существующих клиентов партнёра данных не хватает,
+   если включить это поле в обязательные. */
+function getClientRequiredFieldValue(c, key){
+  const addr = c.registrationAddress || {};
+  const map = {
+    email: c.email, phone: c.phoneNumber, telegram_id: c.telegramId,
+    last_name: c.lastName, first_name: c.firstName, patronymic: c.middleName,
+    last_name_native: c.lastNameNative, first_name_native: c.firstNameNative,
+    birth_date: c.birthDate, passport: c.passportNumber,
+    passport_issue_date: c.passportIssuedDate, country_of_passport_issue: c.passportIssuingCountry,
+    inn: c.inn, file_ids: (c.documents && c.documents.length) ? '1' : '',
+    registration_country: addr.country, registration_index: addr.postIndex,
+    registration_city: addr.city, registration_city_en: addr.cityEn,
+    registration_street: addr.street, registration_street_en: addr.streetEn,
+    registration_state: addr.state, registration_building: addr.buildingName,
+    registration_house: addr.buildingNumber, registration_apartment: addr.flatNumber,
+  };
+  return map[key];
+}
+/** Сколько клиентов партнёра не заполнили это поле. */
+function countClientsMissingField(agentId, key){
+  return clients.filter(c=>c.agentId===agentId && !getClientRequiredFieldValue(c, key)).length;
+}
+/** Сводка по текущему обязательному набору партнёра: сколько клиентов не хватает хотя бы одного поля. */
+function countClientsMissingRequired(a){
+  const fields = a.requiredFields||REQUIRED_FIELDS_DEFAULT;
+  return clients.filter(c=>c.agentId===a.id && fields.some(key=>!getClientRequiredFieldValue(c, key))).length;
+}
+/** Каких обязательных полей не хватает конкретному клиенту (по требованиям его партнёра). */
+function getMissingRequiredFieldsForClient(c){
+  const a = agents.find(ag=>ag.id===c.agentId);
+  if(!a) return [];
+  const fields = a.requiredFields||REQUIRED_FIELDS_DEFAULT;
+  return fields.filter(key=>!getClientRequiredFieldValue(c, key)).map(key=>REQUIRED_FIELDS_LABELS[key]||key);
+}
+
 let agents = [
   {id:'a1', name:'FinPay KG', legalName:'FinPay Kyrgyzstan LLC', email:'ops@finpay.kg', phone:'+996 555 10 20 30',
    countryCode:'KGZ', status:'ACTIVE', partnerId:'p_finpay_kg', partnerName:'FinPay KG', userId:'u-51928ae3',
    apiKey:'mock_pk_9f2a7c1e4b3d8091a5c6', secret:'mock_sk_7d3e9a1c5f8b2046d7e91a3c5f8b2046', canSbp:true, canQr:true,
    acceptForeignClients:true, enableKycViaChainbridge:true, sumsubSourceKey:"finpay_kg_prod", maxDailyChecks:1000, kycRateLimitPerMin:60, partnerChatId:"-5580041538", sendChatNotifications:true, sbpBankName:"Pay2me", autoConvertToUsdt:false, bridgeMode:'SUMSUB', minQrAmount:'100', maxQrAmount:'150000', createdQrDailyLimit:400, successfulQrDailyLimit:300,
    unpaidQrBanLimit:5, rollingAmountLimit:'2000000', rollingPeriodDays:30, referralCode:'FPKG-20A4', tariffName:'Партнёр Стандарт',
-   paymentRate:'1.2', paymentMin:'30', partnerClientFeePct:'0', partnerClientFeeAbs:'0', exchangeRate:'0', withdrawalRate:'0', invoicesWebhookUrl:'https://finpay.kg/hooks/invoices', eventsWebhookUrl:'https://finpay.kg/hooks/events'},
+   paymentRate:'1.2', paymentMin:'30', partnerClientFeePct:'0', partnerClientFeeAbs:'0', exchangeRate:'0', withdrawalRate:'0', invoicesWebhookUrl:'https://finpay.kg/hooks/invoices', eventsWebhookUrl:'https://finpay.kg/hooks/events',
+   requiredFields:['phone','passport']},
   {id:'a2', name:'PayMaxx', legalName:'PayMaxx Trading FZE', email:'admin@paymaxx.com', phone:'+971 4 220 1190',
    countryCode:'ARE', status:'SUSPENDED', partnerId:'p_paymaxx', partnerName:'PayMaxx', userId:'u-e2bf4c18',
    apiKey:'mock_pk_1a4f6b9c2e7d3081f5a2', secret:'mock_sk_2f8c4a1e9d6b3075c8f21a4e9d6b3075', canSbp:true, canQr:false,
@@ -864,6 +1007,10 @@ function resolveHungOperation(op, newStatus, reason){
   operationStatusOverrides[op.sbpOperationId] = { status:newStatus, reason, actor:'Super Admin', when };
 }
 let operationComments = {};
+/** Возвраты, созданные оператором через прототип — invoiceId -> [возврат,...].
+ *  mockInvoiceForOp детерминирован и пересчитывается на каждый render,
+ *  поэтому новые возвраты хранятся отдельно и домешиваются при генерации. */
+let invoiceRefundExtras = {};
 /** Комментарии к операции — сидируются один раз при первом обращении, дальше живут в operationComments. */
 function getOpComments(opId){
   if(!operationComments[opId]){
@@ -873,6 +1020,38 @@ function getOpComments(opId){
     ];
   }
   return operationComments[opId];
+}
+/** Комментарии и приложенные файлы по инвойсу — отдельное хранилище от комментариев операции,
+ *  т.к. инвойс и операция разные сущности (см. раздел 2 доработок партнёрского API). */
+let invoiceComments = {};
+function getInvoiceComments(invoiceId){
+  if(!invoiceComments[invoiceId]) invoiceComments[invoiceId] = [];
+  return invoiceComments[invoiceId];
+}
+function renderInvoiceComments(invoiceId){
+  const comments = getInvoiceComments(invoiceId);
+  const list = comments.length ? comments.map(cm=>`
+    <div class="comment-item">
+      <div class="comment-avatar">${esc(cm.initials)}</div>
+      <div class="comment-body">
+        <div class="comment-meta">
+          <b>${esc(cm.author)}</b> · ${esc(cm.when)}
+          ${cm.own ? `<div class="comment-actions">
+            <button data-inv-comment-delete="${esc(cm.id)}" title="Удалить">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>` : ''}
+        </div>
+        <div class="comment-text">${esc(cm.text)}</div>
+      </div>
+    </div>`).join('') : `<div class="empty-state" style="padding:16px 0">Комментариев пока нет</div>`;
+  return `
+    ${list}
+    <div class="comment-input">
+      <textarea id="invNewComment" placeholder="Добавить комментарий для коллег-операторов…"></textarea>
+      <button class="btn btn-primary" id="invCommentSend" style="align-self:flex-end">Отправить</button>
+    </div>
+  `;
 }
 let checkDetailSamples = {
   REQUIRED_DATA: {
@@ -945,17 +1124,20 @@ function downloadCsvFile(filename, headers, rows){
    STATE + ROUTER
    ========================================================================= */
 const state = {
-  view: 'accounts-list',        // accounts-list | account-detail | individual-detail | external-list | external-detail | operation-detail
+  view: 'accounts-list',        // accounts-list | account-detail | individual-detail | external-list | external-detail | operation-detail | invoice-detail
   accountsTab: 'fizlica',       // fizlica | partners | sanctions
   infoOpen: false,
   currentAgentId: null,
   currentClientId: null,
   currentOpId: null,
+  currentInvoiceId: null,
   currentIndividualId: null,
   individualTab: 'kyc',         // kyc | partner
   accountDetailTab: 'kyc',      // kyc | partner
   clientDetailTab: 'main',      // main | ops
   agentExportOpen: false,
+  clientActionsOpen: false,
+  _missingFieldsToastId: null,  // id клиента, для которого уже показан тост о нехватке обязательных полей
   externalTab: 'clients',       // clients | sanctions
   sanctionsQuery: '',
   filters: {
@@ -970,13 +1152,16 @@ const state = {
     opsStatus: '', opsQuery: '', opsFrom: null, opsTo: null, opsNoResponse: false,
   },
   exportOpen: false,
-  collapsed: {},         // key -> true, если панель свёрнута (по умолчанию все развёрнуты)
+  collapsed: {           // key -> true, если панель свёрнута; остальные по умолчанию развёрнуты
+    'ap-autowithdraw': true, 'ap-kycbridge': true, 'ap-commission': true,
+    'ap-errors': true, 'ap-billable': true, 'ap-usagelog': true, 'ap-telegram': true,
+  },
   dateUI: { open:false, target:'client', viewMonth:null, tempFrom:null, tempTo:null },
   openFilterMenu: null,   // 'partner' | 'status' | 'verif' | null
 };
 
 function closeAllPopovers(){
-  state.exportOpen=false; state.dateUI.open=false; state.openFilterMenu=null; state.agentExportOpen=false;
+  state.exportOpen=false; state.dateUI.open=false; state.openFilterMenu=null; state.agentExportOpen=false; state.clientActionsOpen=false;
 }
 
 /* ---------- date helpers (для попапа периода) ---------- */
@@ -1123,8 +1308,65 @@ function inFilterDateRange(dateStr, fromDate, toDate){
  * в таблице показаны только реально существующие поля. Детерминирован по id
  * клиента, чтобы не пересчитывался на каждый render.
  */
-const OP_TYPE_LABEL = { SBP:'Пополнение по СБП', QR:'Пополнение по QR', EXCHANGE:'Автоконвертация (обмен)' };
+const OP_TYPE_LABEL = { SBP:'Пополнение по СБП', QR:'Пополнение по QR', EXCHANGE:'Автоконвертация (обмен)', REFUND:'Возврат по СБП' };
 const SBP_BANKS = ['Т-Банк','СберБанк','Альфа-Банк','ВТБ'];
+
+/** Каталог товаров для раздела «Товары» мок-инвойса — только для прототипа. */
+const INVOICE_ITEM_CATALOG = [
+  { title: "Nike Air Force 1 '07 White", sku: 'AF1-07-WHT-42', unitPrice: 56900 },
+  { title: 'New Balance 530 White Silver', sku: 'NB530-WS-40', unitPrice: 33000 },
+  { title: 'Adidas Samba OG', sku: 'SMB-OG-41', unitPrice: 24900 },
+  { title: 'Converse Chuck 70', sku: 'CHK70-BLK-39', unitPrice: 11900 },
+];
+
+/**
+ * Инвойс — прослойка над СБП/QR операцией партнёрского клиента (см. раздел 2
+ * доработок партнёрского API). Связь один к одному с операцией, items/customer/
+ * delivery опциональны — часть партнёров их не передаёт вовсе.
+ */
+function mockInvoiceForOp(op, clientId){
+  let h=0; const s=op.sbpOperationId; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; }
+  const hasItems = h % 5 !== 0; // часть партнёров не передаёт состав заказа вовсе
+  let items = null, amountItems = op.amount, discount = 0;
+  if(hasItems){
+    const n = 1 + (h % 2);
+    items = [];
+    for(let i=0;i<n;i++){
+      const base = INVOICE_ITEM_CATALOG[(h+i*7) % INVOICE_ITEM_CATALOG.length];
+      const quantity = 1 + ((h+i) % 2);
+      items.push({ line_number:i+1, title:base.title, sku:base.sku, quantity, unit_price:base.unitPrice, total_price: base.unitPrice*quantity });
+    }
+    amountItems = items.reduce((sum,it)=>sum+it.total_price,0);
+    discount = h % 3 === 0 ? Math.round(amountItems*0.05) : 0;
+  }
+  const orderSeed = String(h % 900000).padStart(6,'0');
+  const refunds = [];
+  if(op.status==='CONFIRMED' && h % 3 === 0){
+    const full = h % 2 === 0;
+    refunds.push({
+      refundId: 'ref_' + (h % 89999 + 10000),
+      amount: full ? op.amount : Math.round(op.amount*0.4),
+      status: h % 7 === 0 ? 'FAILED' : (h % 4 === 0 ? 'PENDING' : 'CONFIRMED'),
+      reason: full ? 'Полный возврат по заявке покупателя' : 'Частичный возврат за один товар из заказа',
+      createdAt: op.paidAt || op.createdAt,
+    });
+  }
+  const c = clientById(clientId);
+  const invoiceId = 'inv_' + (h % 8999999 + 1000000);
+  const extras = invoiceRefundExtras[invoiceId] || [];
+  return {
+    invoiceId,
+    orderId: 'ord_' + orderSeed,
+    orderNumber: hasItems ? ('YU-' + orderSeed.slice(0,6) + '-' + s.slice(-4).toUpperCase()) : null,
+    amount: op.amount,
+    amountBreakdown: hasItems ? { items: amountItems, discount, delivery: 0, total: op.amount } : null,
+    promoCode: hasItems && discount>0 ? 'WELCOME5' : null,
+    items,
+    customer: hasItems ? { fullName: fullName(c) || '—', phone: c?.phoneNumber || null } : null,
+    delivery: hasItems ? { method: 'Курьерская доставка', city: 'Москва' } : null,
+    refunds: [...refunds, ...extras],
+  };
+}
 function mockClientOperations(clientId){
   let h=0; for(let i=0;i<String(clientId).length;i++){ h=(h*31+String(clientId).charCodeAt(i))>>>0; }
   const count = h % 7; // 0..6 операций — часть клиентов честно без истории
@@ -1145,7 +1387,7 @@ function mockClientOperations(clientId){
     const hh = String(8 + (seed%14)).padStart(2,'0');
     const mm = String(seed%60).padStart(2,'0');
     const createdAt = `2026-08-${day} ${hh}:${mm}`;
-    ops.push({
+    const mainOp = {
       sbpOperationId: 'sbp_' + (1000000 + seed%899999),
       status,
       type,
@@ -1153,6 +1395,26 @@ function mockClientOperations(clientId){
       amount,
       createdAt,
       paidAt: status==='CONFIRMED' ? createdAt : null,
+    };
+    mainOp.invoice = mockInvoiceForOp(mainOp, clientId);
+    ops.push(mainOp);
+    // возврат — отдельная операция своего типа (REFUND), по аналогии с OperationTypeEnum.REVERSAL
+    // в ядре bb2 (см. раздел 3 доработок партнёрского API) — не проводка внутри исходной операции,
+    // а новая строка со ссылкой на исходную операцию и на инвойс, по которому он оформлен.
+    mainOp.invoice.refunds.forEach(r=>{
+      ops.push({
+        sbpOperationId: r.refundId,
+        status: r.status,
+        type: 'REFUND',
+        bankName: null,
+        amount: r.amount,
+        createdAt: r.createdAt,
+        paidAt: r.status==='CONFIRMED' ? r.createdAt : null,
+        linkedOpId: mainOp.sbpOperationId,
+        linkedInvoiceId: mainOp.invoice.invoiceId,
+        refundReason: r.reason,
+        isFullRefund: r.amount >= mainOp.amount,
+      });
     });
     // пример: если у клиента включена автоконвертация, следом за подтверждённым пополнением
     // площадка сама создаёт операцию обмена в валюту автовывода — показываем отдельной строкой
@@ -1193,7 +1455,8 @@ function opStatusBadge(s){
   return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
 }
 function opTypeBadge(t){
-  return `<span class="badge b-info"><span class="d"></span>${esc(OP_TYPE_LABEL[t]||t)}</span>`;
+  const cls = t==='REFUND' ? 'b-faded' : 'b-info';
+  return `<span class="badge ${cls}"><span class="d"></span>${esc(OP_TYPE_LABEL[t]||t)}</span>`;
 }
 /** Детерминированный псевдо-UUID счёта — для мока таблицы проводок. */
 function pseudoAccountId(seedStr){
@@ -1272,6 +1535,8 @@ function render(){
   }
   else if(state.view==='external-detail'){ stage.innerHTML = renderClientDetail(state.currentClientId); bindClientDetail(); }
   else if(state.view==='operation-detail'){ stage.innerHTML = renderOperationDetail(state.currentClientId, state.currentOpId); bindOperationDetail(); }
+  else if(state.view==='invoice-detail'){ stage.innerHTML = renderInvoiceDetail(state.currentClientId, state.currentInvoiceId); bindInvoiceDetail(); }
+  updateMobileNavActive();
 }
 
 /* ---------- Аккаунты (list) ---------- */
@@ -1697,7 +1962,6 @@ function renderAccountPartnerTab(a){
       <div>
         <div class="panel" data-collapsed="${isCollapsed('ap-basic')}">
           ${collapsibleHead('ap-basic', '<h3>Основная информация</h3>')}
-          <div class="panel-actions"><button class="btn btn-sm" id="btnEditPartnerInfo">Редактировать</button></div>
           <div class="panel-b">
             <div class="toggle-row" style="margin-bottom:14px">
               <div><div class="tt">Активный</div><div class="ts">Отключение закрывает доступ к партнёрскому API, настройки и данные сохраняются</div></div>
@@ -1710,6 +1974,7 @@ function renderAccountPartnerTab(a){
               <div><dt>Статус партнёра</dt><dd>${a.status}</dd></div>
               <div><dt>Дата становления партнёром</dt><dd>${esc(a.createdAt||'14.08.2026, 18:31:07')}</dd></div>
             </dl>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditPartnerInfo">Редактировать</button></div>
           </div>
         </div>
 
@@ -1729,19 +1994,16 @@ function renderAccountPartnerTab(a){
               <button class="switch ${a.acceptForeignClients?'on':''}" data-toggle="acceptForeignClients"><span class="knob"></span></button>
             </div>
             <div class="hairline"></div>
-            <div class="field-grid cols3">
-              <div class="field"><label>Мин. сумма QR</label><input data-limit="minQrAmount" value="${esc(a.minQrAmount)}" placeholder="—"></div>
-              <div class="field"><label>Макс. сумма QR</label><input data-limit="maxQrAmount" value="${esc(a.maxQrAmount)}" placeholder="—"></div>
-              <div class="field"><label>Скользящий период, дн.</label><input data-limit="rollingPeriodDays" value="${esc(a.rollingPeriodDays)}" placeholder="30"></div>
-              <div class="field"><label>Создано QR в сутки</label><input data-limit="createdQrDailyLimit" value="${esc(a.createdQrDailyLimit)}" placeholder="—"></div>
-              <div class="field"><label>Оплачено QR в сутки</label><input data-limit="successfulQrDailyLimit" value="${esc(a.successfulQrDailyLimit)}" placeholder="—"></div>
-              <div class="field"><label>Лимит неоплаченных до блокировки</label><input data-limit="unpaidQrBanLimit" value="${esc(a.unpaidQrBanLimit)}" placeholder="—"></div>
-            </div>
-            <div class="field" style="margin-top:12px">
-              <label>Сумма за скользящий период</label>
-              <input data-limit="rollingAmountLimit" value="${esc(a.rollingAmountLimit)}" placeholder="—" style="max-width:220px">
-            </div>
-            <div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="btnSaveLimits">Сохранить лимиты</button></div>
+            <dl class="deflist cols3">
+              <div><dt>Мин. сумма QR</dt><dd class="${a.minQrAmount?'':'muted'}">${esc(a.minQrAmount||'—')}</dd></div>
+              <div><dt>Макс. сумма QR</dt><dd class="${a.maxQrAmount?'':'muted'}">${esc(a.maxQrAmount||'—')}</dd></div>
+              <div><dt>Скользящий период, дн.</dt><dd>${esc(a.rollingPeriodDays||'30')}</dd></div>
+              <div><dt>Создано QR в сутки</dt><dd class="${a.createdQrDailyLimit?'':'muted'}">${esc(a.createdQrDailyLimit||'—')}</dd></div>
+              <div><dt>Оплачено QR в сутки</dt><dd class="${a.successfulQrDailyLimit?'':'muted'}">${esc(a.successfulQrDailyLimit||'—')}</dd></div>
+              <div><dt>Лимит неоплаченных до блокировки</dt><dd class="${a.unpaidQrBanLimit?'':'muted'}">${esc(a.unpaidQrBanLimit||'—')}</dd></div>
+              <div><dt>Сумма за скользящий период</dt><dd class="${a.rollingAmountLimit?'':'muted'}">${esc(a.rollingAmountLimit||'—')}</dd></div>
+            </dl>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditLimits">Редактировать</button></div>
           </div>
         </div>
 
@@ -1772,7 +2034,6 @@ function renderAccountPartnerTab(a){
 
         <div class="panel" data-collapsed="${isCollapsed('ap-commission')}">
           ${collapsibleHead('ap-commission', '<h3>Комиссии</h3>')}
-          <div class="panel-actions"><button class="btn btn-sm" id="btnEditCommission">Изменить</button></div>
           <div class="panel-b">
             <dl class="deflist cols3">
               <div><dt>Ставка платежа, %</dt><dd>${esc(a.paymentRate||'0')}</dd></div>
@@ -1785,6 +2046,7 @@ function renderAccountPartnerTab(a){
             <div class="ts" style="margin-top:10px">Комиссия платежа = max(сумма × ставка / 100, минимум). Комиссию партнёра клиенту он удерживает сам — мы её только храним и отдаём в калькулятор.</div>
             <div class="hairline"></div>
             <a href="#" id="marketFeesLink" style="color:var(--primary);font-weight:500;text-decoration:none;font-size:12.5px">Индивидуальные комиссии мейкера/тейкера по торговым парам →</a>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditCommission">Изменить</button></div>
           </div>
         </div>
 
@@ -1808,42 +2070,9 @@ function renderAccountPartnerTab(a){
             <div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="btnSaveAutoWithdraw">Сохранить изменения</button></div>
           </div>
         </div>
-      </div>
 
-      <div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-hmac')}">
-          ${collapsibleHead('ap-hmac', '<h3>HMAC-секрет партнёрского API</h3>')}
-          <div class="panel-b">
-            <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
-            <div class="secretbox">
-              <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
-              <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
-              <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
-          ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
-          <div class="panel-b">
-            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
-            <div class="hairline"></div>
-            <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
-            <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
-          </div>
-        </div>
         <div class="panel" data-collapsed="${isCollapsed('ap-billable')}">
           ${collapsibleHead('ap-billable', '<h3>Сводка billable-проверок</h3>')}
-          <div class="panel-actions">
-            <div class="popwrap">
-              <button class="btn btn-sm" id="billableDateRangeBtn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                ${(state.filters.billableFrom && state.filters.billableTo) ? `${fmtRu(state.filters.billableFrom)} — ${fmtRu(state.filters.billableTo)}` : 'Период'}
-              </button>
-              ${(state.dateUI.open && state.dateUI.target==='billable') ? renderDatePopover() : ''}
-            </div>
-            <button class="btn btn-sm" id="btnExportBillable">Экспорт CSV</button>
-          </div>
           <div class="twrap">
             <table class="grid">
               <thead><tr><th>Provider</th><th>Период</th><th>Итого</th><th>Одобрено</th><th>Resubmission</th><th>Отказано</th></tr></thead>
@@ -1861,11 +2090,20 @@ function renderAccountPartnerTab(a){
               })()}</tbody>
             </table>
           </div>
+          <div class="panel-b panel-b-row">
+            <div class="popwrap">
+              <button class="btn btn-sm" id="billableDateRangeBtn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                ${(state.filters.billableFrom && state.filters.billableTo) ? `${fmtRu(state.filters.billableFrom)} — ${fmtRu(state.filters.billableTo)}` : 'Период'}
+              </button>
+              ${(state.dateUI.open && state.dateUI.target==='billable') ? renderDatePopover() : ''}
+            </div>
+            <button class="btn btn-sm" id="btnExportBillable">Экспорт CSV</button>
+          </div>
         </div>
 
         <div class="panel" data-collapsed="${isCollapsed('ap-usagelog')}">
           ${collapsibleHead('ap-usagelog', '<h3>Журнал использования моста</h3>')}
-          <div class="panel-actions"><button class="btn btn-sm" id="btnExportKycUsage">Экспорт CSV</button></div>
           <div class="twrap">
             <table class="grid">
               <thead><tr><th>Дата/время</th><th>Клиент</th><th>Статус</th><th>Этап отказа</th><th>Причина отказа</th></tr></thead>
@@ -1878,6 +2116,45 @@ function renderAccountPartnerTab(a){
                   <td class="${u.failReason?'':'muted'}">${esc(u.failReason||'—')}</td>
                 </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:20px">Нет данных за выбранный период</div></td></tr>`}</tbody>
             </table>
+          </div>
+          <div class="panel-b" style="padding-top:10px"><button class="btn btn-sm" id="btnExportKycUsage">Экспорт CSV</button></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-hmac')}">
+          ${collapsibleHead('ap-hmac', '<h3>HMAC-секрет партнёрского API</h3>')}
+          <div class="panel-b">
+            <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
+            <div class="secretbox">
+              <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
+              <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
+              <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-requiredfields')}">
+          ${collapsibleHead('ap-requiredfields', '<h3>Обязательные поля клиента</h3>')}
+          <div class="panel-b">
+            ${REQUIRED_FIELDS_GROUPS.map(g=>`
+              <div class="ts" style="margin:10px 0 6px;font-weight:600;color:var(--text)">${g.group}</div>
+              ${g.fields.map(f=>`
+                <label class="checkfilter" style="display:flex;margin-bottom:6px;opacity:.75">
+                  <input type="checkbox" disabled ${(a.requiredFields||REQUIRED_FIELDS_DEFAULT).includes(f.key)?'checked':''}>
+                  ${f.label}
+                </label>`).join('')}
+            `).join('')}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditRequiredFields">Редактировать</button></div>
+          </div>
+        </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
+          ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
+          <div class="panel-b">
+            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
+            <div class="hairline"></div>
+            <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
+            <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
           </div>
         </div>
 
@@ -1910,7 +2187,8 @@ function renderAccountPartnerTab(a){
 
     <div class="panel" style="margin-top:14px" data-collapsed="${isCollapsed('ap-clients')}">
       ${collapsibleHead('ap-clients', `<div><h3>Внешние клиенты партнёра</h3><div class="hint">${clients.filter(c=>c.agentId===a.id).length} клиентов</div></div>`)}
-      <div class="panel-actions">
+      <div class="panel-b" id="partnerClientsBlock">${renderClientsTable(a.id)}</div>
+      <div class="panel-b panel-b-row">
         <div class="popwrap">
           <button class="btn btn-sm" id="agentExportBtn">Экспорт
             <svg width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
@@ -1924,7 +2202,6 @@ function renderAccountPartnerTab(a){
         </div>
         <button class="btn btn-sm" id="btnOpenInExternal">Открыть во «Внешних клиентах» →</button>
       </div>
-      <div class="panel-b" id="partnerClientsBlock">${renderClientsTable(a.id)}</div>
     </div>
 
   `;
@@ -2001,10 +2278,7 @@ function bindAccountDetailPage(){
     else if(key==='canQr' && !a[key]) toast('QR выключен — допуск к пополнению по QR снят у всех клиентов партнёра');
     else toast('Изменение сохранено');
   }));
-  $('#btnSaveLimits')?.addEventListener('click', ()=>{
-    $all('input[data-limit]').forEach(inp=>{ a[inp.dataset.limit] = inp.value; });
-    toast('Лимиты СБП сохранены');
-  });
+  $('#btnEditLimits')?.addEventListener('click', ()=>openLimitsModal(a));
   $('#btnShowSecret')?.addEventListener('click', (e)=>{
     const val = $('#secretVal');
     if(val.textContent.startsWith('••')){ val.textContent = a.secret; e.target.textContent='Скрыть'; }
@@ -2069,6 +2343,8 @@ function bindAccountDetailPage(){
     if(bridgeModeSelect) a.bridgeMode = bridgeModeSelect.value;
     toast('Настройки KYC-моста сохранены');
   });
+
+  $('#btnEditRequiredFields')?.addEventListener('click', ()=>openRequiredFieldsModal(a));
 
   $('#btnSaveTelegram')?.addEventListener('click', ()=>{
     a.partnerChatId = $('#tgChatId').value;
@@ -2262,7 +2538,7 @@ function renderPartnerWizardStep(r, wiz){
         <div class="field"><label>Скользящий период, дн.</label><input id="wizRollDays" value="${esc(wiz.rollingPeriodDays)}" placeholder="30"></div>
         <div class="field"><label>Создано QR в сутки</label><input id="wizCreatedDaily" value="${esc(wiz.createdQrDailyLimit)}" placeholder="—"></div>
         <div class="field"><label>Оплачено QR в сутки</label><input id="wizSuccessDaily" value="${esc(wiz.successfulQrDailyLimit)}" placeholder="—"></div>
-        <div class="field"><label>Лимит неоплаченных до блокировки</label><input id="wizUnpaidBan" value="${esc(wiz.unpaidQrBanLimit)}" placeholder="—"></div>
+        <div class="field"><label>Неопл. до блокировки</label><input id="wizUnpaidBan" value="${esc(wiz.unpaidQrBanLimit)}" placeholder="—"></div>
       </div>
       <div class="field" style="margin-top:12px;max-width:260px"><label>Сумма за скользящий период</label><input id="wizRollAmount" value="${esc(wiz.rollingAmountLimit)}" placeholder="—"></div>
     `;
@@ -2861,24 +3137,43 @@ function renderClientOperationsTab(c, a){
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Действие</th></tr></thead>
+          <thead><tr><th>ID инвойса / операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Возврат</th><th>Действие</th></tr></thead>
           <tbody>${rows.length ? rows.map(op=>{
             const fee = opFeeInfo(op, a);
             const isHung = op.status==='PENDING';
+            const inv = op.invoice;
+            const refundBadge = (!inv || !inv.refunds.length) ? '<span class="muted">—</span>'
+              : inv.refunds.map(r=>{
+                  const map = { PENDING:['b-warning','Возврат в ожидании'], CONFIRMED:['b-success','Возврат подтверждён'], FAILED:['b-error','Возврат отклонён'] };
+                  const [cls,label] = map[r.status]||['b-faded', r.status];
+                  return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
+                }).join(' ');
+            const isRefund = op.type==='REFUND';
             return `
             <tr>
-              <td><a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a><div class="cell-sub">${esc(op.createdAt)}</div></td>
+              <td>${inv ? `
+                <a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-invoice-link="${esc(inv.invoiceId)}">${esc(inv.invoiceId)}</a>
+                <div class="cell-sub">СБП ${esc(op.sbpOperationId)}</div>
+                ${inv.orderNumber ? `<div class="cell-sub">Заказ ${esc(inv.orderNumber)}</div>` : ''}
+              ` : isRefund ? `
+                <a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a>
+                <div class="cell-sub">${esc(op.isFullRefund?'Полный':'Частичный')} возврат по <a href="#" data-invoice-link="${esc(op.linkedInvoiceId)}">${esc(op.linkedInvoiceId)}</a></div>
+              ` : `
+                <a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a>
+                <div class="cell-sub">${esc(op.createdAt)}</div>
+              `}</td>
               <td>${opTypeBadge(op.type)}</td>
               <td class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</td>
-              <td class="cell-strong">${op.amount.toLocaleString('ru-RU')}</td>
-              <td class="muted">${fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
+              <td class="cell-strong" style="${isRefund?'color:var(--error-dark)':''}">${isRefund?'-':''}${op.amount.toLocaleString('ru-RU')}</td>
+              <td class="muted">${isRefund?'—':fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
               <td>${opStatusBadge(op.status)}</td>
+              <td>${refundBadge}</td>
               <td>${isHung ? `
                 <div style="display:flex;gap:6px">
                   <button class="btn btn-sm btn-primary" data-op-approve="${esc(op.sbpOperationId)}">Подтвердить</button>
                   <button class="btn btn-sm btn-danger" data-op-decline="${esc(op.sbpOperationId)}">Отклонить</button>
                 </div>` : `<span class="muted">—</span>`}</td>
-            </tr>`;}).join('') : `<tr><td colspan="7"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
+            </tr>`;}).join('') : `<tr><td colspan="8"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
         </table>
       </div>
       <div class="pagfoot"><span>Total: ${rows.length} lines</span><select class="select"><option>10</option><option>20</option><option>50</option></select></div>
@@ -2936,6 +3231,14 @@ function opLedgerRows(op, c, a){
       {account:accClient, type:'CREDIT', amount:`${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}`, status:st(1)},
     ];
   }
+  if(op.type==='REFUND'){
+    // реверс в обратную сторону от исходного пополнения — счёт партнёра дебетуется,
+    // служебный счёт провайдера кредитуется на сумму возврата
+    return [
+      {account:accPartner, type:'DEBIT', amount:`${op.amount.toLocaleString('ru-RU')} RUB`, status:st(0)},
+      {account:'SERVICE-BT6-RUNA', type:'CREDIT', amount:`${op.amount.toLocaleString('ru-RU')} RUB`, status:st(1)},
+    ];
+  }
   const fee = opFeeInfo(op, a);
   return [
     {account:accClient, type:'DEBIT', amount:`${fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(0)},
@@ -2945,7 +3248,7 @@ function opLedgerRows(op, c, a){
   ];
 }
 
-const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', EXCHANGE:'EXCHANGE' };
+const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', EXCHANGE:'EXCHANGE', REFUND:'REVERSAL' };
 
 function renderOperationDetail(clientId, opId){
   const c = clientById(clientId);
@@ -2957,11 +3260,33 @@ function renderOperationDetail(clientId, opId){
   const fee = opFeeInfo(op, a);
   const fmtMoney = (n,cur)=> n.toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' ' + (cur||'RUB');
   const isExchange = op.type==='EXCHANGE';
+  const isRefund = op.type==='REFUND';
 
   const clientInitials = (fullName(c).match(/\S/)? fullName(c).split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase() : '—');
 
   let sender, receiver;
-  if(isExchange){
+  if(isRefund){
+    // возврат — отдельная операция типа REFUND (аналог OperationTypeEnum.REVERSAL в ядре), направление
+    // обратное исходному платежу: деньги уходят со счёта партнёра назад через НСПК на счёт плательщика.
+    // Реквизиты плательщика Bitbanker не узнаёт и не хранит на этом шаге так же, как и при самой оплате.
+    sender = {
+      roleLabel:'Счёт списания', name:'Счёт партнёра', initials:'💳',
+      badges: a ? [a.name] : [],
+      rows:[
+        {k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null},
+        {k:'Исходная операция', v: op.linkedOpId, mono:true},
+      ],
+      link: a ? {label:'Открыть виртуальный счёт', enabled:true, gotoId:a.id} : null,
+    };
+    receiver = {
+      roleLabel:'Получатель возврата', name:'Плательщик по исходной операции', initials:'🏦',
+      badges:['НСПК'],
+      rows:[
+        {k:'Реквизиты', v:'Неизвестны Bitbanker — возврат через НСПК по ссылке на исходный платёж'},
+        {k:'Причина возврата', v: op.refundReason},
+      ],
+    };
+  } else if(isExchange){
     // автоконвертация идёт внутри счёта самого партнёра — списание и зачисление это один и тот же владелец,
     // просто два суб-счёта в разных валютах, отправителя-клиента тут нет
     const vaSeed = pseudoAccountId('va-'+(a?a.id:'no-partner')).slice(0,8).toUpperCase();
@@ -3004,9 +3329,11 @@ function renderOperationDetail(clientId, opId){
 
   const ledgerRows = opLedgerRows(op, c, a);
 
-  const metaJson = isExchange
-    ? {source:'bb', bb_type:'exchange', rate:op.rate}
-    : {source:'bb', bb_type: op.type==='SBP'?'sbp':'qr'};
+  const metaJson = isRefund
+    ? {source:'bb', bb_type:'reversal', original_operation_id:op.linkedOpId, invoice_id:op.linkedInvoiceId}
+    : isExchange
+      ? {source:'bb', bb_type:'exchange', rate:op.rate}
+      : {source:'bb', bb_type: op.type==='SBP'?'sbp':'qr'};
 
   return `
     <div class="rec-card">
@@ -3030,7 +3357,7 @@ function renderOperationDetail(clientId, opId){
           <div class="rec-meta">
             <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
             <span>Клиент: <a href="#" class="namelink" id="opGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
-            <span>Дата создания: ${esc(op.createdAt)}</span>
+            ${isRefund ? `<span>Исходный инвойс: <a href="#" class="namelink" id="opGotoInvoice" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedInvoiceId)}</a></span>` : `<span>Дата создания: ${esc(op.createdAt)}</span>`}
           </div>
         </div>
       </div>
@@ -3040,19 +3367,20 @@ function renderOperationDetail(clientId, opId){
       <div class="panel-h"><h3>Основное</h3></div>
       <div class="panel-b">
         <dl class="deflist" style="grid-template-columns:1fr;margin-bottom:14px">
-          <div><dt>Сумма${isExchange?'':', RUB'}</dt><dd class="cell-strong" style="font-size:17px">${isExchange ? `${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency} → ${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}` : op.amount.toLocaleString('ru-RU')}</dd></div>
+          <div><dt>Сумма${isExchange?'':', RUB'}</dt><dd class="cell-strong" style="font-size:17px">${isExchange ? `${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency} → ${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}` : (isRefund?'-':'')+op.amount.toLocaleString('ru-RU')}</dd></div>
         </dl>
         <dl class="deflist cols3">
-          <div><dt>Направление</dt><dd>Входящая</dd></div>
+          <div><dt>Направление</dt><dd>${isRefund?'Исходящая (возврат)':'Входящая'}</dd></div>
           <div><dt>Платёжная система</dt><dd class="mono" style="font-size:12.5px">${esc(PAYMENT_SYSTEM_CODE[op.type]||op.type)}</dd></div>
           <div><dt>Поставщик</dt><dd class="${op.bankName?'':'muted'}">${op.bankName?esc(op.bankName):'—'}</dd></div>
           <div><dt>Дата</dt><dd>${esc(op.createdAt)}</dd></div>
           <div><dt>Исполнено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>
-          <div><dt>Обновлено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>
+          ${isRefund ? `<div><dt>Тип возврата</dt><dd>${op.isFullRefund?'Полный':'Частичный'}</dd></div>` : `<div><dt>Обновлено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>`}
         </dl>
       </div>
     </div>
 
+    ${isRefund ? '' : `
     <div class="panel">
       <div class="panel-h"><h3>Расчёт</h3></div>
       <div class="panel-b">
@@ -3069,7 +3397,7 @@ function renderOperationDetail(clientId, opId){
           <div><dt>Итого удержано</dt><dd class="cell-strong">${fmtMoney(fee.totalFee)}</dd></div>
         </dl>
       </div>
-    </div>
+    </div>`}
 
     <div class="panel">
       <div class="panel-h"><h3>Участники операции</h3></div>
@@ -3087,7 +3415,8 @@ function renderOperationDetail(clientId, opId){
       <div class="panel-b">
         <dl class="deflist cols3">
           <div><dt>ID операции</dt><dd class="mono" style="font-size:11.5px">${esc(op.sbpOperationId)}</dd></div>
-          <div><dt>Назначение платежа</dt><dd>${isExchange?'Автоконвертация суммы пополнения':'Пополнение баланса клиента партнёра'}</dd></div>
+          <div><dt>Назначение платежа</dt><dd>${isRefund?'Возврат по ранее оплаченному инвойсу':isExchange?'Автоконвертация суммы пополнения':'Пополнение баланса клиента партнёра'}</dd></div>
+          ${isRefund ? `<div><dt>Причина возврата</dt><dd>${esc(op.refundReason)}</dd></div>` : ''}
         </dl>
       </div>
     </div>
@@ -3097,7 +3426,7 @@ function renderOperationDetail(clientId, opId){
       <div class="panel-b">
         <dl class="deflist cols3">
           <div><dt>Источник средств</dt><dd class="muted">—</dd></div>
-          <div><dt>Назначение платежа</dt><dd>${isExchange?`Автоконвертация ${op.fromAmount} ${op.fromCurrency}`:`Поступление ${op.amount} RUB`}</dd></div>
+          <div><dt>Назначение платежа</dt><dd>${isRefund?`Возврат ${op.amount} RUB`:isExchange?`Автоконвертация ${op.fromAmount} ${op.fromCurrency}`:`Поступление ${op.amount} RUB`}</dd></div>
           <div><dt>Примечание</dt><dd class="muted">—</dd></div>
         </dl>
         <details open style="margin-top:14px">
@@ -3196,6 +3525,12 @@ function openDeleteCommentModal(opId, cm){
 function bindOperationDetail(){
   $('#backToOps')?.addEventListener('click', ()=>{ state.view='external-detail'; state.clientDetailTab='ops'; render(); });
   $('#opGotoClient')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='external-detail'; state.clientDetailTab='main'; render(); });
+  $('#opGotoInvoice')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const op = mockClientOperations(state.currentClientId).find(o=>o.sbpOperationId===state.currentOpId);
+    if(!op?.linkedInvoiceId) return;
+    state.currentInvoiceId = op.linkedInvoiceId; state.view='invoice-detail'; render();
+  });
   $all('[data-party-goto]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
     const id = e.currentTarget.dataset.partyGoto;
@@ -3249,6 +3584,186 @@ function bindOperationDetail(){
   $all('[data-comment-delete]').forEach(b=>b.addEventListener('click', ()=>{
     const cm = getOpComments(opId).find(x=>x.id===b.dataset.commentDelete);
     if(cm) openDeleteCommentModal(opId, cm);
+  }));
+}
+
+/* =========================================================================
+   INVOICE DETAIL — прослойка над СБП/QR операцией (см. раздел 2 доработок
+   партнёрского API, dorabotki-partnyorskij-api-01-10-2026.md). В истории
+   операций клиента партнёра на первом месте теперь инвойс, сама операция —
+   связанный факт платежа, открывается отдельной карточкой по ссылке.
+   ========================================================================= */
+function findInvoiceByOp(clientId, invoiceId){
+  const op = mockClientOperations(clientId).find(o=>o.invoice && o.invoice.invoiceId===invoiceId);
+  return op ? { op, invoice: op.invoice } : null;
+}
+
+function invoiceRefundStatusBadge(s){
+  const map = { PENDING:['b-warning','В ожидании'], CONFIRMED:['b-success','Подтверждён'], FAILED:['b-error','Отклонён'] };
+  const [cls,label] = map[s] || ['b-faded', s];
+  return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
+}
+
+function renderInvoiceDetail(clientId, invoiceId){
+  const c = clientById(clientId);
+  if(!c) return `<div class="empty-state">Клиент не найден</div>`;
+  const found = findInvoiceByOp(clientId, invoiceId);
+  if(!found) return `<div class="empty-state">Инвойс не найден</div>`;
+  const { op, invoice: inv } = found;
+  const fmtMoney = (n)=> Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' RUB';
+
+  const refundedTotal = inv.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0);
+  const remainingToRefund = Math.max(op.amount - refundedTotal, 0);
+  const canRefund = op.status==='CONFIRMED' && remainingToRefund > 0;
+
+  return `
+    <div class="rec-card">
+      <div class="rec-top">
+        <a href="#" class="rec-back" id="backToOpsFromInvoice">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div style="flex:1">
+          <div class="rec-headrow" style="justify-content:space-between">
+            <div class="rec-headrow" style="gap:12px">
+              <h1>Инвойс ${esc(inv.invoiceId)}</h1>
+              ${opStatusBadge(op.status)}
+            </div>
+            ${canRefund ? `<button class="btn btn-primary" id="invCreateRefund">Оформить возврат</button>` : ''}
+          </div>
+          <div class="rec-meta">
+            <span class="idcopy" title="ID инвойса">ID: ${esc(inv.invoiceId)}</span>
+            <span>Клиент: <a href="#" class="namelink" id="invGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
+            ${inv.orderNumber ? `<span>Заказ партнёра: ${esc(inv.orderNumber)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Исходный платёж (СБП)</h3></div>
+      <div class="panel-b">
+        <div class="party" style="max-width:100%">
+          <div class="party-rows">
+            ${opPartyRow({k:'ID операции', v:op.sbpOperationId, mono:true})}
+            ${opPartyRow({k:'Сумма', v:fmtMoney(op.amount)})}
+            ${opPartyRow({k:'Банк отправителя', v:op.bankName})}
+            ${opPartyRow({k:'Дата создания', v:op.createdAt})}
+            ${opPartyRow({k:'Исполнено в', v:op.paidAt})}
+          </div>
+        </div>
+        <div style="margin-top:10px">${opStatusBadge(op.status)}</div>
+        <div class="party-link" data-goto-operation="${esc(op.sbpOperationId)}" style="margin-top:12px">→ Открыть карточку исходного платежа</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Информация о заказе</h3></div>
+      <div class="panel-b">
+        <dl class="deflist" style="grid-template-columns:1fr;margin-bottom:12px">
+          <div><dt>order_id</dt><dd class="mono" style="font-size:12.5px">${esc(inv.orderId)}</dd></div>
+        </dl>
+        <div class="jsonbox">${esc(JSON.stringify({
+          order_number: inv.orderNumber,
+          amount: inv.amount,
+          amount_breakdown: inv.amountBreakdown,
+          promo_code: inv.promoCode,
+          items: inv.items,
+          customer: inv.customer,
+          delivery: inv.delivery,
+        },null,2))}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Возвраты</h3></div>
+      <div class="panel-b">
+        ${inv.refunds.length ? `
+        <div class="twrap">
+          <table class="grid">
+            <thead><tr><th>ID возврата</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Причина</th><th>Дата</th></tr></thead>
+            <tbody>${inv.refunds.map(r=>`
+              <tr>
+                <td><a href="#" class="namelink mono" style="font-size:12px" data-goto-operation="${esc(r.refundId)}">${esc(r.refundId)}</a></td>
+                <td class="cell-strong">${fmtMoney(r.amount)}</td>
+                <td>${r.amount>=op.amount?'Полный':'Частичный'}</td>
+                <td>${invoiceRefundStatusBadge(r.status)}</td>
+                <td>${esc(r.reason)}</td>
+                <td class="muted">${esc(r.createdAt)}</td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div class="deflist cols3" style="margin-top:12px">
+          <div><dt>Возвращено</dt><dd>${fmtMoney(refundedTotal)}</dd></div>
+          <div><dt>Остаток к возврату</dt><dd class="cell-strong">${fmtMoney(remainingToRefund)}</dd></div>
+        </div>` : `<div class="empty-state" style="padding:10px 0">По этому инвойсу возвратов не было</div>`}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Комментарии оператора</h3></div>
+      <div class="panel-b">
+        ${renderInvoiceComments(inv.invoiceId)}
+      </div>
+    </div>
+  `;
+}
+
+function openCreateRefundModal(clientId, invoiceId){
+  const found = findInvoiceByOp(clientId, invoiceId);
+  if(!found) return;
+  const { op, invoice: inv } = found;
+  const refundedTotal = inv.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0);
+  const remaining = Math.max(op.amount - refundedTotal, 0);
+  openModal(`
+    <div class="modal-h"><h3>Оформить возврат</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="empty-state" style="padding:0 0 12px;margin:0">Остаток к возврату по операции: <b>${remaining.toLocaleString('ru-RU')} RUB</b>. Пустое поле суммы — полный возврат остатка.</div>
+      <div class="field"><label>Сумма возврата (опционально)</label><input id="refAmount" type="number" max="${remaining}" min="0" placeholder="${remaining}"></div>
+      <div class="field"><label>Причина (обязательно)</label><textarea rows="3" id="refReason" placeholder="Например: возврат по заявке покупателя, товар получен и проверен"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="refCreateOk">Создать возврат</button></div>
+  `);
+  $('#refCreateOk').addEventListener('click', ()=>{
+    const reason = $('#refReason').value.trim();
+    if(!reason){ toast('Укажите причину возврата'); return; }
+    const rawAmount = $('#refAmount').value;
+    const amount = rawAmount ? Number(rawAmount) : remaining;
+    if(!amount || amount<=0 || Number.isNaN(amount)){ toast('Укажите корректную сумму возврата'); return; }
+    if(amount > remaining){ toast(`Сумма возврата не может быть больше остатка — ${remaining.toLocaleString('ru-RU')} RUB`); return; }
+    if(!invoiceRefundExtras[inv.invoiceId]) invoiceRefundExtras[inv.invoiceId] = [];
+    invoiceRefundExtras[inv.invoiceId].push({
+      refundId: 'ref_' + Math.floor(10000 + Math.random()*89999),
+      amount, status:'PENDING', reason,
+      createdAt: new Date().toLocaleString('ru-RU').slice(0,17),
+    });
+    closeModal(); render();
+    toast('Возврат создан, статус - в ожидании ответа провайдера');
+  });
+}
+
+function bindInvoiceDetail(){
+  $('#backToOpsFromInvoice')?.addEventListener('click', ()=>{ state.view='external-detail'; state.clientDetailTab='ops'; render(); });
+  $('#invGotoClient')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='external-detail'; state.clientDetailTab='main'; render(); });
+  $all('[data-goto-operation]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    state.currentOpId = e.currentTarget.dataset.gotoOperation; state.view='operation-detail'; render();
+  }));
+  $('#invCreateRefund')?.addEventListener('click', ()=>{
+    openCreateRefundModal(state.currentClientId, state.currentInvoiceId);
+  });
+  const invoiceId = state.currentInvoiceId;
+  $('#invCommentSend')?.addEventListener('click', ()=>{
+    const text = $('#invNewComment').value.trim();
+    if(!text) return;
+    getInvoiceComments(invoiceId).push({
+      id:'ic'+Date.now(), author:'Super Admin', initials:'SA',
+      when:new Date().toLocaleString('ru-RU').slice(0,17), text, own:true,
+    });
+    render();
+  });
+  $all('[data-inv-comment-delete]').forEach(b=>b.addEventListener('click', ()=>{
+    invoiceComments[invoiceId] = getInvoiceComments(invoiceId).filter(x=>x.id!==b.dataset.invCommentDelete);
+    render();
   }));
 }
 
@@ -3343,11 +3858,17 @@ function renderClientDetail(clientId){
               <h1>${esc(fullName(c))}</h1>
               <span class="rec-pill ${clientPillClass}">${clientPillLabel}</span>
             </div>
-            <div class="actionsbar">
-              <button class="btn" id="btnEditClient">Редактировать</button>
-              ${restrictActions}
-              <button class="btn" id="btnDownloadNotification">Скачать уведомление</button>
-              ${!c.deletionRequested ? `<button class="btn btn-solid-danger" id="btnMarkDelete">Пометить к удалению</button>` : ''}
+            <div class="popwrap">
+              <button class="icon-btn" id="clientActionsBtn" title="Действия">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="19" r="1.8" fill="currentColor"/></svg>
+              </button>
+              ${state.clientActionsOpen ? `
+                <div class="dropmenu">
+                  <button id="btnEditClient">Редактировать</button>
+                  <button id="${c.status==='RESTRICTED'?'btnUnrestrict':'btnRestrict'}">${c.status==='RESTRICTED'?'Снять ограничение':'Ограничить'}</button>
+                  <button id="btnDownloadNotification">Скачать уведомление</button>
+                  ${!c.deletionRequested ? `<button id="btnMarkDelete" style="color:var(--error-dark)">Пометить к удалению</button>` : ''}
+                </div>` : ''}
             </div>
           </div>
           <div class="rec-meta">
@@ -3398,6 +3919,10 @@ function renderClientDetail(clientId){
               <div><dt>Страна выдачи паспорта</dt><dd class="${c.passportIssuingCountry?'':'muted'}">${esc(c.passportIssuingCountry||'—')}</dd></div>
               <div><dt>Результат проверки</dt><dd>${checkResultBadge(c.checkResult)}</dd></div>
 
+              ${(c.lastNameNative || c.firstNameNative) ? `
+              <div><dt>Фамилия как в документе</dt><dd class="${c.lastNameNative?'':'muted'}">${esc(c.lastNameNative||'—')}</dd></div>
+              <div><dt>Имя как в документе</dt><dd class="${c.firstNameNative?'':'muted'}">${esc(c.firstNameNative||'—')}</dd></div>` : ''}
+
               <div><dt>Зарегистрировано в</dt><dd>${esc(c.createdAt||'—')}</dd></div>
             </dl>
           </div>
@@ -3439,9 +3964,9 @@ function renderClientDetail(clientId){
       <div>
         <div class="panel" data-collapsed="${isCollapsed('cd-checks')}">
           ${collapsibleHead('cd-checks', `<h3>Проверки (${ranChecks.length})</h3>`)}
-          ${ranChecks.length ? `<div class="panel-actions"><button class="btn btn-sm" id="btnRerunAllChecks">Перезапустить все</button></div>` : ''}
           <div class="panel-b">
             <div class="checklist">${checksRows||'<div class="empty-state" style="padding:12px">Проверки ещё не запускались</div>'}</div>
+            ${ranChecks.length ? `<div style="margin-top:12px"><button class="btn btn-sm" id="btnRerunAllChecks">Перезапустить все</button></div>` : ''}
           </div>
         </div>
 
@@ -3506,6 +4031,11 @@ function logChange(c, field, oldV, newV, reason, actor, doc){
 
 function bindClientDetail(){
   const c = clientById(state.currentClientId);
+  if(c && state._missingFieldsToastId!==c.id){
+    state._missingFieldsToastId = c.id;
+    const missing = getMissingRequiredFieldsForClient(c);
+    if(missing.length) toast(`Отсутствуют обязательные параметры: ${missing.join(', ')}`);
+  }
   bindPanelToggles();
   $('#backToClients')?.addEventListener('click', ()=>{ state.view='external-list'; render(); });
   $all('.popwrap').forEach(w=>w.addEventListener('click', e=>e.stopPropagation()));
@@ -3517,6 +4047,10 @@ function bindClientDetail(){
     $all('[data-op-link]').forEach(el=>el.addEventListener('click', (e)=>{
       e.preventDefault();
       state.currentOpId = el.dataset.opLink; state.view='operation-detail'; render();
+    }));
+    $all('[data-invoice-link]').forEach(el=>el.addEventListener('click', (e)=>{
+      e.preventDefault();
+      state.currentInvoiceId = el.dataset.invoiceLink; state.view='invoice-detail'; render();
     }));
     $('#opsSearch')?.addEventListener('input', e=>{ state.filters.opsQuery=e.target.value; renderInto(); });
     $('#opsStatusFilterBtn')?.addEventListener('click', ()=>{
@@ -3698,6 +4232,7 @@ function bindClientDetail(){
 
   $all('[data-check]').forEach(b=>b.addEventListener('click', ()=>openCheckDetailsModal(b.dataset.check, c)));
 
+  $('#clientActionsBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); state.clientActionsOpen=!state.clientActionsOpen; render(); });
   $('#btnEditClient')?.addEventListener('click', ()=>openEditClientModal(c));
   $('#btnDownloadNotification')?.addEventListener('click', ()=>toast('Формируется уведомление по клиенту…'));
   $('#btnMarkDelete')?.addEventListener('click', ()=>openMarkForDeletionModal(c));
@@ -3787,6 +4322,31 @@ function openCommissionModal(a){
   });
 }
 
+function openLimitsModal(a){
+  openModal(`
+    <div class="modal-h"><h3>Лимиты СБП — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="field-grid cols3">
+        <div class="field"><label>Мин. сумма QR</label><input data-limit="minQrAmount" value="${esc(a.minQrAmount)}" placeholder="—"></div>
+        <div class="field"><label>Макс. сумма QR</label><input data-limit="maxQrAmount" value="${esc(a.maxQrAmount)}" placeholder="—"></div>
+        <div class="field"><label>Скользящий период, дн.</label><input data-limit="rollingPeriodDays" value="${esc(a.rollingPeriodDays)}" placeholder="30"></div>
+        <div class="field"><label>Создано QR в сутки</label><input data-limit="createdQrDailyLimit" value="${esc(a.createdQrDailyLimit)}" placeholder="—"></div>
+        <div class="field"><label>Оплачено QR в сутки</label><input data-limit="successfulQrDailyLimit" value="${esc(a.successfulQrDailyLimit)}" placeholder="—"></div>
+        <div class="field"><label>Неопл. до блокировки</label><input data-limit="unpaidQrBanLimit" value="${esc(a.unpaidQrBanLimit)}" placeholder="—"></div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Сумма за скользящий период</label>
+        <input data-limit="rollingAmountLimit" value="${esc(a.rollingAmountLimit)}" placeholder="—" style="max-width:220px">
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="limitsSave">Сохранить</button></div>
+  `, true);
+  $('#limitsSave').addEventListener('click', ()=>{
+    $all('input[data-limit]').forEach(inp=>{ a[inp.dataset.limit] = inp.value; });
+    closeModal(); render(); toast('Лимиты СБП сохранены');
+  });
+}
+
 function openEditPartnerInfoModal(a){
   openModal(`
     <div class="modal-h"><h3>Основная информация — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
@@ -3828,6 +4388,10 @@ function openNewClientModal(scopeAgentId){
         <div class="field"><label>Номер паспорта</label><input id="ncPassport"></div>
         <div class="field"><label>Страна выдачи</label><input id="ncCountry" placeholder="KGZ"></div>
       </div>
+      <div class="field-grid">
+        <div class="field"><label>Фамилия как в документе</label><input id="ncLastNative" placeholder="Обязательно при иностранном документе"></div>
+        <div class="field"><label>Имя как в документе</label><input id="ncFirstNative" placeholder="Обязательно при иностранном документе"></div>
+      </div>
       <div class="toggle-row"><div class="tt">Пополнение по СБП</div><button class="switch" id="ncSbp"><span class="knob"></span></button></div>
       <div class="toggle-row"><div class="tt">Пополнение по QR</div><button class="switch" id="ncQr"><span class="knob"></span></button></div>
     </div>
@@ -3838,6 +4402,14 @@ function openNewClientModal(scopeAgentId){
   $('#ncSave').addEventListener('click', ()=>{
     const agentId = $('#ncAgent').value, last=$('#ncLast').value.trim(), first=$('#ncFirst').value.trim();
     if(!agentId || !last || !first){ toast('Заполните партнёра, фамилию и имя'); return; }
+    const country = $('#ncCountry').value.trim();
+    // как в bb1 (partner_clients.py: validate_non_local_required_fields) - для
+    // нелокального паспорта "как в документе" обязательны уже на создании, не только на правке
+    const isForeign = !!country && country.toUpperCase()!=='RUS';
+    const lastNative = $('#ncLastNative').value.trim(), firstNative = $('#ncFirstNative').value.trim();
+    if(isForeign && (!lastNative || !firstNative)){
+      toast('При иностранном документе обязательны «Фамилия как в документе» и «Имя как в документе»'); return;
+    }
     const id = 'c'+(clients.length+1);
     clients.push({
       id, agentId, externalId: $('#ncExtId').value.trim() || ('manual_'+Math.floor(Math.random()*9000+1000)),
@@ -3845,7 +4417,7 @@ function openNewClientModal(scopeAgentId){
       status:'PENDING', verificationStatus:'PENDING', sourceChannel:'MANUAL', kycMethod:'MANUAL', checkResult:'PENDING',
       deletionRequested:false, sbpTopUp:$('#ncSbp').classList.contains('on'), qrTopUp:$('#ncQr').classList.contains('on'),
       sbpTopUpFixed:false, sbpWithdrawal:false, sbpWithdrawalFixed:false, sbpBlockedByAntifraud:false, unpaidQrStreak:0, birthDate:'', passportNumber:$('#ncPassport').value.trim(),
-      passportIssuedDate:'', passportIssuingCountry:$('#ncCountry').value.trim(), inn:'', registrationAddress:{},
+      passportIssuedDate:'', passportIssuingCountry:country, lastNameNative:lastNative, firstNameNative:firstNative, inn:'', registrationAddress:{},
       createdAt: new Date().toLocaleString('ru-RU').slice(0,17), checks:{},
     });
     closeModal(); render(); toast('Клиент создан, проверки поставлены в очередь');
@@ -4026,6 +4598,32 @@ function openMarkForDeletionModal(c){
   });
 }
 
+function openRequiredFieldsModal(a){
+  const current = a.requiredFields||REQUIRED_FIELDS_DEFAULT;
+  openModal(`
+    <div class="modal-h"><h3>Обязательные поля клиента — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="ts" style="margin-bottom:10px;color:var(--error-dark)">Если включить поле, которого не было в обязательных, у существующих клиентов партнёра, где оно не заполнено, нужно будет дозаполнить данные — иначе пополнения через партнёрский API для них перестанут проходить.</div>
+      ${REQUIRED_FIELDS_GROUPS.map(g=>`
+        <div class="ts" style="margin:10px 0 6px;font-weight:600;color:var(--text)">${g.group}</div>
+        ${g.fields.map(f=>`
+          <label class="checkfilter" style="display:flex;margin-bottom:6px">
+            <input type="checkbox" data-reqfield="${f.key}" ${current.includes(f.key)?'checked':''}>
+            ${f.label}${REQUIRED_FIELDS_DEFAULT.includes(f.key)?' <span class="ts" style="margin-left:4px">(по умолчанию)</span>':''}
+          </label>`).join('')}
+      `).join('')}
+      <div class="field" style="margin-top:12px"><label>Причина <span class="req">*</span></label><textarea rows="2" id="reqFieldsReason" placeholder="Обязательно — попадёт в журнал изменений"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="reqFieldsSave">Сохранить</button></div>
+  `);
+  $('#reqFieldsSave').addEventListener('click', ()=>{
+    if(!$('#reqFieldsReason').value.trim()){ toast('Укажите причину'); return; }
+    a.requiredFields = $all('[data-reqfield]').filter(c=>c.checked).map(c=>c.dataset.reqfield);
+    closeModal(); render();
+    toast('Обязательные поля клиента сохранены');
+  });
+}
+
 function openCheckDetailsModal(code, c){
   const meta = CHECK_TYPES.find(t=>t.code===code);
   const sample = checkDetailSamples[code] || {request:{last_name:c.lastName, first_name:c.firstName}, response:{passed:true, result:'ok'}};
@@ -4049,6 +4647,15 @@ function openCheckDetailsModal(code, c){
    ========================================================================= */
 document.getElementById('navAccounts').addEventListener('click', ()=>{ state.view='accounts-list'; render(); });
 document.getElementById('navExternal').addEventListener('click', ()=>{ state.view='external-list'; render(); });
+document.getElementById('navAccountsMobile').addEventListener('click', ()=>{ state.view='accounts-list'; render(); });
+document.getElementById('navExternalMobile').addEventListener('click', ()=>{ state.view='external-list'; render(); });
+/** Подсветка активного пункта нижнего меню — по текущему view. */
+function updateMobileNavActive(){
+  const accountsViews = ['accounts-list','account-detail','individual-detail'];
+  const externalViews = ['external-list','external-detail','operation-detail'];
+  $('#navAccountsMobile')?.classList.toggle('active', accountsViews.includes(state.view));
+  $('#navExternalMobile')?.classList.toggle('active', externalViews.includes(state.view));
+}
 
 /* close export/date/filter popovers on outside click */
 document.addEventListener('click', ()=>{
