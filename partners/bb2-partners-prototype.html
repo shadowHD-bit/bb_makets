@@ -422,6 +422,17 @@ table.grid tbody tr:last-child td{border-bottom:0}
 .field-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .hairline{border:0;border-top:1px solid var(--stroke-soft);margin:16px 0}
 
+.subblock{background:var(--bg-weak);border:1px solid var(--stroke-soft);border-radius:var(--radius-10);padding:13px 14px}
+.subblock + .subblock{margin-top:10px}
+.subblock-h{font-size:11px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px}
+.subblock .twrap{border-radius:var(--radius-8)}
+.subblock table.grid{background:var(--bg-white)}
+
+.raw-toggle{cursor:pointer;color:var(--primary);font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;list-style:none;-webkit-user-select:none;user-select:none}
+.raw-toggle::-webkit-details-marker{display:none}
+.raw-toggle .chevd{transition:transform .15s;flex:0 0 auto;display:flex}
+details[open] > .raw-toggle .chevd{transform:rotate(90deg)}
+
 .secretbox{display:flex;align-items:center;gap:8px;background:var(--bg-weak);border:1px solid var(--stroke-soft);border-radius:var(--radius-8);padding:9px 11px}
 .secretbox .val{flex:1;font-family:var(--font-mono);font-size:12px;color:var(--text-sub);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -810,6 +821,82 @@ const REQUIRED_FIELDS_GROUPS = [
 const REQUIRED_FIELDS_ALL = REQUIRED_FIELDS_GROUPS.flatMap(g=>g.fields.map(f=>f.key));
 const REQUIRED_FIELDS_LABELS = Object.fromEntries(REQUIRED_FIELDS_GROUPS.flatMap(g=>g.fields.map(f=>[f.key, f.label])));
 
+/* Конфигурация схемы инвойса партнёра (см. раздел 2 доработок партнёрского API) — пути внутри
+   сырого JSON партнёра, по которым бэкенд находит известные нам поля заказа. Настраивается
+   оператором в карточке партнёра, не партнёром через API. items[].* — пути внутри каждого
+   элемента массива позиций, относительно самого элемента, не от корня. */
+const INVOICE_SCHEMA_GROUPS = [
+  { group:'Заказ', fields:[
+    {key:'order_id', label:'order_id'},
+    {key:'order_number', label:'order_number'},
+    {key:'promo_code', label:'promo_code'},
+    {key:'description', label:'description'},
+  ]},
+  { group:'Разбивка суммы', fields:[
+    {key:'amount_breakdown.items', label:'Сумма товаров'},
+    {key:'amount_breakdown.discount', label:'Скидка'},
+    {key:'amount_breakdown.delivery', label:'Стоимость доставки'},
+    {key:'amount_breakdown.total', label:'Итого'},
+  ]},
+  { group:'Товары', fields:[
+    {key:'items[]', label:'Путь до массива позиций'},
+    {key:'items[].title', label:'Название (внутри элемента)'},
+    {key:'items[].sku', label:'Артикул (внутри элемента)'},
+    {key:'items[].quantity', label:'Количество (внутри элемента)'},
+    {key:'items[].unit_price', label:'Цена за единицу (внутри элемента)'},
+    {key:'items[].total_price', label:'Сумма по строке (внутри элемента)'},
+  ]},
+  { group:'Покупатель', fields:[
+    {key:'customer.full_name', label:'ФИО'},
+    {key:'customer.phone', label:'Телефон'},
+    {key:'customer.email', label:'Email'},
+  ]},
+  { group:'Доставка', fields:[
+    {key:'delivery.method', label:'Способ'},
+    {key:'delivery.city', label:'Город'},
+  ]},
+];
+const INVOICE_SCHEMA_FIELDS = INVOICE_SCHEMA_GROUPS.flatMap(g=>g.fields.map(f=>f.key));
+
+function getByPath(obj, path){
+  if(!path) return undefined;
+  return path.split('.').reduce((acc,key)=> (acc==null?undefined:acc[key]), obj);
+}
+/** Разбор сырого JSON партнёра по его конфигурации схемы — путь не найден = null, не ошибка. */
+function parseRawInvoiceByConfig(raw, config){
+  config = config || {};
+  const get = p => { const v = getByPath(raw, config[p]); return v===undefined ? null : v; };
+  const itemsArr = getByPath(raw, config['items[]']);
+  return {
+    order_id: get('order_id'),
+    order_number: get('order_number'),
+    promo_code: get('promo_code'),
+    description: get('description'),
+    amount_breakdown: {
+      items: get('amount_breakdown.items'),
+      discount: get('amount_breakdown.discount'),
+      delivery: get('amount_breakdown.delivery'),
+      total: get('amount_breakdown.total'),
+    },
+    items: Array.isArray(itemsArr) ? itemsArr.map(it=>({
+      title: getByPath(it, config['items[].title']) ?? null,
+      sku: getByPath(it, config['items[].sku']) ?? null,
+      quantity: getByPath(it, config['items[].quantity']) ?? null,
+      unit_price: getByPath(it, config['items[].unit_price']) ?? null,
+      total_price: getByPath(it, config['items[].total_price']) ?? null,
+    })) : null,
+    customer: {
+      full_name: get('customer.full_name'),
+      phone: get('customer.phone'),
+      email: get('customer.email'),
+    },
+    delivery: {
+      method: get('delivery.method'),
+      city: get('delivery.city'),
+    },
+  };
+}
+
 /* Чтение значения поля клиента по ключу обязательного поля партнёрского API —
    для проверки, у кого из уже существующих клиентов партнёра данных не хватает,
    если включить это поле в обязательные. */
@@ -854,7 +941,17 @@ let agents = [
    acceptForeignClients:true, enableKycViaChainbridge:true, sumsubSourceKey:"finpay_kg_prod", maxDailyChecks:1000, kycRateLimitPerMin:60, partnerChatId:"-5580041538", sendChatNotifications:true, sbpBankName:"Pay2me", autoConvertToUsdt:false, bridgeMode:'SUMSUB', minQrAmount:'100', maxQrAmount:'150000', createdQrDailyLimit:400, successfulQrDailyLimit:300,
    unpaidQrBanLimit:5, rollingAmountLimit:'2000000', rollingPeriodDays:30, referralCode:'FPKG-20A4', tariffName:'Партнёр Стандарт',
    paymentRate:'1.2', paymentMin:'30', partnerClientFeePct:'0', partnerClientFeeAbs:'0', exchangeRate:'0', withdrawalRate:'0', invoicesWebhookUrl:'https://finpay.kg/hooks/invoices', eventsWebhookUrl:'https://finpay.kg/hooks/events',
-   requiredFields:['phone','passport']},
+   requiredFields:['phone','passport'],
+   invoiceSchemaConfig:{
+     'order_id':'invoice.order_id', 'order_number':'invoice.order_number',
+     'promo_code':'invoice.promo_code', 'description':'invoice.description',
+     'amount_breakdown.items':'invoice.amount_breakdown.items', 'amount_breakdown.discount':'invoice.amount_breakdown.discount',
+     'amount_breakdown.delivery':'invoice.amount_breakdown.delivery', 'amount_breakdown.total':'invoice.amount_breakdown.total',
+     'items[]':'invoice.items', 'items[].title':'title', 'items[].sku':'sku',
+     'items[].quantity':'quantity', 'items[].unit_price':'unit_price', 'items[].total_price':'total_price',
+     'customer.full_name':'invoice.customer.full_name', 'customer.phone':'invoice.customer.phone', 'customer.email':'invoice.customer.email',
+     'delivery.method':'invoice.delivery.method', 'delivery.city':'invoice.delivery.city',
+   }},
   {id:'a2', name:'PayMaxx', legalName:'PayMaxx Trading FZE', email:'admin@paymaxx.com', phone:'+971 4 220 1190',
    countryCode:'ARE', status:'SUSPENDED', partnerId:'p_paymaxx', partnerName:'PayMaxx', userId:'u-e2bf4c18',
    apiKey:'mock_pk_1a4f6b9c2e7d3081f5a2', secret:'mock_sk_2f8c4a1e9d6b3075c8f21a4e9d6b3075', canSbp:true, canQr:false,
@@ -871,7 +968,8 @@ let agents = [
    apiKey:'mock_pk_5c8e2a4f1b9d6073a4c8', secret:'mock_sk_4a9c2e5f8b1d6073c9a2e5f8b1d6073c', canSbp:true, canQr:true,
    acceptForeignClients:true, enableKycViaChainbridge:false, sumsubSourceKey:"", maxDailyChecks:null, kycRateLimitPerMin:null, partnerChatId:"", sendChatNotifications:false, sbpBankName:"Pay2me", autoConvertToUsdt:false, bridgeMode:'SUMSUB', minQrAmount:'1000', maxQrAmount:'500000', createdQrDailyLimit:1000, successfulQrDailyLimit:900,
    unpaidQrBanLimit:8, rollingAmountLimit:'8000000', rollingPeriodDays:30, referralCode:'VEGA-40F2', tariffName:'Партнёр Премиум',
-   paymentRate:'0.9', paymentMin:'25', partnerClientFeePct:'0', partnerClientFeeAbs:'0', exchangeRate:'0', withdrawalRate:'0', invoicesWebhookUrl:'https://vega.io/hooks/inv', eventsWebhookUrl:''},
+   paymentRate:'0.9', paymentMin:'25', partnerClientFeePct:'0', partnerClientFeeAbs:'0', exchangeRate:'0', withdrawalRate:'0', invoicesWebhookUrl:'https://vega.io/hooks/inv', eventsWebhookUrl:'',
+   idxChecksEnabled:false},
   {id:'a5', name:'Александр Петров', legalName:'ИП Петров А.П.', email:'qemaz@fexpost.com', phone:'+7 916 400 12 34',
    countryCode:'RUS', status:'ARCHIVED', partnerId:'p_petrov', partnerName:'Петров', userId:'u-9a943aac',
    apiKey:'mock_pk_arch_8a2', secret:'mock_sk_arch_2b5', canSbp:false, canQr:false, acceptForeignClients:false, enableKycViaChainbridge:false, sumsubSourceKey:"", maxDailyChecks:null, kycRateLimitPerMin:null, partnerChatId:"", sendChatNotifications:false, sbpBankName:"Pay2me", autoConvertToUsdt:false, bridgeMode:'SUMSUB',
@@ -1007,7 +1105,7 @@ function resolveHungOperation(op, newStatus, reason){
   operationStatusOverrides[op.sbpOperationId] = { status:newStatus, reason, actor:'Super Admin', when };
 }
 let operationComments = {};
-/** Возвраты, созданные оператором через прототип — invoiceId -> [возврат,...].
+/** Возвраты, созданные оператором через прототип — operationId -> [возврат,...].
  *  mockInvoiceForOp детерминирован и пересчитывается на каждый render,
  *  поэтому новые возвраты хранятся отдельно и домешиваются при генерации. */
 let invoiceRefundExtras = {};
@@ -1020,38 +1118,6 @@ function getOpComments(opId){
     ];
   }
   return operationComments[opId];
-}
-/** Комментарии и приложенные файлы по инвойсу — отдельное хранилище от комментариев операции,
- *  т.к. инвойс и операция разные сущности (см. раздел 2 доработок партнёрского API). */
-let invoiceComments = {};
-function getInvoiceComments(invoiceId){
-  if(!invoiceComments[invoiceId]) invoiceComments[invoiceId] = [];
-  return invoiceComments[invoiceId];
-}
-function renderInvoiceComments(invoiceId){
-  const comments = getInvoiceComments(invoiceId);
-  const list = comments.length ? comments.map(cm=>`
-    <div class="comment-item">
-      <div class="comment-avatar">${esc(cm.initials)}</div>
-      <div class="comment-body">
-        <div class="comment-meta">
-          <b>${esc(cm.author)}</b> · ${esc(cm.when)}
-          ${cm.own ? `<div class="comment-actions">
-            <button data-inv-comment-delete="${esc(cm.id)}" title="Удалить">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </div>` : ''}
-        </div>
-        <div class="comment-text">${esc(cm.text)}</div>
-      </div>
-    </div>`).join('') : `<div class="empty-state" style="padding:16px 0">Комментариев пока нет</div>`;
-  return `
-    ${list}
-    <div class="comment-input">
-      <textarea id="invNewComment" placeholder="Добавить комментарий для коллег-операторов…"></textarea>
-      <button class="btn btn-primary" id="invCommentSend" style="align-self:flex-end">Отправить</button>
-    </div>
-  `;
 }
 let checkDetailSamples = {
   REQUIRED_DATA: {
@@ -1124,13 +1190,12 @@ function downloadCsvFile(filename, headers, rows){
    STATE + ROUTER
    ========================================================================= */
 const state = {
-  view: 'accounts-list',        // accounts-list | account-detail | individual-detail | external-list | external-detail | operation-detail | invoice-detail
+  view: 'accounts-list',        // accounts-list | account-detail | individual-detail | external-list | external-detail | operation-detail
   accountsTab: 'fizlica',       // fizlica | partners | sanctions
   infoOpen: false,
   currentAgentId: null,
   currentClientId: null,
   currentOpId: null,
-  currentInvoiceId: null,
   currentIndividualId: null,
   individualTab: 'kyc',         // kyc | partner
   accountDetailTab: 'kyc',      // kyc | partner
@@ -1153,7 +1218,7 @@ const state = {
   },
   exportOpen: false,
   collapsed: {           // key -> true, если панель свёрнута; остальные по умолчанию развёрнуты
-    'ap-autowithdraw': true, 'ap-kycbridge': true, 'ap-commission': true,
+    'ap-autowithdraw': true, 'ap-commission': true, 'ap-invoiceschema': true,
     'ap-errors': true, 'ap-billable': true, 'ap-usagelog': true, 'ap-telegram': true,
   },
   dateUI: { open:false, target:'client', viewMonth:null, tempFrom:null, tempTo:null },
@@ -1308,15 +1373,15 @@ function inFilterDateRange(dateStr, fromDate, toDate){
  * в таблице показаны только реально существующие поля. Детерминирован по id
  * клиента, чтобы не пересчитывался на каждый render.
  */
-const OP_TYPE_LABEL = { SBP:'Пополнение по СБП', QR:'Пополнение по QR', EXCHANGE:'Автоконвертация (обмен)', REFUND:'Возврат по СБП' };
+const OP_TYPE_LABEL = { SBP:'Пополнение по СБП', QR:'Пополнение по QR', INVOICE:'Инвойс', EXCHANGE:'Автоконвертация (обмен)', REFUND:'Возврат по СБП' };
 const SBP_BANKS = ['Т-Банк','СберБанк','Альфа-Банк','ВТБ'];
 
 /** Каталог товаров для раздела «Товары» мок-инвойса — только для прототипа. */
 const INVOICE_ITEM_CATALOG = [
-  { title: "Nike Air Force 1 '07 White", sku: 'AF1-07-WHT-42', unitPrice: 56900 },
-  { title: 'New Balance 530 White Silver', sku: 'NB530-WS-40', unitPrice: 33000 },
-  { title: 'Adidas Samba OG', sku: 'SMB-OG-41', unitPrice: 24900 },
-  { title: 'Converse Chuck 70', sku: 'CHK70-BLK-39', unitPrice: 11900 },
+  { title: "Nike Air Force 1 '07 White", sku: 'AF1-07-WHT-42', unitPrice: 56900, size:'42', brand:'Nike', category:'Кроссовки' },
+  { title: 'New Balance 530 White Silver', sku: 'NB530-WS-40', unitPrice: 33000, size:'40', brand:'New Balance', category:'Кроссовки' },
+  { title: 'Adidas Samba OG', sku: 'SMB-OG-41', unitPrice: 24900, size:'41', brand:'Adidas', category:'Кроссовки' },
+  { title: 'Converse Chuck 70', sku: 'CHK70-BLK-39', unitPrice: 11900, size:'39', brand:'Converse', category:'Кроссовки' },
 ];
 
 /**
@@ -1334,7 +1399,11 @@ function mockInvoiceForOp(op, clientId){
     for(let i=0;i<n;i++){
       const base = INVOICE_ITEM_CATALOG[(h+i*7) % INVOICE_ITEM_CATALOG.length];
       const quantity = 1 + ((h+i) % 2);
-      items.push({ line_number:i+1, title:base.title, sku:base.sku, quantity, unit_price:base.unitPrice, total_price: base.unitPrice*quantity });
+      items.push({
+        line_number:i+1, item_number:`${s.slice(-4).toUpperCase()}-0${i+1}`,
+        title:base.title, sku:base.sku, size:base.size, brand:base.brand, category:base.category,
+        quantity, unit_price:base.unitPrice, total_price: base.unitPrice*quantity,
+      });
     }
     amountItems = items.reduce((sum,it)=>sum+it.total_price,0);
     discount = h % 3 === 0 ? Math.round(amountItems*0.05) : 0;
@@ -1353,18 +1422,61 @@ function mockInvoiceForOp(op, clientId){
   }
   const c = clientById(clientId);
   const invoiceId = 'inv_' + (h % 8999999 + 1000000);
-  const extras = invoiceRefundExtras[invoiceId] || [];
+  const extras = invoiceRefundExtras[op.sbpOperationId] || [];
+  const orderNumber = hasItems ? ('YU-' + orderSeed.slice(0,6) + '-' + s.slice(-4).toUpperCase()) : null;
+  const orderId = 'ord_' + orderSeed;
+  const amountBreakdown = hasItems ? { items: amountItems, discount, delivery: 0, total: op.amount } : null;
+  const promoCode = hasItems && discount>0 ? 'WELCOME5' : null;
+  const customer = hasItems ? { fullName: fullName(c) || '—', phone: c?.phoneNumber || null } : null;
+  const delivery = hasItems ? { method: 'Курьерская доставка', city: 'Москва' } : null;
   return {
     invoiceId,
-    orderId: 'ord_' + orderSeed,
-    orderNumber: hasItems ? ('YU-' + orderSeed.slice(0,6) + '-' + s.slice(-4).toUpperCase()) : null,
+    hasItems,
+    orderId,
+    orderNumber,
     amount: op.amount,
-    amountBreakdown: hasItems ? { items: amountItems, discount, delivery: 0, total: op.amount } : null,
-    promoCode: hasItems && discount>0 ? 'WELCOME5' : null,
+    amountBreakdown,
+    promoCode,
     items,
-    customer: hasItems ? { fullName: fullName(c) || '—', phone: c?.phoneNumber || null } : null,
-    delivery: hasItems ? { method: 'Курьерская доставка', city: 'Москва' } : null,
+    customer,
+    delivery,
     refunds: [...refunds, ...extras],
+    // то, что по легенде реально прислал партнёр — своя полная вложенность, со множеством полей,
+    // которые мы не разбираем и не используем (created_at, currency, payment_methods, success_url,
+    // receipt и т.д.) — конфигурация партнёра (ap-invoiceschema) берёт из этого только нужные пути,
+    // остальное хранится как есть и не отображается структурой, только в сырых данных. См. раздел 2.
+    raw: hasItems ? { invoice: {
+      order_id: orderId,
+      order_number: orderNumber,
+      created_at: op.createdAt.replace(' ', 'T') + ':00+03:00',
+      currency: 'RUB',
+      amount: op.amount,
+      amount_breakdown: { items: amountBreakdown.items, discount: amountBreakdown.discount, delivery: amountBreakdown.delivery, total: amountBreakdown.total },
+      promo_code: promoCode,
+      description: `YeezyUnique order ${orderNumber}`,
+      payment_methods: ['sbp', 'crypto'],
+      payment_method: 'sbp',
+      payment_status: 'pending',
+      success_url: `https://yeezyunique.ru/checkout/result?order=${orderNumber}`,
+      failed_url: `https://yeezyunique.ru/checkout/result?order=${orderNumber}&status=failed`,
+      callback_url: 'https://api.yeezyunique.ru/api/v1/payments/webhooks/bitbanker',
+      customer: {
+        customer_id: pseudoAccountId('cust-'+op.sbpOperationId),
+        full_name: customer.fullName, email: c?.email || null,
+        phone: customer.phone, telegram_username: c?.telegramId || null, country: 'RU',
+      },
+      delivery: {
+        method: delivery.method, country: 'RU', city: delivery.city,
+        street: 'Тверская', house: '12', apartment: '45', postal_code: '125009',
+        comment: 'Позвонить за час', included_in_payment: false,
+      },
+      items: items.map(it=>({
+        line_number: it.line_number, item_number: it.item_number,
+        title: it.title, sku: it.sku, size: it.size, brand: it.brand, category: it.category,
+        quantity: it.quantity, unit_price: it.unit_price, total_price: it.total_price,
+      })),
+      receipt: { enabled: false, note: 'фискализация выключена; при включении передаём позиции с НДС и признаком расчёта' },
+    } } : null,
   };
 }
 function mockClientOperations(clientId){
@@ -1387,21 +1499,27 @@ function mockClientOperations(clientId){
     const hh = String(8 + (seed%14)).padStart(2,'0');
     const mm = String(seed%60).padStart(2,'0');
     const createdAt = `2026-08-${day} ${hh}:${mm}`;
+    const sbpOperationId = 'sbp_' + (1000000 + seed%899999);
+    const invoice = mockInvoiceForOp({ sbpOperationId, status, amount, createdAt, paidAt: status==='CONFIRMED'?createdAt:null }, clientId);
+    // партнёр на уровне API явно выбирает метод создания платежа — QR СБП или Инвойс (см. раздел 2
+    // доработок партнёрского API). Это не надстройка над обычной СБП-операцией, а отдельный тип
+    // операции: по оформлению и статусам — такой же, просто с составом заказа внутри.
+    const isInvoiceMethod = invoice.hasItems;
     const mainOp = {
-      sbpOperationId: 'sbp_' + (1000000 + seed%899999),
+      sbpOperationId,
       status,
-      type,
+      type: isInvoiceMethod ? 'INVOICE' : type,
       bankName: type==='SBP' ? SBP_BANKS[seed % SBP_BANKS.length] : null,
       amount,
       createdAt,
       paidAt: status==='CONFIRMED' ? createdAt : null,
     };
-    mainOp.invoice = mockInvoiceForOp(mainOp, clientId);
+    if(isInvoiceMethod) mainOp.invoice = invoice;
     ops.push(mainOp);
     // возврат — отдельная операция своего типа (REFUND), по аналогии с OperationTypeEnum.REVERSAL
     // в ядре bb2 (см. раздел 3 доработок партнёрского API) — не проводка внутри исходной операции,
-    // а новая строка со ссылкой на исходную операцию и на инвойс, по которому он оформлен.
-    mainOp.invoice.refunds.forEach(r=>{
+    // а новая строка со ссылкой на исходную операцию, по которой он оформлен.
+    (isInvoiceMethod ? invoice.refunds : []).forEach(r=>{
       ops.push({
         sbpOperationId: r.refundId,
         status: r.status,
@@ -1535,7 +1653,6 @@ function render(){
   }
   else if(state.view==='external-detail'){ stage.innerHTML = renderClientDetail(state.currentClientId); bindClientDetail(); }
   else if(state.view==='operation-detail'){ stage.innerHTML = renderOperationDetail(state.currentClientId, state.currentOpId); bindOperationDetail(); }
-  else if(state.view==='invoice-detail'){ stage.innerHTML = renderInvoiceDetail(state.currentClientId, state.currentInvoiceId); bindInvoiceDetail(); }
   updateMobileNavActive();
 }
 
@@ -2147,6 +2264,44 @@ function renderAccountPartnerTab(a){
             <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditRequiredFields">Редактировать</button></div>
           </div>
         </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-idxchecks')}">
+          ${collapsibleHead('ap-idxchecks', '<h3>Проверки IDX</h3>')}
+          <div class="panel-b">
+            <div class="toggle-row" style="border-bottom:0">
+              <div><div class="tt">Прохождение IDX-проверок</div><div class="ts">Санкции, иноагенты, терроризм, розыск, паспортный комплекс, валидация телефона СБП</div></div>
+              <button class="switch ${a.idxChecksEnabled!==false?'on':''}" id="btnToggleIdxChecks"><span class="knob"></span></button>
+            </div>
+            ${a.idxChecksEnabled===false ? `
+            <div class="helper-note" style="background:var(--error-bg);color:var(--error-dark);margin-top:4px">
+              <span>⚠️</span><span>Выключено. Клиенты этого партнёра получают допуск к СБП/QR без единой внешней проверки.</span>
+            </div>` : ''}
+          </div>
+        </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-invoiceschema')}">
+          ${collapsibleHead('ap-invoiceschema', '<h3>Конфигурация инвойса</h3>')}
+          <div class="panel-b">
+            ${(function(){
+              const cfg = a.invoiceSchemaConfig;
+              if(!cfg) return `<div class="empty-state" style="padding:10px 0">Конфигурация не настроена — партнёр не может использовать метод «Инвойс», пока оператор её не заведёт</div>`;
+              const rows = INVOICE_SCHEMA_GROUPS.flatMap(g=>g.fields.map(f=>({group:g.group, label:f.label, path:cfg[f.key]}))).filter(r=>r.path);
+              const total = INVOICE_SCHEMA_FIELDS.length;
+              if(!rows.length) return `<div class="empty-state" style="padding:10px 0">Конфигурация пустая — ни один путь не задан</div>`;
+              return `
+                <div class="ts" style="margin-bottom:8px">Настроено ${rows.length} из ${total} полей</div>
+                <div class="twrap">
+                  <table class="grid">
+                    <thead><tr><th>Поле</th><th>Путь в JSON партнёра</th></tr></thead>
+                    <tbody>${rows.map(r=>`
+                      <tr>
+                        <td>${esc(r.label)}<div class="cell-sub">${esc(r.group)}</div></td>
+                        <td class="mono" style="font-size:12px">${esc(r.path)}</td>
+                      </tr>`).join('')}</tbody>
+                  </table>
+                </div>`;
+            })()}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditInvoiceSchema">Редактировать</button></div>
+          </div>
+        </div>
         <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
           ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
           <div class="panel-b">
@@ -2345,6 +2500,21 @@ function bindAccountDetailPage(){
   });
 
   $('#btnEditRequiredFields')?.addEventListener('click', ()=>openRequiredFieldsModal(a));
+  $('#btnEditInvoiceSchema')?.addEventListener('click', ()=>openInvoiceSchemaModal(a));
+  $('#btnToggleIdxChecks')?.addEventListener('click', ()=>{
+    const turningOff = a.idxChecksEnabled!==false;
+    openConfirmModal({
+      title: turningOff ? 'Выключить IDX-проверки для партнёра?' : 'Включить IDX-проверки для партнёра?',
+      body: turningOff
+        ? 'Клиенты этого партнёра будут получать допуск к СБП/QR без единой внешней проверки (санкции, терроризм, розыск и т.д.). Решение должно быть согласовано с комплаенсом до включения.'
+        : 'Новые и существующие необработанные клиенты этого партнёра снова будут проходить полный маршрут IDX-проверок.',
+      confirmLabel: turningOff ? 'Выключить' : 'Включить', danger: turningOff,
+      onConfirm:(reason)=>{
+        a.idxChecksEnabled = !turningOff;
+        render(); toast(turningOff ? 'IDX-проверки выключены для партнёра' : 'IDX-проверки включены для партнёра');
+      }
+    });
+  });
 
   $('#btnSaveTelegram')?.addEventListener('click', ()=>{
     a.partnerChatId = $('#tgChatId').value;
@@ -3137,7 +3307,7 @@ function renderClientOperationsTab(c, a){
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>ID инвойса / операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Возврат</th><th>Действие</th></tr></thead>
+          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Возврат</th><th>Действие</th></tr></thead>
           <tbody>${rows.length ? rows.map(op=>{
             const fee = opFeeInfo(op, a);
             const isHung = op.status==='PENDING';
@@ -3151,17 +3321,13 @@ function renderClientOperationsTab(c, a){
             const isRefund = op.type==='REFUND';
             return `
             <tr>
-              <td>${inv ? `
-                <a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-invoice-link="${esc(inv.invoiceId)}">${esc(inv.invoiceId)}</a>
-                <div class="cell-sub">СБП ${esc(op.sbpOperationId)}</div>
-                ${inv.orderNumber ? `<div class="cell-sub">Заказ ${esc(inv.orderNumber)}</div>` : ''}
-              ` : isRefund ? `
+              <td>
                 <a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a>
-                <div class="cell-sub">${esc(op.isFullRefund?'Полный':'Частичный')} возврат по <a href="#" data-invoice-link="${esc(op.linkedInvoiceId)}">${esc(op.linkedInvoiceId)}</a></div>
-              ` : `
-                <a href="#" class="namelink" style="font-family:var(--font-mono);font-size:12px;font-weight:700" data-op-link="${esc(op.sbpOperationId)}">${esc(op.sbpOperationId)}</a>
-                <div class="cell-sub">${esc(op.createdAt)}</div>
-              `}</td>
+                ${isRefund
+                  ? `<div class="cell-sub">${esc(op.isFullRefund?'Полный':'Частичный')} возврат по <a href="#" data-op-link="${esc(op.linkedOpId)}">${esc(op.linkedOpId)}</a></div>`
+                  : inv ? `<div class="cell-sub">Заказ ${esc(inv.orderNumber||inv.orderId)}</div>`
+                  : `<div class="cell-sub">${esc(op.createdAt)}</div>`}
+              </td>
               <td>${opTypeBadge(op.type)}</td>
               <td class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</td>
               <td class="cell-strong" style="${isRefund?'color:var(--error-dark)':''}">${isRefund?'-':''}${op.amount.toLocaleString('ru-RU')}</td>
@@ -3248,7 +3414,7 @@ function opLedgerRows(op, c, a){
   ];
 }
 
-const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', EXCHANGE:'EXCHANGE', REFUND:'REVERSAL' };
+const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', INVOICE:'SBP', EXCHANGE:'EXCHANGE', REFUND:'REVERSAL' };
 
 function renderOperationDetail(clientId, opId){
   const c = clientById(clientId);
@@ -3261,6 +3427,10 @@ function renderOperationDetail(clientId, opId){
   const fmtMoney = (n,cur)=> n.toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' ' + (cur||'RUB');
   const isExchange = op.type==='EXCHANGE';
   const isRefund = op.type==='REFUND';
+  const isInvoice = op.type==='INVOICE';
+  const refundedTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0) : 0;
+  const remainingToRefund = isInvoice ? Math.max(op.amount - refundedTotal, 0) : 0;
+  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0;
 
   const clientInitials = (fullName(c).match(/\S/)? fullName(c).split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase() : '—');
 
@@ -3333,7 +3503,7 @@ function renderOperationDetail(clientId, opId){
     ? {source:'bb', bb_type:'reversal', original_operation_id:op.linkedOpId, invoice_id:op.linkedInvoiceId}
     : isExchange
       ? {source:'bb', bb_type:'exchange', rate:op.rate}
-      : {source:'bb', bb_type: op.type==='SBP'?'sbp':'qr'};
+      : {source:'bb', bb_type: op.type==='SBP'?'sbp':op.type==='QR'?'qr':'invoice'};
 
   return `
     <div class="rec-card">
@@ -3352,12 +3522,12 @@ function renderOperationDetail(clientId, opId){
             <div style="display:flex;gap:8px">
               <button class="btn btn-primary" id="opApprove">Подтвердить</button>
               <button class="btn btn-danger" id="opDecline">Отклонить</button>
-            </div>` : ''}
+            </div>` : canRefund ? `<button class="btn btn-primary" id="opCreateRefund">Оформить возврат</button>` : ''}
           </div>
           <div class="rec-meta">
             <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
             <span>Клиент: <a href="#" class="namelink" id="opGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
-            ${isRefund ? `<span>Исходный инвойс: <a href="#" class="namelink" id="opGotoInvoice" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedInvoiceId)}</a></span>` : `<span>Дата создания: ${esc(op.createdAt)}</span>`}
+            ${isRefund ? `<span>Исходная операция: <a href="#" class="namelink" id="opGotoOriginal" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedOpId)}</a></span>` : `<span>Дата создания: ${esc(op.createdAt)}</span>`}
           </div>
         </div>
       </div>
@@ -3415,7 +3585,7 @@ function renderOperationDetail(clientId, opId){
       <div class="panel-b">
         <dl class="deflist cols3">
           <div><dt>ID операции</dt><dd class="mono" style="font-size:11.5px">${esc(op.sbpOperationId)}</dd></div>
-          <div><dt>Назначение платежа</dt><dd>${isRefund?'Возврат по ранее оплаченному инвойсу':isExchange?'Автоконвертация суммы пополнения':'Пополнение баланса клиента партнёра'}</dd></div>
+          <div><dt>Назначение платежа</dt><dd>${isRefund?'Возврат по ранее оплаченной операции':isExchange?'Автоконвертация суммы пополнения':isInvoice?'Пополнение по инвойсу':'Пополнение баланса клиента партнёра'}</dd></div>
           ${isRefund ? `<div><dt>Причина возврата</dt><dd>${esc(op.refundReason)}</dd></div>` : ''}
         </dl>
       </div>
@@ -3455,6 +3625,88 @@ function renderOperationDetail(clientId, opId){
         </table>
       </div>` : `<div class="empty-state" style="padding:0 16px 16px">Заявка ещё не дошла до леджера — проводок пока нет</div>`}
     </div>
+
+    ${isInvoice ? `
+    <div class="panel">
+      <div class="panel-h"><h3>Информация о заказе</h3></div>
+      <div class="panel-b">
+        <div class="subblock">
+          <div class="subblock-h">Заказ</div>
+          <dl class="deflist cols3">
+            <div><dt>Номер заказа</dt><dd>${esc(op.invoice.orderNumber||'—')}</dd></div>
+            <div><dt>order_id</dt><dd class="mono" style="font-size:12px">${esc(op.invoice.orderId)}</dd></div>
+            <div><dt>Промокод</dt><dd class="${op.invoice.promoCode?'':'muted'}">${esc(op.invoice.promoCode||'—')}</dd></div>
+          </dl>
+        </div>
+
+        ${op.invoice.amountBreakdown ? `
+        <div class="subblock">
+          <div class="subblock-h">Сумма</div>
+          <dl class="deflist cols3">
+            <div><dt>Сумма товаров</dt><dd>${fmtMoney(op.invoice.amountBreakdown.items)}</dd></div>
+            <div><dt>Скидка</dt><dd class="${op.invoice.amountBreakdown.discount?'':'muted'}">${op.invoice.amountBreakdown.discount?'-'+fmtMoney(op.invoice.amountBreakdown.discount):'—'}</dd></div>
+            <div><dt>К оплате</dt><dd class="cell-strong">${fmtMoney(op.invoice.amountBreakdown.total)}</dd></div>
+          </dl>
+        </div>` : ''}
+
+        ${op.invoice.items && op.invoice.items.length ? `
+        <div class="subblock">
+          <div class="subblock-h">Товары</div>
+          <div class="twrap">
+            <table class="grid">
+              <thead><tr><th>Наименование</th><th>Артикул</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead>
+              <tbody>${op.invoice.items.map(it=>`
+                <tr>
+                  <td>${esc(it.title)}</td>
+                  <td class="mono muted" style="font-size:12px">${esc(it.sku)}</td>
+                  <td>${it.quantity}</td>
+                  <td>${fmtMoney(it.unit_price)}</td>
+                  <td class="cell-strong">${fmtMoney(it.total_price)}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>` : ''}
+
+        <div class="subblock">
+          <div class="subblock-h">Покупатель и доставка</div>
+          <dl class="deflist cols3">
+            <div><dt>Покупатель</dt><dd class="${op.invoice.customer?.fullName?'':'muted'}">${esc(op.invoice.customer?.fullName||'—')}</dd></div>
+            <div><dt>Телефон покупателя</dt><dd class="${op.invoice.customer?.phone?'':'muted'}">${esc(op.invoice.customer?.phone||'—')}</dd></div>
+            <div><dt>Доставка</dt><dd class="${op.invoice.delivery?'':'muted'}">${op.invoice.delivery?`${esc(op.invoice.delivery.method)}, ${esc(op.invoice.delivery.city)}`:'—'}</dd></div>
+          </dl>
+        </div>
+
+        <details style="margin-top:14px">
+          <summary class="raw-toggle"><span class="chevd">${ICONS.ICON_CHEV_R}</span>Сырые данные от партнёра</summary>
+          <div class="jsonbox" style="margin-top:8px">${esc(JSON.stringify(op.invoice.raw,null,2))}</div>
+        </details>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h3>Возвраты</h3></div>
+      <div class="panel-b">
+        ${op.invoice.refunds.length ? `
+        <div class="twrap">
+          <table class="grid">
+            <thead><tr><th>ID возврата</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Причина</th><th>Дата</th></tr></thead>
+            <tbody>${op.invoice.refunds.map(r=>`
+              <tr>
+                <td><a href="#" class="namelink mono" style="font-size:12px" data-goto-operation="${esc(r.refundId)}">${esc(r.refundId)}</a></td>
+                <td class="cell-strong">${fmtMoney(r.amount)}</td>
+                <td>${r.amount>=op.amount?'Полный':'Частичный'}</td>
+                <td>${invoiceRefundStatusBadge(r.status)}</td>
+                <td>${esc(r.reason)}</td>
+                <td class="muted">${esc(r.createdAt)}</td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div class="deflist cols3" style="margin-top:12px">
+          <div><dt>Возвращено</dt><dd>${fmtMoney(refundedTotal)}</dd></div>
+          <div><dt>Остаток к возврату</dt><dd class="cell-strong">${fmtMoney(remainingToRefund)}</dd></div>
+        </div>` : `<div class="empty-state" style="padding:10px 0">По этой операции возвратов не было</div>`}
+      </div>
+    </div>` : ''}
 
     <div class="panel">
       <div class="panel-h"><h3>Комментарии оператора</h3></div>
@@ -3525,12 +3777,19 @@ function openDeleteCommentModal(opId, cm){
 function bindOperationDetail(){
   $('#backToOps')?.addEventListener('click', ()=>{ state.view='external-detail'; state.clientDetailTab='ops'; render(); });
   $('#opGotoClient')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='external-detail'; state.clientDetailTab='main'; render(); });
-  $('#opGotoInvoice')?.addEventListener('click', (e)=>{
+  $('#opGotoOriginal')?.addEventListener('click', (e)=>{
     e.preventDefault();
     const op = mockClientOperations(state.currentClientId).find(o=>o.sbpOperationId===state.currentOpId);
-    if(!op?.linkedInvoiceId) return;
-    state.currentInvoiceId = op.linkedInvoiceId; state.view='invoice-detail'; render();
+    if(!op?.linkedOpId) return;
+    state.currentOpId = op.linkedOpId; render();
   });
+  $('#opCreateRefund')?.addEventListener('click', ()=>{
+    openCreateRefundModal(state.currentClientId, state.currentOpId);
+  });
+  $all('[data-goto-operation]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.preventDefault();
+    state.currentOpId = e.currentTarget.dataset.gotoOperation; render();
+  }));
   $all('[data-party-goto]').forEach(el=>el.addEventListener('click', (e)=>{
     e.preventDefault();
     const id = e.currentTarget.dataset.partyGoto;
@@ -3587,131 +3846,17 @@ function bindOperationDetail(){
   }));
 }
 
-/* =========================================================================
-   INVOICE DETAIL — прослойка над СБП/QR операцией (см. раздел 2 доработок
-   партнёрского API, dorabotki-partnyorskij-api-01-10-2026.md). В истории
-   операций клиента партнёра на первом месте теперь инвойс, сама операция —
-   связанный факт платежа, открывается отдельной карточкой по ссылке.
-   ========================================================================= */
-function findInvoiceByOp(clientId, invoiceId){
-  const op = mockClientOperations(clientId).find(o=>o.invoice && o.invoice.invoiceId===invoiceId);
-  return op ? { op, invoice: op.invoice } : null;
-}
-
+/** Статус возврата — для таблицы возвратов в карточке операции типа «Инвойс» (см. раздел 2/3 доработок партнёрского API). */
 function invoiceRefundStatusBadge(s){
   const map = { PENDING:['b-warning','В ожидании'], CONFIRMED:['b-success','Подтверждён'], FAILED:['b-error','Отклонён'] };
   const [cls,label] = map[s] || ['b-faded', s];
   return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
 }
 
-function renderInvoiceDetail(clientId, invoiceId){
-  const c = clientById(clientId);
-  if(!c) return `<div class="empty-state">Клиент не найден</div>`;
-  const found = findInvoiceByOp(clientId, invoiceId);
-  if(!found) return `<div class="empty-state">Инвойс не найден</div>`;
-  const { op, invoice: inv } = found;
-  const fmtMoney = (n)=> Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' RUB';
-
-  const refundedTotal = inv.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0);
-  const remainingToRefund = Math.max(op.amount - refundedTotal, 0);
-  const canRefund = op.status==='CONFIRMED' && remainingToRefund > 0;
-
-  return `
-    <div class="rec-card">
-      <div class="rec-top">
-        <a href="#" class="rec-back" id="backToOpsFromInvoice">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-        <div style="flex:1">
-          <div class="rec-headrow" style="justify-content:space-between">
-            <div class="rec-headrow" style="gap:12px">
-              <h1>Инвойс ${esc(inv.invoiceId)}</h1>
-              ${opStatusBadge(op.status)}
-            </div>
-            ${canRefund ? `<button class="btn btn-primary" id="invCreateRefund">Оформить возврат</button>` : ''}
-          </div>
-          <div class="rec-meta">
-            <span class="idcopy" title="ID инвойса">ID: ${esc(inv.invoiceId)}</span>
-            <span>Клиент: <a href="#" class="namelink" id="invGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
-            ${inv.orderNumber ? `<span>Заказ партнёра: ${esc(inv.orderNumber)}</span>` : ''}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-h"><h3>Исходный платёж (СБП)</h3></div>
-      <div class="panel-b">
-        <div class="party" style="max-width:100%">
-          <div class="party-rows">
-            ${opPartyRow({k:'ID операции', v:op.sbpOperationId, mono:true})}
-            ${opPartyRow({k:'Сумма', v:fmtMoney(op.amount)})}
-            ${opPartyRow({k:'Банк отправителя', v:op.bankName})}
-            ${opPartyRow({k:'Дата создания', v:op.createdAt})}
-            ${opPartyRow({k:'Исполнено в', v:op.paidAt})}
-          </div>
-        </div>
-        <div style="margin-top:10px">${opStatusBadge(op.status)}</div>
-        <div class="party-link" data-goto-operation="${esc(op.sbpOperationId)}" style="margin-top:12px">→ Открыть карточку исходного платежа</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-h"><h3>Информация о заказе</h3></div>
-      <div class="panel-b">
-        <dl class="deflist" style="grid-template-columns:1fr;margin-bottom:12px">
-          <div><dt>order_id</dt><dd class="mono" style="font-size:12.5px">${esc(inv.orderId)}</dd></div>
-        </dl>
-        <div class="jsonbox">${esc(JSON.stringify({
-          order_number: inv.orderNumber,
-          amount: inv.amount,
-          amount_breakdown: inv.amountBreakdown,
-          promo_code: inv.promoCode,
-          items: inv.items,
-          customer: inv.customer,
-          delivery: inv.delivery,
-        },null,2))}</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-h"><h3>Возвраты</h3></div>
-      <div class="panel-b">
-        ${inv.refunds.length ? `
-        <div class="twrap">
-          <table class="grid">
-            <thead><tr><th>ID возврата</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Причина</th><th>Дата</th></tr></thead>
-            <tbody>${inv.refunds.map(r=>`
-              <tr>
-                <td><a href="#" class="namelink mono" style="font-size:12px" data-goto-operation="${esc(r.refundId)}">${esc(r.refundId)}</a></td>
-                <td class="cell-strong">${fmtMoney(r.amount)}</td>
-                <td>${r.amount>=op.amount?'Полный':'Частичный'}</td>
-                <td>${invoiceRefundStatusBadge(r.status)}</td>
-                <td>${esc(r.reason)}</td>
-                <td class="muted">${esc(r.createdAt)}</td>
-              </tr>`).join('')}</tbody>
-          </table>
-        </div>
-        <div class="deflist cols3" style="margin-top:12px">
-          <div><dt>Возвращено</dt><dd>${fmtMoney(refundedTotal)}</dd></div>
-          <div><dt>Остаток к возврату</dt><dd class="cell-strong">${fmtMoney(remainingToRefund)}</dd></div>
-        </div>` : `<div class="empty-state" style="padding:10px 0">По этому инвойсу возвратов не было</div>`}
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-h"><h3>Комментарии оператора</h3></div>
-      <div class="panel-b">
-        ${renderInvoiceComments(inv.invoiceId)}
-      </div>
-    </div>
-  `;
-}
-
-function openCreateRefundModal(clientId, invoiceId){
-  const found = findInvoiceByOp(clientId, invoiceId);
-  if(!found) return;
-  const { op, invoice: inv } = found;
+function openCreateRefundModal(clientId, opId){
+  const op = mockClientOperations(clientId).find(o=>o.sbpOperationId===opId);
+  if(!op || !op.invoice) return;
+  const inv = op.invoice;
   const refundedTotal = inv.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0);
   const remaining = Math.max(op.amount - refundedTotal, 0);
   openModal(`
@@ -3730,8 +3875,8 @@ function openCreateRefundModal(clientId, invoiceId){
     const amount = rawAmount ? Number(rawAmount) : remaining;
     if(!amount || amount<=0 || Number.isNaN(amount)){ toast('Укажите корректную сумму возврата'); return; }
     if(amount > remaining){ toast(`Сумма возврата не может быть больше остатка — ${remaining.toLocaleString('ru-RU')} RUB`); return; }
-    if(!invoiceRefundExtras[inv.invoiceId]) invoiceRefundExtras[inv.invoiceId] = [];
-    invoiceRefundExtras[inv.invoiceId].push({
+    if(!invoiceRefundExtras[opId]) invoiceRefundExtras[opId] = [];
+    invoiceRefundExtras[opId].push({
       refundId: 'ref_' + Math.floor(10000 + Math.random()*89999),
       amount, status:'PENDING', reason,
       createdAt: new Date().toLocaleString('ru-RU').slice(0,17),
@@ -3739,32 +3884,6 @@ function openCreateRefundModal(clientId, invoiceId){
     closeModal(); render();
     toast('Возврат создан, статус - в ожидании ответа провайдера');
   });
-}
-
-function bindInvoiceDetail(){
-  $('#backToOpsFromInvoice')?.addEventListener('click', ()=>{ state.view='external-detail'; state.clientDetailTab='ops'; render(); });
-  $('#invGotoClient')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='external-detail'; state.clientDetailTab='main'; render(); });
-  $all('[data-goto-operation]').forEach(el=>el.addEventListener('click', (e)=>{
-    e.preventDefault();
-    state.currentOpId = e.currentTarget.dataset.gotoOperation; state.view='operation-detail'; render();
-  }));
-  $('#invCreateRefund')?.addEventListener('click', ()=>{
-    openCreateRefundModal(state.currentClientId, state.currentInvoiceId);
-  });
-  const invoiceId = state.currentInvoiceId;
-  $('#invCommentSend')?.addEventListener('click', ()=>{
-    const text = $('#invNewComment').value.trim();
-    if(!text) return;
-    getInvoiceComments(invoiceId).push({
-      id:'ic'+Date.now(), author:'Super Admin', initials:'SA',
-      when:new Date().toLocaleString('ru-RU').slice(0,17), text, own:true,
-    });
-    render();
-  });
-  $all('[data-inv-comment-delete]').forEach(b=>b.addEventListener('click', ()=>{
-    invoiceComments[invoiceId] = getInvoiceComments(invoiceId).filter(x=>x.id!==b.dataset.invCommentDelete);
-    render();
-  }));
 }
 
 function renderClientDetail(clientId){
@@ -4047,10 +4166,6 @@ function bindClientDetail(){
     $all('[data-op-link]').forEach(el=>el.addEventListener('click', (e)=>{
       e.preventDefault();
       state.currentOpId = el.dataset.opLink; state.view='operation-detail'; render();
-    }));
-    $all('[data-invoice-link]').forEach(el=>el.addEventListener('click', (e)=>{
-      e.preventDefault();
-      state.currentInvoiceId = el.dataset.invoiceLink; state.view='invoice-detail'; render();
     }));
     $('#opsSearch')?.addEventListener('input', e=>{ state.filters.opsQuery=e.target.value; renderInto(); });
     $('#opsStatusFilterBtn')?.addEventListener('click', ()=>{
@@ -4621,6 +4736,46 @@ function openRequiredFieldsModal(a){
     a.requiredFields = $all('[data-reqfield]').filter(c=>c.checked).map(c=>c.dataset.reqfield);
     closeModal(); render();
     toast('Обязательные поля клиента сохранены');
+  });
+}
+
+function openInvoiceSchemaModal(a){
+  const current = a.invoiceSchemaConfig || {};
+  openModal(`
+    <div class="modal-h"><h3>Конфигурация инвойса — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      ${INVOICE_SCHEMA_GROUPS.map(g=>`
+        <div class="ts" style="margin:10px 0 6px;font-weight:600;color:var(--text)">${g.group}</div>
+        <div class="field-grid cols3" style="margin-bottom:6px">
+          ${g.fields.map(f=>`
+            <div class="field"><label>${esc(f.label)}</label><input data-schema-path="${esc(f.key)}" value="${esc(current[f.key]||'')}" placeholder="${esc(f.key)}"></div>
+          `).join('')}
+        </div>
+      `).join('')}
+      <div class="hairline"></div>
+      <div class="section-num" style="margin-bottom:8px">Проверка на примере</div>
+      <div class="field"><label>Сырой JSON партнёра (пример)</label><textarea rows="6" id="schemaTestJson" placeholder='{"invoice": {"order_id": "...", "items": [...]}}'></textarea></div>
+      <div><button class="btn btn-primary btn-sm" id="schemaTestRun" type="button">Проверить</button></div>
+      <div id="schemaTestResult" style="margin-top:10px"></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="schemaSave">Сохранить</button></div>
+  `, true);
+  const readConfig = ()=> Object.fromEntries($all('[data-schema-path]').map(inp=>[inp.dataset.schemaPath, inp.value.trim()]).filter(([,v])=>v));
+  $('#schemaTestRun').addEventListener('click', ()=>{
+    let raw;
+    try{ raw = JSON.parse($('#schemaTestJson').value); }
+    catch(e){ $('#schemaTestResult').innerHTML = `<div class="empty-state" style="padding:10px 0;color:var(--error-dark)">Это не валидный JSON — проверьте вставленный пример</div>`; return; }
+    const parsed = parseRawInvoiceByConfig(raw, readConfig());
+    $('#schemaTestResult').innerHTML = `
+      <div class="ts" style="margin-bottom:6px">Что нашлось по текущим путям (пустые поля — путь не нашёл данных на этом примере):</div>
+      <div class="jsonbox">${esc(JSON.stringify(parsed,null,2))}</div>
+    `;
+  });
+  $('#schemaSave').addEventListener('click', ()=>{
+    a.invoiceSchemaConfig = readConfig();
+    if(!Object.keys(a.invoiceSchemaConfig).length) a.invoiceSchemaConfig = null;
+    closeModal(); render();
+    toast('Конфигурация инвойса сохранена');
   });
 }
 
