@@ -1624,6 +1624,13 @@ function checkResultBadge(r){
   const [cls,label] = map[r]||['b-faded', r];
   return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
 }
+function recalcCheckResult(c){
+  const excl = c.checkExclusions || {};
+  const entries = Object.entries(c.checks||{}).filter(([code])=>!excl[code]);
+  if(entries.some(([,v])=>v.status==='FAILED')) c.checkResult='HAS_RISK';
+  else if(entries.some(([,v])=>v.status==='IN_PROGRESS')) c.checkResult='PENDING';
+  else c.checkResult='OK';
+}
 function channelTag(c){
   const map = { API:'API', IFRAME:'iFrame', CSV_IMPORT:'Импорт CSV', MANUAL:'Вручную' };
   return `<span class="tag">${map[c]||c}</span>`;
@@ -3899,15 +3906,24 @@ function renderClientDetail(clientId){
     .sort((a,b)=> Date.parse((c.checks[b.code].at||'').replace(' ','T')) - Date.parse((c.checks[a.code].at||'').replace(' ','T')));
   const checksRows = ranChecks.map(t=>{
     const st = c.checks[t.code].status;
+    const excl = (c.checkExclusions||{})[t.code];
     return `
       <div class="checkrow">
-        <div class="nm">${t.label}<div class="sub">${t.code} · ${esc(c.checks[t.code].at||'')}</div></div>
-        ${checkStatusBadge(st)}
+        <div class="nm">${t.label}<div class="sub">${t.code} · ${esc(c.checks[t.code].at||'')}</div>
+          ${excl ? `<div class="sub" style="color:var(--text-soft)">Пропущена вручную · ${esc(excl.by)} · ${esc(excl.at)} · «${esc(excl.reason)}»</div>` : ''}
+        </div>
+        ${excl ? `<span class="badge b-faded"><span class="d"></span>пропущена оператором</span>` : checkStatusBadge(st)}
         <button class="icon-btn" data-check="${t.code}" title="Детали проверки: ${t.label}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5.5M12 8v.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
         </button>
-        ${st!=='SUCCESS' ? `<button class="icon-btn" data-rerun-check="${t.code}" title="Перезапустить проверку: ${t.label}">
+        ${st!=='SUCCESS' && !excl ? `<button class="icon-btn" data-rerun-check="${t.code}" title="Перезапустить проверку: ${t.label}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 3v4.2h-4.2M6 21v-4.2h4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>` : ''}
+        ${st==='FAILED' && !excl ? `<button class="icon-btn" data-skip-check="${t.code}" title="Пропустить проверку вручную: исключить из расчёта результата, с указанием причины">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 5l11 7-11 7V5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="none"/><path d="M18 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>` : ''}
+        ${excl ? `<button class="icon-btn" data-restore-check="${t.code}" title="Восстановить проверку: вернуть в обычный расчёт результата">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 4L4 9l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 9h10a6 6 0 1 1 0 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>` : ''}
       </div>`;
   }).join('') || `<div class="empty-state" style="padding:24px">Проверки ещё не запускались</div>`;
@@ -4085,7 +4101,7 @@ function renderClientDetail(clientId){
           ${collapsibleHead('cd-checks', `<h3>Проверки (${ranChecks.length})</h3>`)}
           <div class="panel-b">
             <div class="checklist">${checksRows||'<div class="empty-state" style="padding:12px">Проверки ещё не запускались</div>'}</div>
-            ${ranChecks.length ? `<div style="margin-top:12px"><button class="btn btn-sm" id="btnRerunAllChecks">Перезапустить все</button></div>` : ''}
+            ${ranChecks.length ? `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" id="btnRerunAllChecks">Перезапустить все</button></div>` : ''}
           </div>
         </div>
 
@@ -4141,6 +4157,42 @@ function renderClientDetail(clientId){
     </div>
     `}
   `;
+}
+
+function openCheckExclusionModal(c, code, action){
+  const meta = CHECK_TYPES.find(t=>t.code===code);
+  const label = meta ? meta.label : code;
+  const isSkip = action==='skip';
+  openModal(`
+    <div class="modal-h"><h3>${isSkip?'Пропустить проверку вручную':'Восстановить проверку'}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="empty-state" style="padding:0 0 12px;margin:0">
+        ${isSkip
+          ? `Проверка «${esc(label)}» (${esc(code)}) будет исключена из расчёта результата клиента — риск по ней перестанет учитываться, остальные проверки остаются как есть.`
+          : `Проверка «${esc(label)}» (${esc(code)}) вернётся в обычный расчёт результата, как и остальные.`}
+      </div>
+      <div class="field"><label>Причина (обязательно)</label><textarea rows="3" id="checkExclReason" placeholder="${isSkip?'Например: ложное срабатывание, подтверждено комплаенсом':'Например: решение отменено, проверка возвращена в работу'}"></textarea></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" data-close-modal>Отмена</button>
+      <button class="btn ${isSkip?'btn-danger':'btn-primary'}" id="checkExclSubmit">${isSkip?'Пропустить':'Восстановить'}</button>
+    </div>
+  `);
+  $('#checkExclSubmit').addEventListener('click', ()=>{
+    const reason = $('#checkExclReason').value.trim();
+    if(!reason){ toast('Укажите причину'); return; }
+    c.checkExclusions = c.checkExclusions || {};
+    if(isSkip){
+      c.checkExclusions[code] = { reason, by:'Super Admin', at: new Date().toLocaleString('ru-RU').slice(0,17) };
+      logChange(c, 'Пропуск проверки «'+label+'» (ручной skip)', 'провалена', 'пропущена оператором', reason);
+    } else {
+      delete c.checkExclusions[code];
+      logChange(c, 'Восстановление проверки «'+label+'»', 'пропущена оператором', 'в обычном расчёте', reason);
+    }
+    recalcCheckResult(c);
+    closeModal(); render();
+    toast(isSkip ? 'Проверка пропущена, результат клиента пересчитан' : 'Проверка восстановлена, результат клиента пересчитан');
+  });
 }
 
 function logChange(c, field, oldV, newV, reason, actor, doc){
@@ -4277,19 +4329,21 @@ function bindClientDetail(){
     toast('Проверка «'+code+'» перезапущена');
     setTimeout(()=>{
       c.checks[code] = { status:'SUCCESS', at: new Date().toLocaleString('ru-RU').slice(0,17) };
-      if(Object.values(c.checks).every(s=>s.status==='SUCCESS')) c.checkResult='OK';
+      recalcCheckResult(c);
       render();
       toast('Проверка «'+code+'» пройдена');
     }, 1200);
   }));
+  $all('[data-skip-check]').forEach(b=>b.addEventListener('click', ()=>openCheckExclusionModal(c, b.dataset.skipCheck, 'skip')));
+  $all('[data-restore-check]').forEach(b=>b.addEventListener('click', ()=>openCheckExclusionModal(c, b.dataset.restoreCheck, 'restore')));
   $('#btnRerunAllChecks')?.addEventListener('click', ()=>{
-    const codes = Object.keys(c.checks||{});
+    const codes = Object.keys(c.checks||{}).filter(code=>!(c.checkExclusions||{})[code]);
     codes.forEach(code=>c.checks[code]={ status:'IN_PROGRESS', at: new Date().toLocaleString('ru-RU').slice(0,17) });
     render();
     toast('Все проверки перезапущены');
     setTimeout(()=>{
       codes.forEach(code=>c.checks[code]={ status:'SUCCESS', at: new Date().toLocaleString('ru-RU').slice(0,17) });
-      c.checkResult='OK';
+      recalcCheckResult(c);
       render();
       toast('Все проверки пройдены');
     }, 1400);
