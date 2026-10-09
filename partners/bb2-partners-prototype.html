@@ -2181,16 +2181,54 @@ function renderAccountPartnerTab(a){
               <div><div class="tt">Автовывод включен</div></div>
               <button class="switch ${a.autoConvertToUsdt?'on':''}" data-toggle="autoConvertToUsdt"><span class="knob"></span></button>
             </div>
-            <div class="field-grid" style="margin-top:12px">
-              <div class="field"><label>Валюта</label><input value="Tether USD (USDT)" disabled></div>
-              <div class="field"><label>Сеть</label><input value="Tron (TRC20)" disabled></div>
+
+            <div class="ts" style="margin:12px 0 8px;font-weight:600;color:var(--text-strong)">Назначение вывода</div>
+            <div class="seg-tabs" style="margin-bottom:12px">
+              <button class="seg-tab ${(a.autoWithdrawDestinationType||'EXTERNAL_WALLET')==='EXTERNAL_WALLET'?'active':''}" data-aw-dest="EXTERNAL_WALLET">Внешний кошелек (TRC20)</button>
+              <button class="seg-tab ${a.autoWithdrawDestinationType==='INTERNAL_ACCOUNT'?'active':''}" data-aw-dest="INTERNAL_ACCOUNT">Внутренний аккаунт Bitbanker</button>
             </div>
-            <div class="field" style="margin-top:12px"><label>Адрес кошелька для автовывода партнера</label><input id="awWallet" value="${esc(a.autoWithdrawWallet||'')}"></div>
-            <div class="field-grid" style="margin-top:12px">
-              <div class="field"><label>Нижний порог автовывода: столько останется на счете после автовывода</label><input id="awLower" value="${esc(a.autoWithdrawLower||'')}"></div>
-              <div class="field"><label>Верхний порог автовывода: при превышении произойдет автовывод</label><input id="awUpper" value="${esc(a.autoWithdrawUpper||'')}"></div>
-            </div>
-            <div class="ts" style="margin-top:8px">Комиссия за вывод — 3 USDT, минимальная сумма вывода — 5 USDT</div>
+
+            ${(()=>{
+              const destType = a.autoWithdrawDestinationType||'EXTERNAL_WALLET';
+              // внешний кошелёк — всегда USDT; у внутреннего перевода валюту выбирает партнёр
+              const thresholdCurrency = destType==='EXTERNAL_WALLET' ? 'USDT' : (a.autoWithdrawInternalCurrency||'USDT');
+              const lowerField = thresholdCurrency==='RUBR' ? 'autoWithdrawLowerRubr' : 'autoWithdrawLowerUsdt';
+              const upperField = thresholdCurrency==='RUBR' ? 'autoWithdrawUpperRubr' : 'autoWithdrawUpperUsdt';
+              const destBlock = destType==='EXTERNAL_WALLET' ? `
+                <div class="field-grid">
+                  <div class="field"><label>Валюта</label><input value="Tether USD (USDT)" disabled></div>
+                  <div class="field"><label>Сеть</label><input value="Tron (TRC20)" disabled></div>
+                </div>
+                <div class="field" style="margin-top:12px"><label>Адрес кошелька для автовывода партнера</label><input id="awWallet" value="${esc(a.autoWithdrawWallet||'')}" placeholder="Получен от партнера через чат"></div>
+                <div class="ts" style="margin-top:8px">Комиссия и минимальная сумма — из настроек сети (BlockchainNetworkCurrency): комиссия за вывод 3 USDT, минимальная сумма вывода 5 USDT</div>
+              ` : `
+                <div class="field" style="max-width:260px">
+                  <label>Валюта внутреннего перевода</label>
+                  <select id="awInternalCurrency">
+                    <option value="USDT" ${thresholdCurrency!=='RUBR'?'selected':''}>USDT</option>
+                    <option value="RUBR" ${thresholdCurrency==='RUBR'?'selected':''}>RUBR</option>
+                  </select>
+                </div>
+                <div class="field" style="margin-top:12px">
+                  <label>Email получателя (аккаунт Bitbanker, тот же white label)</label>
+                  <div style="display:flex;gap:8px">
+                    <input id="awInternalEmail" value="${esc(a.autoWithdrawInternalEmail||'')}" placeholder="partner-account@example.com" style="flex:1">
+                    <button class="btn btn-sm" id="btnCheckAwEmail" type="button">Проверить</button>
+                  </div>
+                  <div id="awEmailCheckResult" style="margin-top:6px"></div>
+                </div>
+                <div class="helper-note" style="margin-top:8px">
+                  <span>Между разными white label переводы запрещены — email проверяется на существование и принадлежность тому же white label, что и у партнера.</span>
+                </div>
+              `;
+              return `
+                ${destBlock}
+                <div class="field-grid" style="margin-top:12px">
+                  <div class="field"><label>Порог 1 (${thresholdCurrency}) — столько останется на счете после автовывода</label><input id="awLower" data-aw-threshold-field="${lowerField}" value="${esc(a[lowerField]||'')}"></div>
+                  <div class="field"><label>Порог 2 (${thresholdCurrency}) — при достижении произойдет автовывод</label><input id="awUpper" data-aw-threshold-field="${upperField}" value="${esc(a[upperField]||'')}"></div>
+                </div>
+              `;
+            })()}
             <div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="btnSaveAutoWithdraw">Сохранить изменения</button></div>
           </div>
         </div>
@@ -2530,10 +2568,47 @@ function bindAccountDetailPage(){
     toast('Настройки Telegram-чата сохранены');
   });
 
+  $all('[data-aw-dest]').forEach(b=>b.addEventListener('click', ()=>{
+    a.autoWithdrawDestinationType = b.dataset.awDest;
+    render();
+  }));
+
+  $('#awInternalCurrency')?.addEventListener('change', (e)=>{
+    // пороги привязаны к валюте — при смене валюты перерисовываем, чтобы
+    // подставить порог1/порог2 именно этой валюты, а не прошлой
+    a.autoWithdrawInternalCurrency = e.target.value;
+    render();
+  });
+
+  $('#btnCheckAwEmail')?.addEventListener('click', ()=>{
+    const email = ($('#awInternalEmail').value||'').trim().toLowerCase();
+    const resultBox = $('#awEmailCheckResult');
+    if(!email){ resultBox.innerHTML = `<span class="badge b-error"><span class="d"></span>Email не указан</span>`; return; }
+    if(email === (a.email||'').toLowerCase()){ resultBox.innerHTML = `<span class="badge b-error"><span class="d"></span>Нельзя указать собственный email партнера</span>`; return; }
+    // мок: "своя" WL — любой email на домене bitbanker-demo.*, остальные — чужой WL/не найден
+    const found = /@bitbanker-demo\.(ru|kg)$/.test(email);
+    const otherWl = /@(vega\.io|paymaxx\.com)$/.test(email);
+    if(otherWl){ resultBox.innerHTML = `<span class="badge b-error"><span class="d"></span>Пользователь из другого white label</span>`; return; }
+    if(!found){ resultBox.innerHTML = `<span class="badge b-error"><span class="d"></span>Пользователь не найден</span>`; return; }
+    resultBox.innerHTML = `<span class="badge b-success"><span class="d"></span>Аккаунт найден, тот же white label</span>`;
+  });
+
   $('#btnSaveAutoWithdraw')?.addEventListener('click', ()=>{
-    a.autoWithdrawWallet = $('#awWallet').value;
-    a.autoWithdrawLower = $('#awLower').value;
-    a.autoWithdrawUpper = $('#awUpper').value;
+    // пороги сохраняются в поле своей валюты (USDT/RUBR отдельно), не общие
+    $all('[data-aw-threshold-field]').forEach(inp=>{ a[inp.dataset.awThresholdField] = inp.value; });
+    if((a.autoWithdrawDestinationType||'EXTERNAL_WALLET')==='EXTERNAL_WALLET'){
+      a.autoWithdrawWallet = $('#awWallet').value;
+      if(!a.autoWithdrawWallet){ toast('Укажите адрес кошелька — получен от партнера через чат'); return; }
+    } else {
+      const email = ($('#awInternalEmail').value||'').trim();
+      if(!email){ toast('Укажите email получателя внутреннего перевода'); return; }
+      const resultText = $('#awEmailCheckResult')?.textContent || '';
+      if(!resultText.includes('найден')){ toast('Проверьте email получателя перед сохранением'); return; }
+      if(resultText.includes('не найден') || resultText.includes('другого white label')){ toast('Нельзя сохранить — ' + resultText.toLowerCase()); return; }
+      a.autoWithdrawInternalEmail = email;
+      a.autoWithdrawInternalCurrency = $('#awInternalCurrency').value;
+    }
+    render();
     toast('Настройки автовывода сохранены');
   });
 
