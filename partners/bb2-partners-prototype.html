@@ -1412,9 +1412,13 @@ function mockInvoiceForOp(op, clientId){
   const refunds = [];
   if(op.status==='CONFIRMED' && h % 3 === 0){
     const full = h % 2 === 0;
+    // Полный возврат - это весь возвратный остаток, а не вся сумма платежа:
+    // refundable = cost - bank_fee_withheld, банковская комиссия не возвращается.
+    const bankFeeWithheld = +(op.amount * BT6_BANK_FEE_PCT/100).toFixed(2);
+    const refundableAmount = Math.max(op.amount - bankFeeWithheld, 0);
     refunds.push({
       refundId: 'ref_' + (h % 89999 + 10000),
-      amount: full ? op.amount : Math.round(op.amount*0.4),
+      amount: full ? refundableAmount : Math.round(refundableAmount*0.4),
       status: h % 7 === 0 ? 'FAILED' : (h % 4 === 0 ? 'PENDING' : 'CONFIRMED'),
       reason: full ? 'Полный возврат по заявке покупателя' : 'Частичный возврат за один товар из заказа',
       createdAt: op.paidAt || op.createdAt,
@@ -1531,7 +1535,9 @@ function mockClientOperations(clientId){
         linkedOpId: mainOp.sbpOperationId,
         linkedInvoiceId: mainOp.invoice.invoiceId,
         refundReason: r.reason,
-        isFullRefund: r.amount >= mainOp.amount,
+        // "Полный" - это весь возвратный остаток (сумма за вычетом банковской комиссии),
+        // а не вся сумма платежа - см. правку амаунта в buildInvoice выше.
+        isFullRefund: r.amount >= +(mainOp.amount * (1 - BT6_BANK_FEE_PCT/100)).toFixed(2),
       });
     });
     // пример: если у клиента включена автоконвертация, следом за подтверждённым пополнением
@@ -1556,13 +1562,17 @@ function mockClientOperations(clientId){
   return resolved.sort((a,b)=> b.createdAt.localeCompare(a.createdAt));
 }
 /** Комиссии по операции — по ставкам из блока «Комиссии» партнёра. */
+// Комиссия банка-эквайера Runa за приём СБП-платежа - 0.7% (bt6-runa-vozvrat-refund.md,
+// пример: платёж 10.00 RUB, удержано 0.07 RUB). Удерживается при зачислении и не возвращается
+// при возврате - именно поэтому refundable = cost - bankFee, а не вся сумма платежа.
+const BT6_BANK_FEE_PCT = 0.7;
 function opFeeInfo(op, a){
   const rate = Number(a?.paymentRate)||0;
   const min = Number(a?.paymentMin)||0;
   const partnerPct = Number(a?.partnerClientFeePct)||0;
   const providerFee = Math.max(op.amount * rate/100, min);
   const partnerFee = op.amount * partnerPct/100;
-  const bankFee = 0;
+  const bankFee = (op.type==='SBP' || op.type==='INVOICE') ? +(op.amount * BT6_BANK_FEE_PCT/100).toFixed(2) : 0;
   const totalFee = bankFee + providerFee + partnerFee;
   const netAmount = Math.max(op.amount - totalFee, 0);
   return { bankFee, providerFee, partnerFee, totalFee, netAmount };
@@ -3401,6 +3411,9 @@ function renderClientOperationsTab(c, a){
                   return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
                 }).join(' ');
             const isRefund = op.type==='REFUND';
+            // своей комиссии у REFUND нет - показываем удержанную банком комиссию с исходного платежа,
+            // а не оставляем колонку пустой (см. bt6-runa-vozvrat-refund.md)
+            const refundBankFee = isRefund ? opFeeInfo(rows.find(o=>o.sbpOperationId===op.linkedOpId)||{amount:0,type:'REFUND'}, a).bankFee : 0;
             return `
             <tr>
               <td>
@@ -3413,7 +3426,7 @@ function renderClientOperationsTab(c, a){
               <td>${opTypeBadge(op.type)}</td>
               <td class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</td>
               <td class="cell-strong" style="${isRefund?'color:var(--error-dark)':''}">${isRefund?'-':''}${op.amount.toLocaleString('ru-RU')}</td>
-              <td class="muted">${isRefund?'—':fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
+              <td class="muted">${isRefund?refundBankFee.toLocaleString('ru-RU',{maximumFractionDigits:2}):fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
               <td>${opStatusBadge(op.status)}</td>
               <td>${refundBadge}</td>
               <td>${isHung ? `
@@ -3496,7 +3509,10 @@ function opLedgerRows(op, c, a){
   ];
 }
 
-const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', INVOICE:'SBP', EXCHANGE:'EXCHANGE', REFUND:'REVERSAL' };
+// Платёжная система - реальная рельса движения денег, а не наш внутренний тип операции:
+// возврат идёт той же СБП/НСПК-рельсой, что и исходный платёж (REVERSAL - только аналогия
+// для типа операции в ядре, см. dorabotki-partnyorskij-api-01-10-2026.md, раздел "Решение").
+const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', INVOICE:'SBP', EXCHANGE:'EXCHANGE', REFUND:'SBP' };
 
 function renderOperationDetail(clientId, opId){
   const c = clientById(clientId);
@@ -3510,9 +3526,19 @@ function renderOperationDetail(clientId, opId){
   const isExchange = op.type==='EXCHANGE';
   const isRefund = op.type==='REFUND';
   const isInvoice = op.type==='INVOICE';
+  // Провайдер принимает один запрос возврата на попытку счёта (409 invoice_attempt_refund_already_requested) -
+  // если возврат уже есть в PENDING/CONFIRMED, второй нельзя оформить даже при ненулевом остатке.
+  const hasOpenRefund = isInvoice && op.invoice.refunds.some(r=>r.status==='PENDING' || r.status==='CONFIRMED');
   const refundedTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0) : 0;
-  const remainingToRefund = isInvoice ? Math.max(op.amount - refundedTotal, 0) : 0;
-  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0;
+  // refundable = cost - bank_fee_withheld (комиссия банка удержана при зачислении и не возвращается)
+  const refundableBase = isInvoice ? Math.max(op.amount - fee.bankFee, 0) : 0;
+  const remainingToRefund = isInvoice ? Math.max(refundableBase - refundedTotal, 0) : 0;
+  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0 && !hasOpenRefund;
+  // Комиссии своей у REFUND нет - банковская комиссия была удержана ещё на исходном платеже
+  // и повторно не взимается (bt6-runa-vozvrat-refund.md); показываем её с исходной операции,
+  // а не оставляем панель совсем пустой.
+  const linkedOp = isRefund ? mockClientOperations(clientId).find(o=>o.sbpOperationId===op.linkedOpId) : null;
+  const linkedFee = linkedOp ? opFeeInfo(linkedOp, a) : null;
 
   const clientInitials = (fullName(c).match(/\S/)? fullName(c).split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase() : '—');
 
@@ -3632,7 +3658,22 @@ function renderOperationDetail(clientId, opId){
       </div>
     </div>
 
-    ${isRefund ? '' : `
+    ${isRefund ? `
+    <div class="panel">
+      <div class="panel-h"><h3>Расчёт</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Сумма возврата</dt><dd class="cell-strong">${fmtMoney(op.amount)}</dd></div>
+          <div><dt>Сумма исходного платежа</dt><dd>${linkedOp?fmtMoney(linkedOp.amount):'—'}</dd></div>
+          <div><dt>Возвратный остаток после этого возврата</dt><dd>${op.isFullRefund?'0 RUB (закрыт)':'0 RUB (закрыт после первого возврата)'}</dd></div>
+        </dl>
+        <div class="hairline" style="margin:14px 0"></div>
+        <div class="section-num" style="margin-bottom:10px">Комиссии</div>
+        <dl class="deflist cols3">
+          <div><dt>Удержанная банком комиссия (с исходного платежа)</dt><dd>${linkedFee?fmtMoney(linkedFee.bankFee):'—'}</dd></div>
+        </dl>
+      </div>
+    </div>` : `
     <div class="panel">
       <div class="panel-h"><h3>Расчёт</h3></div>
       <div class="panel-b">
@@ -3939,12 +3980,20 @@ function openCreateRefundModal(clientId, opId){
   const op = mockClientOperations(clientId).find(o=>o.sbpOperationId===opId);
   if(!op || !op.invoice) return;
   const inv = op.invoice;
+  // Провайдер принимает один запрос возврата на попытку счёта - если возврат уже в PENDING/CONFIRMED, второй не оформляем.
+  if(inv.refunds.some(r=>r.status==='PENDING' || r.status==='CONFIRMED')){
+    toast('По этой операции возврат уже оформлен - провайдер принимает один запрос возврата на попытку счёта');
+    return;
+  }
+  const a = agentById(clientById(clientId)?.agentId);
+  const bankFee = opFeeInfo(op, a).bankFee;
   const refundedTotal = inv.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0);
-  const remaining = Math.max(op.amount - refundedTotal, 0);
+  // refundable = cost - bank_fee_withheld, см. bt6-runa-vozvrat-refund.md
+  const remaining = Math.max(op.amount - bankFee - refundedTotal, 0);
   openModal(`
     <div class="modal-h"><h3>Оформить возврат</h3><button class="modal-x" data-close-modal>✕</button></div>
     <div class="modal-b">
-      <div class="empty-state" style="padding:0 0 12px;margin:0">Остаток к возврату по операции: <b>${remaining.toLocaleString('ru-RU')} RUB</b>. Пустое поле суммы — полный возврат остатка.</div>
+      <div class="empty-state" style="padding:0 0 12px;margin:0">Остаток к возврату по операции: <b>${remaining.toLocaleString('ru-RU')} RUB</b> (сумма платежа ${op.amount.toLocaleString('ru-RU')} RUB за вычетом удержанной банком комиссии ${bankFee.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB — она не возвращается). Пустое поле суммы — полный возврат остатка.</div>
       <div class="field"><label>Сумма возврата (опционально)</label><input id="refAmount" type="number" max="${remaining}" min="0" placeholder="${remaining}"></div>
       <div class="field"><label>Причина (обязательно)</label><textarea rows="3" id="refReason" placeholder="Например: возврат по заявке покупателя, товар получен и проверен"></textarea></div>
     </div>
