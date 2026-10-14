@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ротация провайдеров СБП — прототип (дополнение к реальным экранам)</title>
+<style>
+:root{
+  --text-strong:#171717; --text-sub:#5c5c5c; --text-soft:#a3a3a3; --text-disabled:#c7c7c7;
+  --bg-app:#fafafa; --bg-white:#fff; --bg-weak:#f7f7f7; --bg-soft:#ebebeb;
+  --stroke-soft:#ececec; --stroke-med:#e2e2e2;
+  --purple-50:#faf5ff; --purple-100:#f3e8ff; --purple-200:#e9d5ff; --purple-300:#d8b4fe;
+  --purple-400:#c084fc; --purple-500:#a855f7; --purple-600:#9333ea; --purple-700:#7e22ce;
+  --primary:#8b3ce0; --primary-hover:#7a2fd0; --primary-a10:rgba(139,60,224,.09); --primary-a14:rgba(139,60,224,.13);
+  --success:#1fc16b; --success-bg:#e3f7ec; --success-dark:#0b4627;
+  --warning:#fa7319; --warning-bg:#fff3eb; --warning-dark:#c77a12;
+  --error:#fb3748; --error-bg:#ffebec; --error-dark:#a2131f;
+  --info:#8b3ce0; --info-bg:#f5eefd;
+  --faded:#8a8a8a; --faded-bg:#f2f2f2;
+  --radius-6:6px;--radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--radius-full:999px;
+  --shadow-xs:0 1px 2px 0 rgba(10,13,20,.04);
+  --shadow-sm:0 2px 4px 0 rgba(14,18,27,.03),0 6px 10px 0 rgba(14,18,27,.05);
+  --shadow-pop:0 12px 24px 0 rgba(14,18,27,.10),0 1px 2px 0 rgba(14,18,27,.04);
+  --font: -apple-system,"Segoe UI",ui-sans-serif,system-ui,sans-serif;
+  --font-mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --side-w:264px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg-app);color:var(--text-strong);font-family:var(--font);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+::placeholder{color:var(--text-soft)}
+a{color:inherit}
+svg{display:block}
+
+/* ============================================================ shell */
+.shell{display:flex;min-height:100vh}
+
+/* ============================================================ SIDEBAR — 1:1 из bb2-partners-prototype.html */
+.side{width:var(--side-w);flex:0 0 var(--side-w);background:var(--bg-white);border-right:1px solid var(--stroke-soft);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.side-brand{display:flex;align-items:center;gap:10px;padding:16px 16px 14px}
+.side-brand .mark{width:36px;height:36px;border-radius:var(--radius-full);flex:0 0 36px;background:linear-gradient(135deg,var(--purple-700),var(--purple-400));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12.5px}
+.side-brand .who{min-width:0;flex:1}
+.side-brand .name{font-size:14.5px;font-weight:600;color:var(--text-strong);line-height:1.25}
+.side-brand .sub{font-size:11.5px;color:var(--text-soft);line-height:1.2;margin-top:1px}
+.side-brand .expand{color:var(--text-soft);flex:0 0 16px;cursor:default}
+.side-divider{border:0;border-top:1px solid var(--stroke-soft);margin:0 16px}
+.side-scroll{flex:1;overflow-y:auto;padding:12px 12px 8px}
+.side-group{margin-bottom:2px}
+.side-group-label{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-soft);padding:14px 8px 6px}
+.side-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 8px;border:0;background:none;border-radius:var(--radius-8);font-size:13.5px;font-weight:500;color:var(--text-strong);text-align:left;cursor:default;-webkit-user-select:none;user-select:none}
+.side-item .ic{width:17px;height:17px;flex:0 0 17px;color:var(--text-sub);display:flex;align-items:center;justify-content:center}
+.side-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-item .chev{flex:0 0 12px;color:var(--text-soft)}
+.side-item.group-open .ic,.side-item.group-open .lbl{color:var(--text-strong)}
+.side-sub{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 6px;position:relative}
+.side-sub .side-item{font-size:13px;padding:7px 8px 7px 10px}
+.side-sub .side-item .ic{width:15px;height:15px;flex:0 0 15px}
+.side-item.clickable{cursor:pointer}
+.side-item.clickable:hover{background:var(--bg-weak)}
+.side-item.clickable .mk{width:5px;height:5px;border-radius:99px;background:var(--purple-300);flex:0 0 5px;margin-left:4px;opacity:.9}
+.side-item.nav-active .mk{background:var(--primary)}
+.side-item.nav-active{background:var(--primary-a10);color:var(--primary);font-weight:500;box-shadow:inset 3px 0 0 0 var(--primary);border-radius:var(--radius-8)}
+.side-item.nav-active .ic{color:var(--primary)}
+.side-foot{padding:12px}
+.side-collapse{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft);padding:8px 8px;cursor:default}
+
+/* ============================================================ TOPBAR — 1:1 */
+.topbar{height:56px;flex:0 0 56px;background:var(--bg-white);border-bottom:1px solid var(--stroke-soft);display:flex;align-items:center;justify-content:flex-end;padding:0 20px;position:sticky;top:0;z-index:5;gap:14px}
+.lang-pill{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:6px 10px;font-size:12.5px;font-weight:500;color:var(--text-strong);cursor:default}
+.lang-pill .flag{font-size:12px}
+.lang-pill .chev{color:var(--text-soft);width:9px;height:9px}
+.topbar-divider{width:1px;height:24px;background:var(--stroke-soft)}
+.top-profile{display:flex;align-items:center;gap:9px;cursor:default}
+.top-profile .av{width:32px;height:32px;border-radius:var(--radius-full);background:#ffe7c2;color:#a3660a;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex:0 0 32px;position:relative}
+.top-profile .av .dot{position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:99px;background:var(--success);border:2px solid var(--bg-white)}
+.top-profile .who .n{font-size:12.5px;font-weight:600;color:var(--text-strong);line-height:1.3}
+.top-profile .who .e{font-size:11.5px;color:var(--text-soft);line-height:1.3}
+.top-icon{width:30px;height:30px;border-radius:var(--radius-8);border:1px solid var(--stroke-med);display:flex;align-items:center;justify-content:center;color:var(--text-sub);cursor:default}
+
+/* ============================================================ main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.stage{flex:1;padding:18px 20px 40px;width:100%}
+
+.acc-card{background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:20px;box-shadow:var(--shadow-xs);padding:22px 24px 16px;margin-bottom:14px}
+.acc-card h1{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.acc-card p.sub{margin:0;color:var(--text-sub);font-size:12.5px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-8);border:1px solid var(--stroke-med);background:var(--bg-white);color:var(--text-strong);font-size:12.5px;font-weight:500;padding:7px 13px;cursor:pointer;box-shadow:var(--shadow-xs);transition:background .12s,border-color .12s}
+.btn:hover{background:var(--bg-weak);border-color:#d4d4d4}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.panel{background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-12);box-shadow:var(--shadow-xs)}
+.panel + .panel{margin-top:14px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--stroke-soft)}
+.panel-h h3{font-size:13.5px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.panel-h .hint{font-size:11.5px;color:var(--text-soft);margin-top:1px}
+.panel-b{padding:16px}
+.panel-h.collapsible{cursor:pointer;user-select:none}
+.panel-chev{background:none;border:0;padding:4px;margin:0;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--text-soft);cursor:pointer;border-radius:var(--radius-8);transition:transform .15s}
+.panel-chev:hover{color:var(--text-strong);background:var(--bg-weak)}
+.panel-chev.open{transform:rotate(180deg)}
+.panel[data-collapsed="true"] > .panel-h{border-bottom:0}
+.panel[data-collapsed="true"] > .panel-b,
+.panel[data-collapsed="true"] > .twrap{display:none}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--stroke-soft)}
+.toggle-row:last-child{border-bottom:0}
+.toggle-row .tt{font-size:13px;font-weight:500}
+.ts{font-size:11.5px;color:var(--text-soft)}
+.toggle-row .ts{margin-top:2px;max-width:480px}
+.switch{position:relative;width:36px;height:21px;flex:0 0 36px;border-radius:99px;background:var(--stroke-med);cursor:pointer;transition:background .15s;border:0;padding:0}
+.switch.on{background:var(--primary)}
+.switch .knob{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:99px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.switch.on .knob{left:17px}
+.switch[disabled]{opacity:.45;cursor:not-allowed}
+
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11.5px;font-weight:500;color:var(--text-sub)}
+.field input,.field select,.field textarea{border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:8px 10px;font-size:12.5px;background:var(--bg-white);width:100%;outline:0}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10)}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.hairline{border:0;border-top:1px solid var(--stroke-soft);margin:14px 0}
+
+.twrap{overflow-x:auto;border-radius:var(--radius-12)}
+table.grid{width:100%;border-collapse:collapse;font-size:12.5px}
+table.grid thead th{text-align:left;font-size:10.5px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.03em;padding:9px 14px;border-bottom:1px solid var(--stroke-soft);white-space:nowrap;background:var(--bg-white)}
+table.grid tbody td{padding:11px 14px;border-bottom:1px solid var(--stroke-soft);vertical-align:middle}
+table.grid tbody tr:last-child td{border-bottom:0}
+.cell-strong{font-weight:500;color:var(--text-strong)}
+.cell-sub{font-size:11.5px;color:var(--text-soft);margin-top:1px}
+.mono{font-family:var(--font-mono);font-size:11.5px;color:var(--text-sub)}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:600;white-space:nowrap}
+.badge .d{width:6px;height:6px;border-radius:99px}
+.b-success{background:var(--success-bg);color:var(--success-dark)} .b-success .d{background:var(--success)}
+.b-warning{background:var(--warning-bg);color:var(--warning-dark)} .b-warning .d{background:var(--warning)}
+.b-error{background:var(--error-bg);color:var(--error-dark)} .b-error .d{background:var(--error)}
+.b-info{background:var(--info-bg);color:var(--primary)} .b-info .d{background:var(--primary)}
+.b-faded{background:var(--faded-bg);color:var(--faded)} .b-faded .d{background:var(--faded)}
+.tag{display:inline-flex;padding:2.5px 8px;border-radius:var(--radius-6);font-size:10.5px;font-weight:600;background:var(--bg-soft);color:var(--text-sub)}
+.tag.new{background:var(--info-bg);color:var(--primary)}
+.tag.existing{background:var(--faded-bg);color:var(--faded)}
+
+.helper-note{font-size:11.5px;color:var(--text-soft);background:var(--bg-weak);border-radius:var(--radius-8);padding:8px 10px;display:flex;gap:7px;align-items:flex-start}
+.helper-note b{color:var(--text-sub)}
+
+.overlay{position:fixed;inset:0;background:rgba(23,23,23,.42);display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:50;overflow-y:auto}
+.overlay.show{display:flex}
+.modal{background:var(--bg-white);border-radius:var(--radius-16);box-shadow:var(--shadow-pop);width:100%;max-width:480px;overflow:hidden}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--stroke-soft)}
+.modal-h h3{margin:0;font-size:14.5px;font-weight:600}
+.modal-x{width:26px;height:26px;border-radius:var(--radius-8);border:0;background:none;color:var(--text-soft);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:var(--bg-weak);color:var(--text-strong)}
+.modal-b{padding:18px;display:flex;flex-direction:column;gap:13px;max-height:64vh;overflow-y:auto}
+.modal-f{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--stroke-soft)}
+
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:var(--text-strong);color:#fff;padding:10px 15px;border-radius:var(--radius-10);font-size:12.5px;font-weight:500;box-shadow:var(--shadow-pop);opacity:0;transform:translateY(6px);transition:all .18s}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ---- кастомный дропдаун (как fbtn/fmenu в bb2-partners-prototype.html) ---- */
+.popwrap{position:relative}
+.fbtn{display:flex;align-items:center;justify-content:space-between;gap:7px;width:100%;height:36px;padding:0 11px;border:1px solid var(--stroke-med);border-radius:var(--radius-8);background:var(--bg-white);box-shadow:var(--shadow-xs);cursor:pointer;font-size:12.5px}
+.fbtn:hover{border-color:#d4d4d4}
+.fbtn .fval{color:var(--text-strong);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbtn .fchev{color:var(--text-soft);flex:0 0 8px;transition:transform .15s}
+.fbtn.open .fchev{transform:rotate(180deg)}
+.fmenu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-10);box-shadow:var(--shadow-pop);max-height:240px;overflow-y:auto;padding:5px;z-index:40;display:none}
+.fmenu.show{display:block}
+.fmenu button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 9px;border:0;background:none;border-radius:var(--radius-8);font-size:12.5px;color:var(--text-strong);cursor:pointer;text-align:left}
+.fmenu button:hover{background:var(--bg-weak)}
+.fmenu button.sel{color:var(--primary);font-weight:600}
+
+/* ---- карточка клиента/партнёра (как в bb2-partners-prototype.html) ---- */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-sub);cursor:pointer;margin-bottom:12px;font-weight:500}
+.backlink:hover{color:var(--primary)}
+.rec-card{background:transparent;padding:0;margin-bottom:16px}
+.rec-top{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.rec-back{width:44px;height:44px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft);background:var(--bg-white);display:flex;align-items:center;justify-content:center;color:var(--primary);flex:0 0 44px}
+.rec-headrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rec-headrow h1{font-size:18px;font-weight:600;margin:0;letter-spacing:-.005em}
+.rec-pill{display:inline-flex;padding:3px 11px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600}
+.rec-meta{display:flex;align-items:center;gap:16px;margin-top:8px;font-size:12px;color:var(--text-soft);flex-wrap:wrap}
+.rec-meta .idcopy{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono)}
+.rtabs{display:flex;gap:2px;border-bottom:1px solid var(--stroke-soft);margin:18px 0 18px;overflow-x:auto}
+.rtab{padding:9px 4px;margin-right:18px;font-size:12.5px;font-weight:500;color:var(--text-disabled);border-bottom:2px solid transparent;cursor:not-allowed;background:none;border-top:0;border-left:0;border-right:0;white-space:nowrap}
+.rtab.active{color:var(--primary);border-bottom-color:var(--primary);cursor:default}
+.rtab.clickable{color:var(--text-sub);cursor:pointer}
+.rtab.clickable:hover{color:var(--text-strong)}
+.rtab.clickable.active{color:var(--primary)}
+.deflist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 20px;min-width:0}
+.deflist.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.deflist.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.deflist dt{font-size:11px;color:var(--text-soft);font-weight:500;text-transform:uppercase;letter-spacing:.02em;margin-bottom:3px}
+.deflist dd{margin:0;font-size:13px;font-weight:500;color:var(--text-strong)}
+.deflist dd.muted{color:var(--text-soft);font-weight:400}
+@media (max-width:1180px){.deflist.cols4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-brand">
+      <div class="mark">BI</div>
+      <div class="who"><div class="name">Bitbanker</div><div class="sub">Admin Panel</div></div>
+      <span class="expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 9l4-4 4 4M8 15l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <hr class="side-divider">
+    <nav class="side-scroll">
+      <div class="side-group-label">Рабочее место</div>
+      <div class="side-group">
+        <button class="side-item"><span class="ic">{{ICON_GRID}}</span><span class="lbl">Обзор</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_CLOCK}}</span><span class="lbl">Процессы</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item group-open"><span class="ic">{{ICON_PEOPLE}}</span><span class="lbl">Клиенты</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item clickable" id="navClient"><span class="ic">{{ICON_PERSON}}</span><span class="lbl">Аккаунты</span><span class="mk"></span></button>
+          <button class="side-item"><span class="ic">{{ICON_FOLDER}}</span><span class="lbl">Внешние клиенты</span></button>
+        </div>
+        <button class="side-item"><span class="ic">{{ICON_BAR}}</span><span class="lbl">Аналитика</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+      </div>
+
+      <div class="side-group-label">Финансовые продукты</div>
+      <div class="side-group">
+        <button class="side-item"><span class="ic">{{ICON_DOC}}</span><span class="lbl">ОПС / PSP</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_VAULT}}</span><span class="lbl">Депозитарий</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_TREND}}</span><span class="lbl">Биржа</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_COIN}}</span><span class="lbl">Криптоброкер</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+      </div>
+
+      <div class="side-group-label">Управление платформой</div>
+      <div class="side-group">
+        <button class="side-item group-open"><span class="ic">{{ICON_GEAR}}</span><span class="lbl">Настройки</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item clickable" id="navSbpSettings"><span class="ic">{{ICON_SBP}}</span><span class="lbl">СБП</span><span class="mk"></span></button>
+        </div>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="side-collapse"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Свернуть</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="lang-pill"><span class="flag">🇷🇺</span> Русский<svg class="chev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 5l3.5-3.5L8 5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="topbar-divider"></div>
+      <div class="top-profile">
+        <div class="av">SA<span class="dot"></span></div>
+        <div class="who"><div class="n">Super Admin</div><div class="e">super-admin@admin.com</div></div>
+      </div>
+      <div class="top-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modalBox"></div></div>
+
+<script>
+const ICONS = {
+  ICON_GRID: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>',
+  ICON_CLOCK: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_PEOPLE: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 14.3c2.6.4 4.5 2.6 4.5 5.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  ICON_PERSON: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c0-4.1 3.4-7.5 7.5-7.5s7.5 3.4 7.5 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_FOLDER: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  ICON_DOC: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 2.5h9l4.5 4.5V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12h7M8.5 16h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  ICON_BAR: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  ICON_VAULT: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M12 10v4M10 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  ICON_TREND: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_COIN: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 15c0 1.1 1.1 2 2.5 2s2.5-.7 2.5-1.7c0-2.6-5-1-5-3.6 0-1 1.1-1.7 2.5-1.7s2.5.9 2.5 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 7.3v1.2M12 15.5v1.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  ICON_GEAR: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2 5.6 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_CHEV_R: '<svg width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M1.5 1l4.5 5-4.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_CHEV_D: '<svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5l5 4.5 5-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_SBP: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M15 6l5 6-5 6M9 6l-5 6 5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+document.querySelector('.side-scroll').innerHTML = document.querySelector('.side-scroll').innerHTML.replace(/\{\{(\w+)\}\}/g, (_,k)=>ICONS[k]||'');
+
+/* ============================================================
+   Мок-данные — по bt-mt-rotation-srs.md + реальным точкам интеграции
+   (SBPSettingsPage, SbpSettingsModal клиента, PartnerMainInfoModal),
+   найденным исследованием bb2/back-office-united-dev
+   ============================================================ */
+const PROVIDERS = [
+  {iname:'pay2me', label:'pay2me', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-1'},
+  {iname:'vtb', label:'ВТБ', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-1'},
+  {iname:'bt6', label:'BT6 (Runa)', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-1'},
+  {iname:'mt', label:'Multitransfer', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-3'},
+];
+const KYC_LEVELS = ['KYC-1','KYC-2','KYC-3'];
+const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map(p=>[p.iname,p.label]));
+/* глобальный провайдер по умолчанию - для клиентов ББ без назначенного провайдера */
+let globalDefault = 'pay2me';
+const PROVIDER_OPTIONS = PROVIDERS.map(p=>p.iname);
+
+let PROVIDER_LOG = [
+  {provider:'mt', action:'Техработы включены', reason:'Плановое обслуживание у провайдера, оповещение в чате от 13.10.2026', actor:'a.krivikov@admin.com', time:'13.10.2026 09:12'},
+  {provider:'mt', action:'Техработы выключены', reason:'Обслуживание завершено раньше срока', actor:'a.krivikov@admin.com', time:'13.10.2026 10:48'},
+  {provider:'pay2me', action:'Circuit breaker открыт (CIRCUIT_OPEN)', reason:'Серия ошибок провайдерского класса: 5xx и таймауты > 50% за 5 мин', actor:'система', time:'13.10.2026 14:02'},
+  {provider:'pay2me', action:'Circuit breaker закрыт (AVAILABLE)', reason:'Окно без ошибок истекло', actor:'система', time:'13.10.2026 14:17'},
+];
+
+let LIMITS = [
+  {id:'1', provider:'pay2me', cur:'RUB', min:'100', max:'400000', wl:'1'},
+  {id:'2', provider:'vtb', cur:'RUB', min:'100', max:'400000', wl:'1'},
+];
+let limitFilters = { providers: [], cur: '' };
+
+function limitRows(){
+  const rows = LIMITS.filter(l=>(!limitFilters.providers.length || limitFilters.providers.includes(l.provider)) && (!limitFilters.cur || l.cur.toLowerCase().includes(limitFilters.cur.toLowerCase())));
+  return rows.map(l=>`
+    <tr>
+      <td class="mono">${esc(l.id)}</td>
+      <td class="cell-strong">${esc(PROVIDER_NAMES[l.provider]||l.provider)}</td>
+      <td>${esc(l.cur)}</td>
+      <td class="mono">${esc(l.min)}</td>
+      <td class="mono">${esc(l.max)}</td>
+      <td class="mono">${esc(l.wl)}</td>
+      <td style="text-align:center"><button class="btn btn-sm" data-edit-limit="${esc(l.id)}" title="Редактировать"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5L11 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button></td>
+    </tr>`).join('') || `<tr><td colspan="7" class="cell-sub" style="text-align:center;padding:20px">Ничего не найдено</td></tr>`;
+}
+function limitProviderFilter(){
+  const sel = limitFilters.providers;
+  const label = sel.length ? sel.map(i=>PROVIDER_NAMES[i]).join(', ') : 'Все';
+  return `
+    <div class="popwrap">
+      <button type="button" class="fbtn" id="limProvToggle"><span class="fval">${esc(label)}</span>
+        <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="fmenu" id="limProvMenu">
+        ${PROVIDER_OPTIONS.map(i=>`<button type="button" data-lim-prov="${i}" class="${sel.includes(i)?'sel':''}">${esc(PROVIDER_NAMES[i])}${sel.includes(i)?' ✓':''}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+let clientRotation = { provider:'', phone:'+7 916 590-16-31', depositEnabled:true, withdrawalEnabled:true };
+let agentRotation = { primary:'pay2me', fallback:'mt', onUnavailable:true, onLimit:false };
+function enabledProviders(keep){ return PROVIDERS.filter(p=>p.enabled || p.iname===keep).map(p=>p.iname); }
+
+let state = { page: 'sbp-settings', collapsed: {}, clientTab: 'main' };
+
+function $(s,r){return (r||document).querySelector(s)}
+function $all(s,r){return Array.from((r||document).querySelectorAll(s))}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(msg){
+  const wrap=$('#toastWrap'); const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show'); setTimeout(()=>el.remove(),200)},2600);
+}
+function openModal(html){ $('#modalBox').innerHTML=html; $('#overlay').classList.add('show'); $all('[data-close-modal]').forEach(b=>b.addEventListener('click',closeModal)); bindCustomSelects($('#modalBox')); }
+function closeModal(){ $('#overlay').classList.remove('show'); $('#modalBox').innerHTML=''; }
+$('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
+
+/* ---- кастомный дропдаун: рендер + биндинг (замена нативного <select>) ---- */
+function customSelect(id, selected, o){
+  o = o || {};
+  const values = o.options || PROVIDER_OPTIONS;
+  const emptyLabel = o.emptyLabel; /* если задан - первая опция с пустым значением */
+  const cur = selected ? (PROVIDER_NAMES[selected] || selected) : (emptyLabel || '');
+  return `
+    <div class="popwrap" data-select-id="${id}">
+      <button type="button" class="fbtn" data-select-toggle="${id}">
+        <span class="fval" data-select-val="${id}">${esc(cur)}</span>
+        <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="fmenu" data-select-menu="${id}">
+        ${emptyLabel ? `<button type="button" data-select-opt="${id}" data-value="" class="${!selected?'sel':''}">${esc(emptyLabel)}</button>` : ''}
+        ${values.map(opt=>`<button type="button" data-select-opt="${id}" data-value="${opt}" class="${opt===selected?'sel':''}">${esc(PROVIDER_NAMES[opt])}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+function getSelectValue(id){ const el = $(`[data-select-menu="${id}"] .sel`); return el ? el.dataset.value : undefined; }
+function bindCustomSelects(root){
+  $all('[data-select-toggle]', root).forEach(btn=>btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const id = btn.dataset.selectToggle;
+    const menu = $(`[data-select-menu="${id}"]`, root);
+    const isOpen = menu.classList.contains('show');
+    $all('.fmenu', root).forEach(m=>m.classList.remove('show'));
+    $all('.fbtn', root).forEach(b=>b.classList.remove('open'));
+    if(!isOpen){
+      /* fixed - чтобы меню не обрезалось overflow у .modal-b */
+      const r = btn.getBoundingClientRect();
+      const below = window.innerHeight - r.bottom - 12;
+      menu.style.position='fixed'; menu.style.left=r.left+'px'; menu.style.width=r.width+'px'; menu.style.right='auto';
+      if(below < 180 && r.top > below){ menu.style.top='auto'; menu.style.bottom=(window.innerHeight-r.top+6)+'px'; menu.style.maxHeight=Math.min(240,r.top-12)+'px'; }
+      else { menu.style.bottom='auto'; menu.style.top=(r.bottom+6)+'px'; menu.style.maxHeight=Math.min(240,below)+'px'; }
+      menu.classList.add('show'); btn.classList.add('open');
+    }
+  }));
+  $all('[data-select-opt]', root).forEach(opt=>opt.addEventListener('click',()=>{
+    const id = opt.dataset.selectOpt;
+    $all(`[data-select-opt="${id}"]`, root).forEach(o=>o.classList.remove('sel'));
+    opt.classList.add('sel');
+    $(`[data-select-val="${id}"]`, root).textContent = opt.textContent;
+    $(`[data-select-menu="${id}"]`, root).classList.remove('show');
+    $(`[data-select-toggle="${id}"]`, root).classList.remove('open');
+  }));
+}
+document.addEventListener('scroll', e=>{ if(e.target.closest && e.target.closest('.fmenu')) return; $all('#modalBox .fmenu.show').forEach(m=>m.classList.remove('show')); $all('#modalBox .fbtn.open').forEach(b=>b.classList.remove('open')); }, true);
+document.addEventListener('click', ()=>{ $all('.fmenu.show').forEach(m=>m.classList.remove('show')); $all('.fbtn.open').forEach(b=>b.classList.remove('open')); });
+
+function setNavActive(id){
+  $all('.side-item.clickable').forEach(b=>b.classList.remove('nav-active'));
+  $('#'+id)?.classList.add('nav-active');
+}
+function toggleCollapse(key){
+  state.collapsed[key] = !state.collapsed[key];
+  $(`[data-panel="${key}"]`).setAttribute('data-collapsed', state.collapsed[key] ? 'true':'false');
+  $(`[data-panel="${key}"] .panel-chev`).classList.toggle('open', !state.collapsed[key]);
+}
+
+function render(){
+  if(state.page==='sbp-settings'){ setNavActive('navSbpSettings'); $('#stage').innerHTML = renderSbpSettingsPage(); }
+  if(state.page==='client'){ setNavActive('navClient'); $('#stage').innerHTML = renderClientPage(); }
+  bindEvents();
+}
+
+/* ============================================================ УПРАВЛЕНИЕ ПЛАТФОРМОЙ → НАСТРОЙКИ → СБП
+   Реальная страница apps/vabs/src/pages/SBPSettingsPage - сейчас 2 секции
+   (Лимиты СБП-провайдера, Справочник банков), без вкладок, одной колонкой.
+   Добавляем третью секцию - "Доступность провайдеров" (ротация) */
+function renderSbpSettingsPage(){
+  return `
+    <div class="acc-card">
+      <h1>Настройки СБП</h1>
+      <p class="sub">Реальный экран SBPSettingsPage, дополненный разделом доступности провайдеров</p>
+    </div>
+
+    <div class="panel" data-panel="providers">
+      <div class="panel-h"><div><h3>Провайдеры СБП</h3><div class="hint">Доступность по каждому провайдеру. Недоступность запускает автоматическое переключение на резервного</div></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Провайдер</th><th>Статус</th><th>Мин. KYC</th><th>Включён</th><th>Техработы</th><th style="text-align:center">Действия</th></tr></thead>
+        <tbody>
+          ${PROVIDERS.map(p=>{
+            return `
+            <tr>
+              <td class="cell-strong">${esc(p.label)}${p.iname===globalDefault?' <span class="badge b-info" style="margin-left:4px"><span class="d"></span>по умолчанию</span>':''}</td>
+              <td><span class="badge ${p.enabled && !p.maintenance?'b-success':p.maintenance?'b-warning':'b-faded'}"><span class="d"></span>${p.enabled && !p.maintenance?'AVAILABLE':p.maintenance?'MAINTENANCE':'DISABLED'}</span>${p.maintenance && p.maintenanceUntil?`<div class="cell-sub">до ${esc(p.maintenanceUntil.replace('T',' '))}</div>`:''}</td>
+              <td class="mono">${esc(p.kycMin)}</td>
+              <td><button class="switch ${p.enabled?'on':''}" data-toggle-enabled="${p.iname}" title="enabled"><span class="knob"></span></button></td>
+              <td><button class="switch ${p.maintenance?'on':''}" data-toggle-maintenance="${p.iname}" title="maintenance" ${!p.enabled?'disabled':''}><span class="knob"></span></button></td>
+              <td style="text-align:center"><button class="btn btn-sm" data-edit-provider="${p.iname}" title="Настройки провайдера"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5L11 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" data-panel="limits">
+      <div class="panel-h"><div><h3>Лимиты</h3><div class="hint">Лимиты СБП-провайдера на валюту и white label</div></div>
+        <button class="btn btn-primary btn-sm" id="btnCreateLimit">Создать лимит</button>
+      </div>
+      <div class="panel-b" style="padding-bottom:0">
+        <div class="field-grid cols3" style="align-items:end">
+          <div class="field"><label>Провайдер</label>${limitProviderFilter()}</div>
+          <div class="field"><label>Валюта</label><input id="limFilterCur" placeholder="Поиск" value="${esc(limitFilters.cur)}"></div>
+          <div><button class="btn btn-sm" id="btnLimReset" style="height:36px">Очистить</button></div>
+        </div>
+      </div>
+      <div class="twrap" style="margin-top:14px"><table class="grid">
+        <thead><tr><th>ID</th><th>Провайдер</th><th>Валюта</th><th>Мин. сумма</th><th>Макс. сумма</th><th>WL ID</th><th style="text-align:center">Действия</th></tr></thead>
+        <tbody id="limRows">${limitRows()}</tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" data-panel="banks" data-collapsed="true">
+      <div class="panel-h collapsible" data-toggle-panel="banks">
+        <h3>Справочник банков СБП</h3>
+        <button class="panel-chev" aria-label="Развернуть"><svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5l5 4.5 5-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="panel-b">
+        <div class="twrap"><table class="grid">
+          <thead><tr><th>Банк</th><th>БИК</th><th>Страна</th><th>СБП</th></tr></thead>
+          <tbody>
+            <tr><td class="cell-strong">ПАО Сбербанк</td><td class="mono">044525225</td><td>RU</td><td><span class="badge b-success"><span class="d"></span>да</span></td></tr>
+            <tr><td class="cell-strong">Тинькофф Банк</td><td class="mono">044525974</td><td>RU</td><td><span class="badge b-success"><span class="d"></span>да</span></td></tr>
+            <tr><td class="cell-strong">ВТБ</td><td class="mono">044525187</td><td>RU</td><td><span class="badge b-success"><span class="d"></span>да</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="log">
+      <div class="panel-h"><div><h3>История изменений доступности</h3><div class="hint">Включение/выключение провайдера, техработы и изменение порядка по умолчанию - вручную, с обязательной причиной</div></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Провайдер</th><th>Действие</th><th>Причина</th><th>Кто</th><th>Когда</th></tr></thead>
+        <tbody>
+          ${PROVIDER_LOG.slice().reverse().map(l=>`
+            <tr><td class="cell-strong">${esc(PROVIDER_NAMES[l.provider]||l.provider)}</td><td>${esc(l.action)}</td><td class="cell-sub">${esc(l.reason)}</td><td class="cell-sub">${esc(l.actor)}</td><td class="cell-sub">${esc(l.time)}</td></tr>
+          `).join('') || `<tr><td colspan="5" class="cell-sub" style="text-align:center;padding:20px">Изменений пока не было</td></tr>`}
+        </tbody>
+      </table></div>
+    </div>
+  `;
+}
+
+/* ============================================================ КЛИЕНТЫ → АККАУНТЫ → карточка аккаунта
+   Партнёр - тот же аккаунт платформы, с дополнительной вкладкой
+   «Партнёрские» (не отдельный раздел сайдбара). Реальные компоненты:
+   «Основное» → ClientMainData → SbpSettingsInfo/SbpSettingsModal;
+   «Партнёрские» → PartnerMainInfoBlock/Modal + PartnerSbpLimitsBlock.
+   Остальные вкладки - некликабельны, для контекста реального экрана */
+function renderClientPage(){
+  const tabs = [
+    ['main','Основное'], ['ops','Операции'], ['docs','Документы'],
+    ['limits','Лимиты'], ['partner','Партнёрские'], ['chat','Чат'],
+  ];
+  const clickable = ['main','partner'];
+  return `
+    <div class="backlink">← Аккаунты</div>
+    <div class="rec-card">
+      <div class="rec-top">
+        <div class="rec-back">FP</div>
+        <div style="flex:1;min-width:0">
+          <div class="rec-headrow">
+            <h1>FinPay KG</h1>
+            <span class="rec-pill" style="background:var(--success-bg);color:var(--success-dark)">Активен</span>
+          </div>
+          <div class="rec-meta">
+            <span class="idcopy">client_7f3c1a9e</span>
+            <span>Юрлицо · Партнёр · KYC 3</span>
+          </div>
+        </div>
+      </div>
+      <div class="rtabs">
+        ${tabs.map(([k,l])=>`<button class="rtab ${clickable.includes(k)?'clickable':''} ${state.clientTab===k?'active':''}" ${clickable.includes(k)?`data-client-tab="${k}"`:''}>${l}</button>`).join('')}
+      </div>
+    </div>
+
+    ${state.clientTab==='partner' ? renderPartnerTab() : renderMainTab()}
+  `;
+}
+
+function renderMainTab(){
+  return `
+    <div class="panel" data-panel="clientsbp">
+      <div class="panel-h"><div><h3>Настройки СБП</h3></div>
+        <button class="btn btn-primary btn-sm" id="btnEditClientSbp">Изменить</button>
+      </div>
+      <div class="panel-b">
+        <dl class="deflist cols4">
+          <div><dt>Телефон СБП</dt><dd>${esc(clientRotation.phone)}</dd></div>
+          <div><dt>Провайдер по умолчанию</dt><dd>${clientRotation.provider?esc(PROVIDER_NAMES[clientRotation.provider]):`Глобальный (${esc(PROVIDER_NAMES[globalDefault])})`}</dd></div>
+          <div><dt>Пополнение</dt><dd><span class="badge ${clientRotation.depositEnabled?'b-success':'b-faded'}"><span class="d"></span>${clientRotation.depositEnabled?'доступно':'недоступно'}</span></dd></div>
+          <div><dt>Вывод</dt><dd><span class="badge ${clientRotation.withdrawalEnabled?'b-success':'b-faded'}"><span class="d"></span>${clientRotation.withdrawalEnabled?'доступно':'недоступно'}</span></dd></div>
+        </dl>
+      </div>
+    </div>
+  `;
+}
+
+function renderPartnerTab(){
+  return `
+    <div class="panel" data-panel="partnermain">
+      <div class="panel-h collapsible" data-toggle-panel="partnermain">
+        <h3>Основная информация</h3>
+        <button class="panel-chev open" aria-label="Свернуть"><svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5l5 4.5 5-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Название партнёра</dt><dd>FinPay KG</dd></div>
+          <div><dt>Провайдер СБП</dt><dd>${esc(PROVIDER_NAMES[agentRotation.primary])}</dd></div>
+          <div><dt>Резервный провайдер</dt><dd>${agentRotation.fallback?esc(PROVIDER_NAMES[agentRotation.fallback]):'Не задан'}</dd></div>
+          <div><dt>Переключение при недоступности</dt><dd><span class="badge ${agentRotation.onUnavailable?'b-success':'b-faded'}"><span class="d"></span>${agentRotation.onUnavailable?'включено':'выключено'}</span></dd></div>
+          <div><dt>Переключение при лимите</dt><dd><span class="badge ${agentRotation.onLimit?'b-success':'b-faded'}"><span class="d"></span>${agentRotation.onLimit?'включено':'выключено'}</span></dd></div>
+        </dl>
+        <div class="hairline"></div>
+        <button class="btn btn-primary btn-sm" id="btnEditAgentProviders">Изменить</button>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="partnerlimits" data-collapsed="true">
+      <div class="panel-h collapsible" data-toggle-panel="partnerlimits">
+        <h3>Лимиты СБП</h3>
+        <button class="panel-chev" aria-label="Развернуть"><svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5l5 4.5 5-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="panel-b">
+        <div class="toggle-row"><div><div class="tt">Пополнение по QR</div></div><button class="switch on"><span class="knob"></span></button></div>
+        <div class="toggle-row"><div><div class="tt">Прием QR</div></div><button class="switch on"><span class="knob"></span></button></div>
+        <div class="field-grid cols3" style="margin-top:14px">
+          <div class="field"><label>Лимит на QR, ₽</label><input value="400000" disabled></div>
+          <div class="field"><label>Лимит в сутки, ₽</label><input value="800000" disabled></div>
+          <div class="field"><label>Лимит в месяц, ₽</label><input value="1000000" disabled></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function bindLimitRows(){
+  $all('[data-edit-limit]').forEach(b=>b.addEventListener('click',()=>{
+    const l = LIMITS.find(x=>x.id===b.dataset.editLimit);
+    openModal(`
+      <div class="modal-h"><h3>Редактирование лимита провайдера</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Провайдер</label><input value="${esc(PROVIDER_NAMES[l.provider]||l.provider)}" disabled></div>
+        <div class="field"><label>Валюта</label><input value="${esc(l.cur)}" disabled></div>
+        <div class="field"><label>WL ID</label><input value="${esc(l.wl)}" disabled></div>
+        <div class="field"><label>Мин. сумма</label><input id="limMin" inputmode="decimal" value="${esc(l.min)}"></div>
+        <div class="field"><label>Макс. сумма</label><input id="limMax" inputmode="decimal" value="${esc(l.max)}"></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveLimit">Подтвердить</button></div>
+    `);
+    $('#btnSaveLimit').addEventListener('click',()=>{
+      const mn=$('#limMin').value.trim(), mx=$('#limMax').value.trim();
+      if(!mn || !mx){ toast('Заполните все поля'); return; }
+      l.min=mn; l.max=mx; closeModal(); render(); toast('Лимит обновлён');
+    });
+  }));
+}
+
+function bindEvents(){
+  $all('[data-toggle-panel]').forEach(h=>h.addEventListener('click',()=>toggleCollapse(h.dataset.togglePanel)));
+  $all('[data-client-tab]').forEach(b=>b.addEventListener('click',()=>{ state.clientTab=b.dataset.clientTab; render(); }));
+
+  $all('[data-toggle-enabled]').forEach(b=>b.addEventListener('click',()=>{
+    const p = PROVIDERS.find(x=>x.iname===b.dataset.toggleEnabled);
+    const willEnable = !p.enabled;
+    if(!willEnable && p.iname===globalDefault){ toast('Это провайдер по умолчанию - сначала назначьте другого'); return; }
+    openModal(`
+      <div class="modal-h"><h3>${willEnable?'Включить':'Выключить'} провайдера ${esc(p.label)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="helper-note"><span>⚠️</span><span>${willEnable?'Провайдер снова станет доступен для всех аккаунтов - партнёров и клиентов ББ.':'Провайдер станет недоступен ни у кого - ни у партнёров, ни у клиентов ББ. Уже созданные операции дообрабатываются у него. Партнёры с резервным провайдером и включённым условием переключатся на резервного; у клиентов ББ резервного нет - пополнение по СБП будет временно недоступно.'}</span></div>
+        <div class="field"><label>Причина <span style="color:var(--error)">*</span></label><textarea id="toggleReason" rows="3" placeholder="Например: плановые техработы у провайдера, оповещение от 14.10.2026"></textarea></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnConfirmToggle">${willEnable?'Включить':'Выключить'}</button></div>
+    `);
+    $('#btnConfirmToggle').addEventListener('click',()=>{
+      const reason = $('#toggleReason').value.trim();
+      if(!reason){ $('#toggleReason').style.borderColor='var(--error)'; toast('Укажите причину'); return; }
+      p.enabled = willEnable;
+      if(!p.enabled) p.maintenance = false;
+      PROVIDER_LOG.push({provider:p.iname, action: p.enabled?'Включён':'Выключен', reason, actor:'super-admin@admin.com', time:'сейчас'});
+      closeModal(); render();
+      toast(`${p.label}: ${p.enabled?'включён':'выключен'} - причина зафиксирована в истории изменений`);
+    });
+  }));
+
+  $all('[data-toggle-maintenance]').forEach(b=>b.addEventListener('click',()=>{
+    if(b.disabled) return;
+    const p = PROVIDERS.find(x=>x.iname===b.dataset.toggleMaintenance);
+    const willEnable = !p.maintenance;
+    openModal(`
+      <div class="modal-h"><h3>${willEnable?'Включить техработы':'Снять техработы'} - ${esc(p.label)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="helper-note"><span>⚠️</span><span>${willEnable?'Провайдер временно станет недоступен для выбора (ротация пропускает его), но останется включённым в целом - в отличие от полного выключения.':'Провайдер снова станет доступен для выбора ротацией.'}</span></div>
+        ${willEnable?'<div class="field"><label>Плановое окончание техработ <span style="color:var(--error)">*</span></label><input id="maintUntil" type="datetime-local"></div>':''}
+        <div class="field"><label>Причина <span style="color:var(--error)">*</span></label><textarea id="toggleReason" rows="3" placeholder="Например: плановые техработы у провайдера, оповещение в чате от 14.10.2026"></textarea></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnConfirmToggle">${willEnable?'Включить техработы':'Снять техработы'}</button></div>
+    `);
+    $('#btnConfirmToggle').addEventListener('click',()=>{
+      const reason = $('#toggleReason').value.trim();
+      if(!reason){ $('#toggleReason').style.borderColor='var(--error)'; toast('Укажите причину'); return; }
+      if(willEnable){
+        const until = $('#maintUntil').value;
+        if(!until){ $('#maintUntil').style.borderColor='var(--error)'; toast('Укажите плановое окончание'); return; }
+        p.maintenanceUntil = until;
+      } else p.maintenanceUntil = '';
+      p.maintenance = willEnable;
+      PROVIDER_LOG.push({provider:p.iname, action: p.maintenance?`Техработы включены, до ${p.maintenanceUntil.replace('T',' ')}`:'Техработы выключены', reason, actor:'super-admin@admin.com', time:'сейчас'});
+      closeModal(); render();
+      toast(`${p.label}: техработы ${p.maintenance?'включены':'сняты'} - причина зафиксирована в истории изменений`);
+    });
+  }));
+
+  $all('[data-edit-provider]').forEach(b=>b.addEventListener('click',()=>{
+    const p = PROVIDERS.find(x=>x.iname===b.dataset.editProvider);
+    const isDef = p.iname===globalDefault;
+    openModal(`
+      <div class="modal-h"><h3>Настройки провайдера - ${esc(p.label)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Минимальный уровень KYC клиента (kyc.minLevel)</label>
+          <div class="popwrap" data-select-id="kycMin">
+            <button type="button" class="fbtn" data-select-toggle="kycMin"><span class="fval" data-select-val="kycMin">${esc(p.kycMin)}</span>
+              <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+            <div class="fmenu" data-select-menu="kycMin">${KYC_LEVELS.map(k=>`<button type="button" data-select-opt="kycMin" data-value="${k}" class="${k===p.kycMin?'sel':''}">${k}</button>`).join('')}</div>
+          </div>
+        </div>
+        <div class="toggle-row"><div><div class="tt">Провайдер по умолчанию (глобальный)</div><div class="ts">${isDef?'Сейчас провайдер по умолчанию. Чтобы сменить - включите этот переключатель у другого провайдера':(p.enabled?'Используется для клиентов ББ без назначенного провайдера. Только один на систему - прежний будет снят':'Нельзя назначить: провайдер выключен глобально')}</div></div>
+          <button class="switch ${isDef?'on':''}" id="swDefaultProv" ${(isDef||!p.enabled)?'disabled':''}><span class="knob"></span></button></div>
+        <div class="helper-note"><span>ℹ️</span><span>Если уровень KYC клиента ниже минимума основного провайдера, а у резервного минимум ниже - операция выпускается через резервного (отдельного флага нет).</span></div>
+        <div class="field"><label>Причина <span style="color:var(--error)">*</span></label><textarea id="provReason" rows="2" placeholder="Обязательно - попадёт в историю изменений"></textarea></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveProvider">Сохранить</button></div>
+    `);
+    $('#swDefaultProv').addEventListener('click',()=>{ if(!$('#swDefaultProv').disabled) $('#swDefaultProv').classList.toggle('on'); });
+    $('#btnSaveProvider').addEventListener('click',()=>{
+      const reason = $('#provReason').value.trim();
+      if(!reason){ $('#provReason').style.borderColor='var(--error)'; toast('Укажите причину'); return; }
+      const v = getSelectValue('kycMin') || p.kycMin;
+      if(v!==p.kycMin){
+        PROVIDER_LOG.push({provider:p.iname, action:`kyc.minLevel: ${p.kycMin} → ${v}`, reason, actor:'super-admin@admin.com', time:'сейчас'});
+        p.kycMin = v;
+      }
+      if(!isDef && $('#swDefaultProv').classList.contains('on')){
+        PROVIDER_LOG.push({provider:'Провайдер по умолчанию', action:`${PROVIDER_NAMES[globalDefault]} → ${p.label}`, reason, actor:'super-admin@admin.com', time:'сейчас'});
+        globalDefault = p.iname;
+      }
+      closeModal(); render(); toast('Настройки провайдера сохранены');
+    });
+  }));
+
+  /* --- лимиты провайдеров: фильтры, создание, редактирование (как SbpProviderLimitsTable) --- */
+  $('#limProvToggle')?.addEventListener('click',e=>{ e.stopPropagation(); $('#limProvMenu').classList.toggle('show'); $('#limProvToggle').classList.toggle('open'); });
+  $all('[data-lim-prov]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    const i = b.dataset.limProv, a = limitFilters.providers;
+    limitFilters.providers = a.includes(i) ? a.filter(x=>x!==i) : a.concat(i);
+    render();
+    $('#limProvMenu')?.classList.add('show'); $('#limProvToggle')?.classList.add('open');
+  }));
+  $('#limFilterCur')?.addEventListener('input',e=>{ limitFilters.cur = e.target.value; $('#limRows').innerHTML = limitRows(); bindLimitRows(); });
+  $('#btnLimReset')?.addEventListener('click',()=>{ limitFilters = {providers:[], cur:''}; render(); });
+  bindLimitRows();
+
+  $('#btnCreateLimit')?.addEventListener('click',()=>{
+    openModal(`
+      <div class="modal-h"><h3>Создание лимита провайдера</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Провайдер</label>${customSelect('limProv','pay2me')}</div>
+        <div class="field"><label>Валюта</label><input id="limCur" value="RUB"></div>
+        <div class="field"><label>WL ID</label><input id="limWl"></div>
+        <div class="field"><label>Мин. сумма</label><input id="limMin" inputmode="decimal"></div>
+        <div class="field"><label>Макс. сумма</label><input id="limMax" inputmode="decimal"></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveLimit">Создать</button></div>
+    `);
+    $('#btnSaveLimit').addEventListener('click',()=>{
+      const v = id=>$('#'+id).value.trim();
+      if(!v('limCur') || !v('limWl') || !v('limMin') || !v('limMax')){ toast('Заполните все поля'); return; }
+      LIMITS.push({id:String(LIMITS.length+1), provider:getSelectValue('limProv'), cur:v('limCur').toUpperCase(), min:v('limMin'), max:v('limMax'), wl:v('limWl')});
+      closeModal(); render(); toast('Лимит создан');
+    });
+  });
+
+  /* --- клиентская модалка: реальный SbpSettingsModal; провайдер по умолчанию с возможностью сброса на глобальный --- */
+  $('#btnEditClientSbp')?.addEventListener('click',()=>{
+    openModal(`
+      <div class="modal-h"><h3>Настройки СБП - FinPay KG</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Телефон СБП</label><input id="cliPhone" value="${esc(clientRotation.phone)}"></div>
+        <div class="field"><label>Провайдер по умолчанию</label>${customSelect('cliProvider', clientRotation.provider, {options:enabledProviders(clientRotation.provider), emptyLabel:`Глобальный по умолчанию (${PROVIDER_NAMES[globalDefault]})`})}</div>
+        <div class="toggle-row"><div><div class="tt">Доступ к пополнению</div></div><button class="switch ${clientRotation.depositEnabled?'on':''}" id="swDeposit"><span class="knob"></span></button></div>
+        <div class="toggle-row"><div><div class="tt">Доступ к выводу</div></div><button class="switch ${clientRotation.withdrawalEnabled?'on':''}" id="swWithdrawal"><span class="knob"></span></button></div>
+        <div class="helper-note"><span>ℹ️</span><span>Автоматического резервного переключения для клиентов ББ нет: при недоступности провайдера клиент видит «пополнение по СБП временно недоступно».</span></div>
+        <div class="field"><label>Причина изменения <span style="color:var(--error)">*</span></label><textarea id="cliReason" rows="2" placeholder="featureAccessReason - обязательно при смене провайдера/доступа"></textarea></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveClient">Сохранить</button></div>
+    `);
+    $('#swDeposit').addEventListener('click',()=>$('#swDeposit').classList.toggle('on'));
+    $('#swWithdrawal').addEventListener('click',()=>$('#swWithdrawal').classList.toggle('on'));
+    $('#btnSaveClient').addEventListener('click',()=>{
+      const reason = $('#cliReason').value.trim();
+      if(!reason){ $('#cliReason').style.borderColor='var(--error)'; toast('Укажите причину'); return; }
+      clientRotation.phone = $('#cliPhone').value;
+      const pv = getSelectValue('cliProvider');
+      if(pv !== undefined) clientRotation.provider = pv;
+      clientRotation.depositEnabled = $('#swDeposit').classList.contains('on');
+      clientRotation.withdrawalEnabled = $('#swWithdrawal').classList.contains('on');
+      closeModal(); render(); toast('Настройки СБП клиента обновлены');
+    });
+  });
+
+  /* --- партнёрская модалка: реальный PartnerMainInfoModal + новые поля резерва --- */
+  $('#btnEditAgentProviders')?.addEventListener('click',()=>{
+    openModal(`
+      <div class="modal-h"><h3>Основная информация - FinPay KG</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b">
+        <div class="field"><label>Провайдер СБП (основной)</label>${customSelect('agentPrimary', agentRotation.primary, {options:enabledProviders(agentRotation.primary)})}</div>
+
+        <div class="hairline"></div>
+        <div class="field"><label>Резервный провайдер</label>${customSelect('agentFallback', agentRotation.fallback, {options:enabledProviders(agentRotation.fallback), emptyLabel:'Не задан'})}</div>
+        <div class="toggle-row"><div><div class="tt">Переключать при недоступности основного</div><div class="ts">sbpFallbackOnUnavailable</div></div><button class="switch ${agentRotation.onUnavailable?'on':''}" id="swOnUnavailable"><span class="knob"></span></button></div>
+        <div class="toggle-row"><div><div class="tt">Переключать при исчерпании лимита</div><div class="ts">sbpFallbackOnLimit</div></div><button class="switch ${agentRotation.onLimit?'on':''}" id="swOnLimit"><span class="knob"></span></button></div>
+      </div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveAgentRotation">Сохранить</button></div>
+    `);
+    $('#swOnUnavailable').addEventListener('click',()=>$('#swOnUnavailable').classList.toggle('on'));
+    $('#swOnLimit').addEventListener('click',()=>$('#swOnLimit').classList.toggle('on'));
+    $('#btnSaveAgentRotation').addEventListener('click',()=>{
+      const primary = getSelectValue('agentPrimary') || agentRotation.primary;
+      const fbSel = getSelectValue('agentFallback');
+      const fallback = fbSel === undefined ? agentRotation.fallback : fbSel;
+      if(fallback && fallback===primary){ toast('Резервный провайдер не может совпадать с основным'); return; }
+      agentRotation.primary = primary;
+      agentRotation.fallback = fallback;
+      agentRotation.onUnavailable = $('#swOnUnavailable').classList.contains('on');
+      agentRotation.onLimit = $('#swOnLimit').classList.contains('on');
+      closeModal(); render(); toast('Провайдер партнёра обновлён');
+    });
+  });
+
+  $('#navSbpSettings')?.addEventListener('click',()=>{ state.page='sbp-settings'; render(); });
+  $('#navClient')?.addEventListener('click',()=>{ state.page='client'; state.clientTab='main'; render(); });
+}
+
+render();
+</script>
+</body>
+</html>
