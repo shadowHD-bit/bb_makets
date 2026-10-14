@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сверка СБП — прототип (дополнение к реальным экранам)</title>
+<style>
+:root{
+  --text-strong:#171717; --text-sub:#5c5c5c; --text-soft:#a3a3a3; --text-disabled:#c7c7c7;
+  --bg-app:#fafafa; --bg-white:#fff; --bg-weak:#f7f7f7; --bg-soft:#ebebeb;
+  --stroke-soft:#ececec; --stroke-med:#e2e2e2;
+  --purple-50:#faf5ff; --purple-100:#f3e8ff; --purple-200:#e9d5ff; --purple-300:#d8b4fe;
+  --purple-400:#c084fc; --purple-500:#a855f7; --purple-600:#9333ea; --purple-700:#7e22ce;
+  --primary:#8b3ce0; --primary-hover:#7a2fd0; --primary-a10:rgba(139,60,224,.09); --primary-a14:rgba(139,60,224,.13);
+  --success:#1fc16b; --success-bg:#e3f7ec; --success-dark:#0b4627;
+  --warning:#fa7319; --warning-bg:#fff3eb; --warning-dark:#c77a12;
+  --error:#fb3748; --error-bg:#ffebec; --error-dark:#a2131f;
+  --info:#8b3ce0; --info-bg:#f5eefd;
+  --faded:#8a8a8a; --faded-bg:#f2f2f2;
+  --radius-6:6px;--radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--radius-full:999px;
+  --shadow-xs:0 1px 2px 0 rgba(10,13,20,.04);
+  --shadow-sm:0 2px 4px 0 rgba(14,18,27,.03),0 6px 10px 0 rgba(14,18,27,.05);
+  --shadow-pop:0 12px 24px 0 rgba(14,18,27,.10),0 1px 2px 0 rgba(14,18,27,.04);
+  --font: -apple-system,"Segoe UI",ui-sans-serif,system-ui,sans-serif;
+  --font-mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --side-w:264px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg-app);color:var(--text-strong);font-family:var(--font);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+::placeholder{color:var(--text-soft)}
+a{color:inherit}
+svg{display:block}
+
+/* ============================================================ shell */
+.shell{display:flex;min-height:100vh}
+
+/* ============================================================ SIDEBAR — 1:1 из bb2-partners-prototype.html */
+.side{width:var(--side-w);flex:0 0 var(--side-w);background:var(--bg-white);border-right:1px solid var(--stroke-soft);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.side-brand{display:flex;align-items:center;gap:10px;padding:16px 16px 14px}
+.side-brand .mark{width:36px;height:36px;border-radius:var(--radius-full);flex:0 0 36px;background:linear-gradient(135deg,var(--purple-700),var(--purple-400));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12.5px}
+.side-brand .who{min-width:0;flex:1}
+.side-brand .name{font-size:14.5px;font-weight:600;color:var(--text-strong);line-height:1.25}
+.side-brand .sub{font-size:11.5px;color:var(--text-soft);line-height:1.2;margin-top:1px}
+.side-brand .expand{color:var(--text-soft);flex:0 0 16px;cursor:default}
+.side-divider{border:0;border-top:1px solid var(--stroke-soft);margin:0 16px}
+.side-scroll{flex:1;overflow-y:auto;padding:12px 12px 8px}
+.side-group{margin-bottom:2px}
+.side-group-label{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-soft);padding:14px 8px 6px}
+.side-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 8px;border:0;background:none;border-radius:var(--radius-8);font-size:13.5px;font-weight:500;color:var(--text-strong);text-align:left;cursor:default;-webkit-user-select:none;user-select:none}
+.side-item .ic{width:17px;height:17px;flex:0 0 17px;color:var(--text-sub);display:flex;align-items:center;justify-content:center}
+.side-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-item .chev{flex:0 0 12px;color:var(--text-soft)}
+.side-item.group-open .ic,.side-item.group-open .lbl{color:var(--text-strong)}
+.side-sub{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 6px;position:relative}
+.side-sub .side-item{font-size:13px;padding:7px 8px 7px 10px}
+.side-sub .side-item .ic{width:15px;height:15px;flex:0 0 15px}
+.side-item.clickable{cursor:pointer}
+.side-item.clickable:hover{background:var(--bg-weak)}
+.side-item.clickable .mk{width:5px;height:5px;border-radius:99px;background:var(--purple-300);flex:0 0 5px;margin-left:4px;opacity:.9}
+.side-item.nav-active .mk{background:var(--primary)}
+.side-item.nav-active{background:var(--primary-a10);color:var(--primary);font-weight:500;box-shadow:inset 3px 0 0 0 var(--primary);border-radius:var(--radius-8)}
+.side-item.nav-active .ic{color:var(--primary)}
+.side-foot{padding:12px}
+.side-collapse{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft);padding:8px 8px;cursor:default}
+
+/* ============================================================ TOPBAR — 1:1 */
+.topbar{height:56px;flex:0 0 56px;background:var(--bg-white);border-bottom:1px solid var(--stroke-soft);display:flex;align-items:center;justify-content:flex-end;padding:0 20px;position:sticky;top:0;z-index:5;gap:14px}
+.lang-pill{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:6px 10px;font-size:12.5px;font-weight:500;color:var(--text-strong);cursor:default}
+.lang-pill .flag{font-size:12px}
+.lang-pill .chev{color:var(--text-soft);width:9px;height:9px}
+.topbar-divider{width:1px;height:24px;background:var(--stroke-soft)}
+.top-profile{display:flex;align-items:center;gap:9px;cursor:default}
+.top-profile .av{width:32px;height:32px;border-radius:var(--radius-full);background:#ffe7c2;color:#a3660a;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex:0 0 32px;position:relative}
+.top-profile .av .dot{position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:99px;background:var(--success);border:2px solid var(--bg-white)}
+.top-profile .who .n{font-size:12.5px;font-weight:600;color:var(--text-strong);line-height:1.3}
+.top-profile .who .e{font-size:11.5px;color:var(--text-soft);line-height:1.3}
+.top-icon{width:30px;height:30px;border-radius:var(--radius-8);border:1px solid var(--stroke-med);display:flex;align-items:center;justify-content:center;color:var(--text-sub);cursor:default}
+
+/* ============================================================ main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.stage{flex:1;padding:18px 20px 40px;width:100%}
+
+.acc-card{background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:20px;box-shadow:var(--shadow-xs);padding:22px 24px 16px;margin-bottom:14px}
+.acc-card h1{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.acc-card p.sub{margin:0;color:var(--text-sub);font-size:12.5px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-8);border:1px solid var(--stroke-med);background:var(--bg-white);color:var(--text-strong);font-size:12.5px;font-weight:500;padding:7px 13px;cursor:pointer;box-shadow:var(--shadow-xs);transition:background .12s,border-color .12s}
+.btn:hover{background:var(--bg-weak);border-color:#d4d4d4}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.panel{background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-12);box-shadow:var(--shadow-xs)}
+.panel + .panel{margin-top:14px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--stroke-soft)}
+.panel-h h3{font-size:13.5px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.panel-h .hint{font-size:11.5px;color:var(--text-soft);margin-top:1px}
+.panel-b{padding:16px}
+.panel-h.collapsible{cursor:pointer;user-select:none}
+.panel-chev{background:none;border:0;padding:4px;margin:0;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--text-soft);cursor:pointer;border-radius:var(--radius-8);transition:transform .15s}
+.panel-chev:hover{color:var(--text-strong);background:var(--bg-weak)}
+.panel-chev.open{transform:rotate(180deg)}
+.panel[data-collapsed="true"] > .panel-h{border-bottom:0}
+.panel[data-collapsed="true"] > .panel-b,
+.panel[data-collapsed="true"] > .twrap{display:none}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--stroke-soft)}
+.toggle-row:last-child{border-bottom:0}
+.toggle-row .tt{font-size:13px;font-weight:500}
+.ts{font-size:11.5px;color:var(--text-soft)}
+.toggle-row .ts{margin-top:2px;max-width:480px}
+.switch{position:relative;width:36px;height:21px;flex:0 0 36px;border-radius:99px;background:var(--stroke-med);cursor:pointer;transition:background .15s;border:0;padding:0}
+.switch.on{background:var(--primary)}
+.switch .knob{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:99px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.switch.on .knob{left:17px}
+.switch[disabled]{opacity:.45;cursor:not-allowed}
+
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11.5px;font-weight:500;color:var(--text-sub)}
+.field input,.field select,.field textarea{border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:8px 10px;font-size:12.5px;background:var(--bg-white);width:100%;outline:0}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10)}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.hairline{border:0;border-top:1px solid var(--stroke-soft);margin:14px 0}
+
+.twrap{overflow-x:auto;border-radius:var(--radius-12)}
+table.grid{width:100%;border-collapse:collapse;font-size:12.5px}
+table.grid thead th{text-align:left;font-size:10.5px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.03em;padding:9px 14px;border-bottom:1px solid var(--stroke-soft);white-space:nowrap;background:var(--bg-white)}
+table.grid tbody td{padding:11px 14px;border-bottom:1px solid var(--stroke-soft);vertical-align:middle}
+table.grid tbody tr:last-child td{border-bottom:0}
+.cell-strong{font-weight:500;color:var(--text-strong)}
+.cell-sub{font-size:11.5px;color:var(--text-soft);margin-top:1px}
+.mono{font-family:var(--font-mono);font-size:11.5px;color:var(--text-sub)}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:600;white-space:nowrap}
+.badge .d{width:6px;height:6px;border-radius:99px}
+.b-success{background:var(--success-bg);color:var(--success-dark)} .b-success .d{background:var(--success)}
+.b-warning{background:var(--warning-bg);color:var(--warning-dark)} .b-warning .d{background:var(--warning)}
+.b-error{background:var(--error-bg);color:var(--error-dark)} .b-error .d{background:var(--error)}
+.b-info{background:var(--info-bg);color:var(--primary)} .b-info .d{background:var(--primary)}
+.b-faded{background:var(--faded-bg);color:var(--faded)} .b-faded .d{background:var(--faded)}
+.tag{display:inline-flex;padding:2.5px 8px;border-radius:var(--radius-6);font-size:10.5px;font-weight:600;background:var(--bg-soft);color:var(--text-sub)}
+.tag.new{background:var(--info-bg);color:var(--primary)}
+.tag.existing{background:var(--faded-bg);color:var(--faded)}
+
+.helper-note{font-size:11.5px;color:var(--text-soft);background:var(--bg-weak);border-radius:var(--radius-8);padding:8px 10px;display:flex;gap:7px;align-items:flex-start}
+.helper-note b{color:var(--text-sub)}
+
+.overlay{position:fixed;inset:0;background:rgba(23,23,23,.42);display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:50;overflow-y:auto}
+.overlay.show{display:flex}
+.modal{background:var(--bg-white);border-radius:var(--radius-16);box-shadow:var(--shadow-pop);width:100%;max-width:480px;overflow:hidden}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--stroke-soft)}
+.modal-h h3{margin:0;font-size:14.5px;font-weight:600}
+.modal-x{width:26px;height:26px;border-radius:var(--radius-8);border:0;background:none;color:var(--text-soft);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:var(--bg-weak);color:var(--text-strong)}
+.modal-b{padding:18px;display:flex;flex-direction:column;gap:13px;max-height:64vh;overflow-y:auto}
+.modal-f{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--stroke-soft)}
+
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:var(--text-strong);color:#fff;padding:10px 15px;border-radius:var(--radius-10);font-size:12.5px;font-weight:500;box-shadow:var(--shadow-pop);opacity:0;transform:translateY(6px);transition:all .18s}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ---- кастомный дропдаун (как fbtn/fmenu в bb2-partners-prototype.html) ---- */
+.popwrap{position:relative}
+.fbtn{display:flex;align-items:center;justify-content:space-between;gap:7px;width:100%;height:36px;padding:0 11px;border:1px solid var(--stroke-med);border-radius:var(--radius-8);background:var(--bg-white);box-shadow:var(--shadow-xs);cursor:pointer;font-size:12.5px}
+.fbtn:hover{border-color:#d4d4d4}
+.fbtn .fval{color:var(--text-strong);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbtn .fchev{color:var(--text-soft);flex:0 0 8px;transition:transform .15s}
+.fbtn.open .fchev{transform:rotate(180deg)}
+.fmenu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-10);box-shadow:var(--shadow-pop);max-height:240px;overflow-y:auto;padding:5px;z-index:40;display:none}
+.fmenu.show{display:block}
+.fmenu button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 9px;border:0;background:none;border-radius:var(--radius-8);font-size:12.5px;color:var(--text-strong);cursor:pointer;text-align:left}
+.fmenu button:hover{background:var(--bg-weak)}
+.fmenu button.sel{color:var(--primary);font-weight:600}
+
+/* ---- карточка клиента/партнёра (как в bb2-partners-prototype.html) ---- */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-sub);cursor:pointer;margin-bottom:12px;font-weight:500}
+.backlink:hover{color:var(--primary)}
+.rec-card{background:transparent;padding:0;margin-bottom:16px}
+.rec-top{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.rec-back{width:44px;height:44px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft);background:var(--bg-white);display:flex;align-items:center;justify-content:center;color:var(--primary);flex:0 0 44px}
+.rec-headrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rec-headrow h1{font-size:18px;font-weight:600;margin:0;letter-spacing:-.005em}
+.rec-pill{display:inline-flex;padding:3px 11px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600}
+.rec-meta{display:flex;align-items:center;gap:16px;margin-top:8px;font-size:12px;color:var(--text-soft);flex-wrap:wrap}
+.rec-meta .idcopy{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono)}
+.rtabs{display:flex;gap:2px;border-bottom:1px solid var(--stroke-soft);margin:18px 0 18px;overflow-x:auto}
+.rtab{padding:9px 4px;margin-right:18px;font-size:12.5px;font-weight:500;color:var(--text-disabled);border-bottom:2px solid transparent;cursor:not-allowed;background:none;border-top:0;border-left:0;border-right:0;white-space:nowrap}
+.rtab.active{color:var(--primary);border-bottom-color:var(--primary);cursor:default}
+.rtab.clickable{color:var(--text-sub);cursor:pointer}
+.rtab.clickable:hover{color:var(--text-strong)}
+.rtab.clickable.active{color:var(--primary)}
+.deflist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 20px;min-width:0}
+.deflist.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.deflist.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.deflist dt{font-size:11px;color:var(--text-soft);font-weight:500;text-transform:uppercase;letter-spacing:.02em;margin-bottom:3px}
+.deflist dd{margin:0;font-size:13px;font-weight:500;color:var(--text-strong)}
+.deflist dd.muted{color:var(--text-soft);font-weight:400}
+@media (max-width:1180px){.deflist.cols4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.field-grid > .panel + .panel{margin-top:0}
+.tg-feed{padding:12px;display:flex;flex-direction:column;gap:10px;max-height:640px;overflow-y:auto;background:var(--bg-weak);border-radius:0 0 var(--radius-12) var(--radius-12)}
+.tg-msg{background:var(--bg-white);border:1px solid var(--stroke-soft);border-left:4px solid var(--faded);border-radius:var(--radius-10);padding:9px 11px;box-shadow:var(--shadow-xs)}
+.tg-msg.sev-P1{border-left-color:var(--error)} .tg-msg.sev-P2{border-left-color:var(--warning)} .tg-msg.sev-P3{border-left-color:var(--faded)} .tg-msg.sev-ok{border-left-color:var(--success)}
+.tg-h{font-size:12px;color:var(--text-sub);margin-bottom:3px}
+.tg-b{font-size:12.5px;line-height:1.4;word-break:break-word}
+.tg-f{font-size:11px;color:var(--text-soft);margin-top:5px}
+.tg-f a,.cell-sub a{color:var(--primary);text-decoration:none} .tg-f a:hover,.cell-sub a:hover{text-decoration:underline}
+pre.raw{margin:0;padding:10px 12px;background:var(--bg-weak);border:1px solid var(--stroke-soft);border-radius:var(--radius-8);font-family:var(--font-mono);font-size:11.5px;line-height:1.45;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.row-done{opacity:.55}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-brand">
+      <div class="mark">BI</div>
+      <div class="who"><div class="name">Bitbanker</div><div class="sub">Admin Panel</div></div>
+      <span class="expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 9l4-4 4 4M8 15l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <hr class="side-divider">
+    <nav class="side-scroll">
+      <div class="side-group-label">Рабочее место</div>
+      <div class="side-group">
+        <button class="side-item"><span class="ic">{{ICON_GRID}}</span><span class="lbl">Обзор</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_CLOCK}}</span><span class="lbl">Процессы</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item group-open"><span class="ic">{{ICON_PEOPLE}}</span><span class="lbl">Клиенты</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item" id="navClient"><span class="ic">{{ICON_PERSON}}</span><span class="lbl">Аккаунты</span><span class="mk"></span></button>
+          <button class="side-item"><span class="ic">{{ICON_FOLDER}}</span><span class="lbl">Внешние клиенты</span></button>
+        </div>
+        <button class="side-item group-open"><span class="ic">{{ICON_BAR}}</span><span class="lbl">Аналитика</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item" id="navMonitoring"><span class="ic">{{ICON_CLOCK}}</span><span class="lbl">Мониторинг СБП</span></button>
+        </div>
+      </div>
+
+      <div class="side-group-label">Финансовые продукты</div>
+      <div class="side-group">
+        <button class="side-item group-open"><span class="ic">{{ICON_DOC}}</span><span class="lbl">ОПС / PSP</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item clickable" id="navRec"><span class="ic">{{ICON_FOLDER}}</span><span class="lbl">Сверка СБП</span><span class="mk"></span></button>
+        </div>
+        <button class="side-item"><span class="ic">{{ICON_VAULT}}</span><span class="lbl">Депозитарий</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_TREND}}</span><span class="lbl">Биржа</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_COIN}}</span><span class="lbl">Криптоброкер</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+      </div>
+
+      <div class="side-group-label">Управление платформой</div>
+      <div class="side-group">
+        <button class="side-item group-open"><span class="ic">{{ICON_GEAR}}</span><span class="lbl">Настройки</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item" id="navSbpSettings"><span class="ic">{{ICON_SBP}}</span><span class="lbl">СБП</span></button>
+        </div>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="side-collapse"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Свернуть</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="lang-pill"><span class="flag">🇷🇺</span> Русский<svg class="chev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 5l3.5-3.5L8 5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="topbar-divider"></div>
+      <div class="top-profile">
+        <div class="av">SA<span class="dot"></span></div>
+        <div class="who"><div class="n">Super Admin</div><div class="e">super-admin@admin.com</div></div>
+      </div>
+      <div class="top-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modalBox"></div></div>
+
+<script>
+const ICONS = {
+  ICON_GRID: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>',
+  ICON_CLOCK: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_PEOPLE: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 14.3c2.6.4 4.5 2.6 4.5 5.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  ICON_PERSON: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c0-4.1 3.4-7.5 7.5-7.5s7.5 3.4 7.5 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_FOLDER: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  ICON_DOC: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 2.5h9l4.5 4.5V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12h7M8.5 16h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  ICON_BAR: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  ICON_VAULT: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M12 10v4M10 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  ICON_TREND: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_COIN: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 15c0 1.1 1.1 2 2.5 2s2.5-.7 2.5-1.7c0-2.6-5-1-5-3.6 0-1 1.1-1.7 2.5-1.7s2.5.9 2.5 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 7.3v1.2M12 15.5v1.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  ICON_GEAR: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2 5.6 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_CHEV_R: '<svg width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M1.5 1l4.5 5-4.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_CHEV_D: '<svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5l5 4.5 5-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_SBP: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M15 6l5 6-5 6M9 6l-5 6 5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+document.querySelector('.side-scroll').innerHTML = document.querySelector('.side-scroll').innerHTML.replace(/\{\{(\w+)\}\}/g, (_,k)=>ICONS[k]||'');
+
+
+
+
+
+
+
+/* ============================================================
+   Прототип «Сверка СБП-операций» - по bt-mt-reconciliation-srs.md и разделам 9, 10, 12 черновика 3.0.
+   Админка → ОПС / PSP → Сверка СБП. Значения - демо. Время виртуальное (+15 минут проверяет окно «нет данных плательщика»).
+   ============================================================ */
+const PROVIDERS = [{iname:'mt', label:'Multitransfer'}, {iname:'pay2me', label:'pay2me'}, {iname:'vtb', label:'ВТБ'}, {iname:'bt6', label:'BT6 (Runa)'}];
+const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map(p=>[p.iname,p.label]));
+const PROVIDER_OPTIONS = PROVIDERS.map(p=>p.iname);
+const OPERATOR = 'operator@admin.com', COMPLIANCE = 'compliance@admin.com';
+
+let NOW = new Date(2026,9,14,10,0,0);
+const pad = n => String(n).padStart(2,'0');
+const fmtDT = d => d ? `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}` : '—';
+const fmtD = d => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const isoDT = d => d ? `${iso(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` : '';
+const ymd = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+const fmtN = v => Number(v).toLocaleString('ru-RU');
+const money = v => Number(v).toFixed(2);
+const hex = n => Array.from({length:n},()=>Math.floor(Math.random()*16).toString(16)).join('');
+const guid = () => `${hex(8)}-${hex(4)}-${hex(4)}-${hex(4)}-${hex(12)}`;
+const knpGen = () => String(300000000 + Math.floor(Math.random()*99999999));
+const hashStr = s => { let h=5381; for(const c of s) h=((h<<5)+h+c.charCodeAt(0))|0; return (h>>>0).toString(16).padStart(8,'0')+'…'; };
+const at = (day, hh, mm) => new Date(2026,9,day,hh,mm,0);
+
+/* типы зависаний (черновик, раздел 9) */
+const HANG = {
+  NO_RESPONSE_CREATE:{label:'Без ответа на создание', auto:false, note:'Сначала поиск в реестре по сумме и времени, иначе клиринг'},
+  NO_RESPONSE_QR:{label:'Без ответа на генерацию QR', auto:true, note:'Опрос статуса: CREATED/CANCELED - QR не выдан; CHECKED - QR выдан, но не показан'},
+  NO_FINAL_STATUS:{label:'Нет финального статуса', auto:true, note:'Опрос до 3 суток; без оплаты - EXPIRED, в списке до появления в реестре'},
+  LATE_PAYMENT:{label:'Поздняя оплата', auto:false, note:'Решение оператора'},
+  PAYER_MISMATCH:{label:'Несовпадение плательщика', auto:false, note:'Решение комплаенса'},
+  NO_PAYER_DATA:{label:'Нет данных плательщика', auto:false, note:'Решение оператора, без блокировки клиента'},
+  UNKNOWN_STATUS:{label:'Неизвестный статус', auto:false, note:'Решение оператора'},
+};
+const REQ_STATUS = {NO_RESPONSE_CREATE:'NO_RESPONSE', NO_RESPONSE_QR:'NO_RESPONSE', NO_FINAL_STATUS:'PENDING', LATE_PAYMENT:'LATE_PAYMENT', PAYER_MISMATCH:'PENDING', NO_PAYER_DATA:'PENDING', UNKNOWN_STATUS:'PENDING'};
+
+let OPS = [], FILES = [], JOURNAL = [], BLOCKS = [], COMPLIANCE_LOG = [], REPORTS = [], IMPORTED = new Set(), OUT = [];
+let opSeq = 200, fileSeq = 0, blkSeq = 0;
+
+function makeOp(o){
+  const op = Object.assign({
+    id:'op_'+(++opSeq), channel:'PARTNER', partner:'FinPay KG', client:'client_7f3c1a9e', clientName:'Иванов Иван', recipientPhone:'79093881549', recipientName:'ИВАНОВ ИВАН ИВАНОВИЧ',
+    provider:'mt', amount:5000, created:new Date(NOW), finalAt:null, bbStatus:'PENDING', mtStatus:'', hangType:null, hangReason:'', clearing:null,
+    paymentId:'', knp:'', paymentNum:'', xCreate:guid(), xQr:'', reqType:'create', requestAt:null,
+    payerMatch:null, payerMasked:'', payerName:'', mtOutcome:null, decision:null, rubr:null,
+  }, o);
+  OPS.push(op); return op;
+}
+const confirmed = (id, ch, partner, amt, createdAt, finalAt) => makeOp({id, channel:ch, partner:ch==='BB_CLIENT'?'':partner, clientName:ch==='BB_CLIENT'?'Петров Пётр':'Клиент партнёра', amount:amt, created:createdAt, finalAt, bbStatus:'CONFIRMED', mtStatus:'PROCESSED', paymentId:guid(), knp:knpGen(), paymentNum:knpGen()+'7', payerMatch:'MATCH', payerMasked:'7909***1549', payerName:'Иванов Иван И.', rubr:amt-50});
+
+/* ---------- сообщения в общий чат СБП (превью) ---------- */
+const ICON = {P1:'🔴', P2:'🟠', A:'🔔'};
+function say(provider, kind, text, sev){ OUT.push({sev:sev===undefined?'A':sev, kind, text, time:new Date(NOW), provider}); }
+function bubble(m){
+  return `<div class="tg-msg ${m.sev?'sev-'+m.sev:'sev-ok'}">
+    <div class="tg-h">${m.sev?`${ICON[m.sev]} <b>${m.sev==='A'?'Алерт':m.sev}</b>`:'🟢 <b>Информация</b>'} · ${esc(PROVIDER_NAMES[m.provider]||m.provider)} · ${esc(m.kind)}</div>
+    <div class="tg-b">${esc(m.text)}</div><div class="tg-f">${fmtDT(m.time)}</div></div>`;
+}
+function previewOut(){
+  if(!OUT.length) return;
+  const items = OUT.slice(); OUT = [];
+  openModal(`
+    <div class="modal-h"><h3>Сообщения в общий чат СБП (Telegram)</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b" style="background:var(--bg-weak)">${items.map(bubble).join('')}</div>
+    <div class="modal-f"><button class="btn btn-primary" data-close-modal>Закрыть</button></div>`);
+}
+
+/* ---------- состояние экрана ---------- */
+let state = {
+  tab:'hung',
+  hungF:{from:'2026-10-01', to:'2026-10-14', type:'', provider:'mt'},
+  imp:null,
+  exp:{provider:'mt', from:'2026-10-12', to:'2026-10-13', basis:'final', status:'', partner:''},
+  regOpts:{extra:true, missing:false, status:false, amount:false, d2:false, count:false},
+};
+
+function $(s,r){return (r||document).querySelector(s)}
+function $all(s,r){return Array.from((r||document).querySelectorAll(s))}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(msg){
+  const wrap=$('#toastWrap'); const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show'); setTimeout(()=>el.remove(),200)},2600);
+}
+function openModal(html){ $('#modalBox').innerHTML=html; $('#overlay').classList.add('show'); $all('[data-close-modal]').forEach(b=>b.addEventListener('click',closeModal)); bindCustomSelects($('#modalBox')); }
+function closeModal(){ $('#overlay').classList.remove('show'); $('#modalBox').innerHTML=''; }
+$('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
+
+/* ---- кастомный дропдаун: рендер + биндинг (замена нативного <select>) ---- */
+function customSelect(id, selected, o){
+  o = o || {};
+  const values = o.options || PROVIDER_OPTIONS;
+  const emptyLabel = o.emptyLabel; /* если задан - первая опция с пустым значением */
+  const cur = selected ? (PROVIDER_NAMES[selected] || selected) : (emptyLabel || '');
+  return `
+    <div class="popwrap" data-select-id="${id}">
+      <button type="button" class="fbtn" data-select-toggle="${id}">
+        <span class="fval" data-select-val="${id}">${esc(cur)}</span>
+        <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="fmenu" data-select-menu="${id}">
+        ${emptyLabel ? `<button type="button" data-select-opt="${id}" data-value="" class="${!selected?'sel':''}">${esc(emptyLabel)}</button>` : ''}
+        ${values.map(opt=>`<button type="button" data-select-opt="${id}" data-value="${opt}" class="${opt===selected?'sel':''}">${esc(PROVIDER_NAMES[opt])}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+function getSelectValue(id){ const el = $(`[data-select-menu="${id}"] .sel`); return el ? el.dataset.value : undefined; }
+function bindCustomSelects(root){
+  $all('[data-select-toggle]', root).forEach(btn=>btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const id = btn.dataset.selectToggle;
+    const menu = $(`[data-select-menu="${id}"]`, root);
+    const isOpen = menu.classList.contains('show');
+    $all('.fmenu', root).forEach(m=>m.classList.remove('show'));
+    $all('.fbtn', root).forEach(b=>b.classList.remove('open'));
+    if(!isOpen){
+      /* fixed - чтобы меню не обрезалось overflow у .modal-b */
+      const r = btn.getBoundingClientRect();
+      const below = window.innerHeight - r.bottom - 12;
+      menu.style.position='fixed'; menu.style.left=r.left+'px'; menu.style.width=r.width+'px'; menu.style.right='auto';
+      if(below < 180 && r.top > below){ menu.style.top='auto'; menu.style.bottom=(window.innerHeight-r.top+6)+'px'; menu.style.maxHeight=Math.min(240,r.top-12)+'px'; }
+      else { menu.style.bottom='auto'; menu.style.top=(r.bottom+6)+'px'; menu.style.maxHeight=Math.min(240,below)+'px'; }
+      menu.classList.add('show'); btn.classList.add('open');
+    }
+  }));
+  $all('[data-select-opt]', root).forEach(opt=>opt.addEventListener('click',()=>{
+    const id = opt.dataset.selectOpt;
+    $all(`[data-select-opt="${id}"]`, root).forEach(o=>o.classList.remove('sel'));
+    opt.classList.add('sel');
+    $(`[data-select-val="${id}"]`, root).textContent = opt.textContent;
+    $(`[data-select-menu="${id}"]`, root).classList.remove('show');
+    $(`[data-select-toggle="${id}"]`, root).classList.remove('open');
+  }));
+}
+document.addEventListener('scroll', e=>{ if(e.target.closest && e.target.closest('.fmenu')) return; $all('#modalBox .fmenu.show').forEach(m=>m.classList.remove('show')); $all('#modalBox .fbtn.open').forEach(b=>b.classList.remove('open')); }, true);
+document.addEventListener('click', ()=>{ $all('.fmenu.show').forEach(m=>m.classList.remove('show')); $all('.fbtn.open').forEach(b=>b.classList.remove('open')); });
+
+function setNavActive(id){
+  $all('.side-item.clickable').forEach(b=>b.classList.remove('nav-active'));
+  $('#'+id)?.classList.add('nav-active');
+}
+function toggleCollapse(key){
+  const panel = $(`[data-panel="${key}"]`);
+  const collapsed = panel.getAttribute('data-collapsed') === 'true';
+  state.collapsed[key] = !collapsed;
+  panel.setAttribute('data-collapsed', state.collapsed[key] ? 'true':'false');
+  $(`[data-panel="${key}"] .panel-chev`).classList.toggle('open', !state.collapsed[key]);
+}
+
+
+
+
+
+
+
+/* выпадающий список с произвольными значениями */
+function optSelect(id, options, selected){
+  const cur = options.find(o=>o.v===selected);
+  return `
+    <div class="popwrap" data-select-id="${id}">
+      <button type="button" class="fbtn" data-select-toggle="${id}">
+        <span class="fval" data-select-val="${id}">${esc(cur?cur.l:'')}</span>
+        <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="fmenu" data-select-menu="${id}">
+        ${options.map(o=>`<button type="button" data-select-opt="${id}" data-value="${o.v}" class="${o.v===selected?'sel':''}">${esc(o.l)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+const badge = (cls, text) => `<span class="badge ${cls}"><span class="d"></span>${esc(text)}</span>`;
+const stBadge = s => badge(s==='CONFIRMED'||s==='ACCEPTED'?'b-success':s==='FAILED'||s==='CANCELLED'?'b-error':s==='HUNG'||s==='EXPIRED'?'b-warning':'b-info', s);
+const showFile = (name, text, note) => openModal(`
+  <div class="modal-h"><h3>${esc(name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+  <div class="modal-b"><pre class="raw">${esc(text)}</pre>${note?`<div class="helper-note"><span>ℹ️</span><span>${esc(note)}</span></div>`:''}</div>
+  <div class="modal-f"><button class="btn btn-primary" data-close-modal>Закрыть</button></div>`);
+
+/* ============================================================ вкладка «Зависшие заявки» */
+function hungList(){
+  const f = state.hungF, from = new Date(f.from+'T00:00:00'), to = new Date(f.to+'T23:59:59');
+  return OPS.filter(o=>o.hangType && !['ACCEPTED','CANCELLED'].includes(o.clearing) && (o.provider===f.provider) && (!f.type || o.hangType===f.type) && o.created>=from && o.created<=to);
+}
+function tabHung(){
+  const f = state.hungF, rows = hungList();
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Зависшие заявки</h3><div class="hint">Операции без финального статуса в ожидаемое время или без ответа провайдера. Типы и возможность автоматического разрешения - по разделу 9 черновика</div></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-sm" id="btnPoll">Опросить статусы (авто)</button><button class="btn btn-primary btn-sm" id="btnExportHung">Выгрузить файл для сверки</button></div></div>
+      <div class="panel-b" style="padding-bottom:0">
+        <div class="field-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));align-items:end">
+          <div class="field"><label>Период с</label><input type="date" id="hfFrom" value="${f.from}"></div>
+          <div class="field"><label>Период по</label><input type="date" id="hfTo" value="${f.to}"></div>
+          <div class="field"><label>Тип зависания</label>${optSelect('hfType',[{v:'',l:'Все'}].concat(Object.keys(HANG).map(k=>({v:k,l:HANG[k].label}))),f.type)}</div>
+          <div class="field"><label>Провайдер</label>${optSelect('hfProv',PROVIDERS.map(p=>({v:p.iname,l:p.label})),f.provider)}</div>
+        </div>
+      </div>
+      <div class="twrap" style="margin-top:14px"><table class="grid">
+        <thead><tr><th>Операция</th><th>Тип</th><th>Канал</th><th>Сумма, ₽</th><th>Создана</th><th>Причина</th><th>Авто</th><th>Состояние</th></tr></thead>
+        <tbody>${rows.map(o=>`<tr>
+          <td class="mono">${esc(o.id)}</td>
+          <td class="cell-strong">${esc(HANG[o.hangType].label)}<div class="cell-sub">${esc(HANG[o.hangType].note)}</div></td>
+          <td>${o.channel==='BB_CLIENT'?'Клиент ББ':esc(o.partner)}</td>
+          <td class="mono">${fmtN(o.amount)}</td><td class="cell-sub">${fmtDT(o.created)}</td>
+          <td class="cell-sub" style="white-space:normal;min-width:130px">${esc(o.hangReason)}</td>
+          <td>${HANG[o.hangType].auto?badge('b-info','опросом'):'<span class="cell-sub">клиринг</span>'}</td>
+          <td>${stBadge(o.clearing==='PENDING'?'PENDING_CLEARING':'HUNG')}${o.bbStatus==='EXPIRED'?'<div class="cell-sub">EXPIRED</div>':''}</td>
+        </tr>`).join('') || '<tr><td colspan="8" class="cell-sub" style="text-align:center;padding:20px">Зависших заявок по фильтрам нет</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+}
+function exportHung(){
+  const ops = hungList().filter(o=>!o.clearing);
+  if(!ops.length){ toast('Нет зависших заявок без решения по фильтрам - файл не формируется'); return; }
+  const head = 'bb_operation_id;x_request_id;request_type;request_at;payment_id;payment_system_transfer_num;amount;bb_status;hang_reason';
+  const lines = ops.map(o=>[o.id, o.reqType==='qr'?(o.xQr||o.xCreate):o.xCreate, o.reqType, isoDT(o.requestAt||o.created), o.paymentId, o.knp, money(o.amount), o.bbStatus==='EXPIRED'?'EXPIRED':REQ_STATUS[o.hangType], o.hangReason].join(';'));
+  const name = `mt_clearing_request_${ymd(NOW)}.csv`;
+  ops.forEach(o=>o.clearing='PENDING');
+  FILES.push({id:++fileSeq, dir:'REQUEST', name, at:new Date(NOW), rows:ops.length, hash:'', by:OPERATOR});
+  render();
+  showFile(name, [head].concat(lines).join('\n'), 'Персональные данные в файл не включаются. Операции переведены в PENDING_CLEARING. Файл отправляется MT через рабочий чат');
+}
+function pollAuto(){
+  let n = 0;
+  OPS.forEach(o=>{
+    if(!o.hangType || o.clearing==='ACCEPTED' || o.clearing==='CANCELLED') return;
+    if(o.hangType==='NO_RESPONSE_QR'){ o.bbStatus='FAILED'; o.mtStatus='CANCELED'; o.hangType=null; o.clearing=null; o.finalAt=new Date(NOW); n++; }
+    else if(o.hangType==='NO_FINAL_STATUS' && o.bbStatus!=='EXPIRED'){ o.bbStatus='EXPIRED'; o.hangReason='Оплаты нет, EXPIRED; в списке до появления в реестре или 3 суток'; n++; }
+  });
+  render(); toast(n ? `Опрос статусов: автоматически обработано заявок - ${n}` : 'Нет заявок, разрешаемых опросом');
+}
+
+/* ============================================================ вкладка «Клиринг» */
+function suggest(r){
+  /* таблица «предлагаемое действие» (черновик, раздел 9) */
+  if(!r.found) return 'CANCEL';
+  if(['CANCELED','REJECTED','CREATED','CHECKED'].includes(r.status)) return 'CANCEL';
+  if(r.status==='PROCESSED' && Number(r.amount)===Number(r.op.amount)) return 'ACCEPT';
+  return null;
+}
+function buildResultFile(){
+  const ops = OPS.filter(o=>o.clearing==='PENDING');
+  const rows = ops.map(o=>{ const m=o.mtOutcome||{found:false}; return {op:o, found:m.found, status:m.status||'', amount:m.amount===undefined?'':m.amount, paymentId:m.paymentId||'', knp:m.knp||'', comment:m.comment||''}; });
+  const head = 'bb_operation_id;x_request_id;mt_found;mt_payment_id;mt_payment_system_transfer_num;mt_status;mt_amount;mt_comment';
+  const text = [head].concat(rows.map(r=>[r.op.id, r.op.xCreate, r.found?'Y':'N', r.paymentId, r.knp, r.status, r.amount===''?'':money(r.amount), r.comment].join(';'))).join('\n');
+  return {ops, rows, text};
+}
+function uploadResult(){
+  const b = buildResultFile();
+  if(!b.ops.length){ toast('Нет заявок в ожидании клиринга: сначала выгрузите файл запроса'); return; }
+  const hash = hashStr(b.text), name = `mt_clearing_result_${ymd(NOW)}.csv`;
+  if(IMPORTED.has(hash)){
+    openModal(`<div class="modal-h"><h3>Импорт не выполнен</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b"><div class="helper-note"><span>⚠️</span><span>Файл ${esc(name)} уже импортирован (хеш ${esc(hash)} совпал). Решения повторно не применяются.</span></div></div>
+      <div class="modal-f"><button class="btn btn-primary" data-close-modal>Закрыть</button></div>`);
+    return;
+  }
+  IMPORTED.add(hash);
+  FILES.push({id:++fileSeq, dir:'RESULT', name, at:new Date(NOW), rows:b.rows.length, hash, by:OPERATOR});
+  state.imp = {file:name, rows:b.rows.map((r,i)=>({n:i+1, ...r, sug:suggest(r), dec:'', reason:'', done:false, skipped:false}))};
+  state.tab='clearing'; render();
+  toast('Файл загружен: предпросмотр ниже, статусы не меняются автоматически');
+}
+function applyDecision(row, decision, reason){
+  if(!reason.trim()){ toast('Причина обязательна'); return false; }
+  const op = row.op;
+  if(JOURNAL.some(j=>j.opId===op.id && j.decision===decision)){ row.done=true; row.skipped=true; toast('Пара «операция - решение» уже применена, запись не создаётся'); return true; }
+  if(decision==='ACCEPT'){
+    const needIds = !op.paymentId;
+    if(row.status!=='PROCESSED' || (needIds && (!row.paymentId || !row.knp))){ toast('Accept невозможен: MT не вернул PROCESSED и paymentId/КНП'); return false; }
+    if(needIds){ op.paymentId=row.paymentId; op.knp=row.knp; }
+    op.clearing='ACCEPTED'; op.bbStatus='CONFIRMED'; op.mtStatus='PROCESSED'; op.finalAt=new Date(NOW); op.rubr=op.amount-50; op.hangType=null;
+  } else {
+    op.clearing='CANCELLED'; op.bbStatus='FAILED'; op.finalAt=new Date(NOW); op.hangType=null;
+  }
+  op.decision = decision;
+  JOURNAL.push({file:state.imp.file, row:row.n, opId:op.id, found:row.found, status:row.status||'-', decision, reason:reason.trim(), by:OPERATOR, at:new Date(NOW)});
+  row.done = true; return true;
+}
+function tabClearing(){
+  const imp = state.imp;
+  const sugBadge = s => s==='ACCEPT'?badge('b-success','ACCEPT'):s==='CANCEL'?badge('b-error','CANCEL'):'<span class="cell-sub">без предложения</span>';
+  const pending = imp ? imp.rows.filter(r=>!r.done) : [];
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Файлы клиринга</h3><div class="hint">Выгрузка уходит провайдеру через рабочий чат, ответ загружается сюда. Импорт не меняет статусы автоматически</div></div>
+        <button class="btn btn-primary btn-sm" id="btnUpload">Загрузить файл результата</button></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Файл</th><th>Направление</th><th>Строк</th><th>Хеш</th><th>Кто</th><th>Когда</th></tr></thead>
+        <tbody>${FILES.slice().reverse().map(f=>`<tr><td class="mono cell-strong">${esc(f.name)}</td><td>${f.dir==='REQUEST'?badge('b-info','к провайдеру'):badge('b-success','от провайдера')}</td><td class="mono">${f.rows}</td><td class="mono cell-sub">${esc(f.hash||'-')}</td><td class="cell-sub">${esc(f.by)}</td><td class="cell-sub">${fmtDT(f.at)}</td></tr>`).join('') || '<tr><td colspan="6" class="cell-sub" style="text-align:center;padding:20px">Файлов пока нет</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    ${imp ? `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Предпросмотр импорта: ${esc(imp.file)}</h3><div class="hint">Решение по каждой строке принимает оператор, причина обязательна. Однотипные строки можно принять пачкой</div></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-sm" data-bulk="ACCEPT">Принять все ACCEPT</button><button class="btn btn-sm" data-bulk="CANCEL">Принять все CANCEL</button></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>№</th><th>Операция</th><th>Сумма ББ, ₽</th><th>Результат MT</th><th>Предложение</th><th>Решение</th><th>Причина</th><th></th></tr></thead>
+        <tbody>${imp.rows.map(r=>`<tr class="${r.done?'row-done':''}">
+          <td class="mono">${r.n}</td><td class="mono cell-strong">${esc(r.op.id)}<div class="cell-sub">${esc(HANG[r.op.hangType]?HANG[r.op.hangType].label:'-')}</div></td>
+          <td class="mono">${fmtN(r.op.amount)}</td>
+          <td class="cell-sub" style="white-space:normal;min-width:180px">${r.found?`${esc(r.status)}${r.amount!==''?`, ${fmtN(r.amount)} ₽`:''}${r.knp?`<br>КНП ${esc(r.knp)}`:''}`:'не найдена у MT'}${r.comment?`<br>${esc(r.comment)}`:''}</td>
+          <td>${sugBadge(r.sug)}${r.sug===null&&r.found&&r.status==='PROCESSED'?'<div class="cell-sub">сумма не совпала, алерт</div>':''}</td>
+          <td>${r.done ? (r.skipped?'<span class="cell-sub">уже применено</span>':stBadge(r.op.clearing)) : `<div style="display:flex;gap:6px"><button class="btn btn-sm ${r.dec==='ACCEPT'?'btn-primary':''}" data-row="${r.n}" data-dec="ACCEPT">Accept</button><button class="btn btn-sm ${r.dec==='CANCEL'?'btn-primary':''}" data-row="${r.n}" data-dec="CANCEL">Cancel</button></div>`}</td>
+          <td>${r.done?'':`<input data-reason="${r.n}" value="${esc(r.reason)}" placeholder="Причина" style="min-width:150px">`}</td>
+          <td>${r.done?'':`<button class="btn btn-sm" data-apply="${r.n}">Применить</button>`}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="panel-b" style="padding-top:0"><div class="helper-note"><span>ℹ️</span><span>Осталось строк без решения: ${pending.length}. Accept - эмуляция PROCESSED (сверка плательщика и зачисление по штатному пути), Cancel - эмуляция REJECTED (реверс холда). Для заявки без ответа на создание Accept возможен только при PROCESSED и наличии paymentId и КНП, они записываются в операцию.</span></div></div>
+    </div>` : ''}
+
+    <div class="panel">
+      <div class="panel-h"><div><h3>Журнал решений клиринга</h3><div class="hint">Файл-источник, строка, оператор, время, решение, причина. Пара «операция - решение» не дублируется</div></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Файл</th><th>Строка</th><th>Операция</th><th>У MT</th><th>Решение</th><th>Причина</th><th>Кто</th><th>Когда</th></tr></thead>
+        <tbody>${JOURNAL.slice().reverse().map(j=>`<tr><td class="mono cell-sub">${esc(j.file)}</td><td class="mono">${j.row}</td><td class="mono cell-strong">${esc(j.opId)}</td><td class="cell-sub">${j.found?esc(j.status):'не найдена'}</td><td>${j.decision==='ACCEPT'?badge('b-success','ACCEPT'):badge('b-error','CANCEL')}</td><td class="cell-sub" style="white-space:normal;min-width:160px">${esc(j.reason)}</td><td class="cell-sub">${esc(j.by)}</td><td class="cell-sub">${fmtDT(j.at)}</td></tr>`).join('') || '<tr><td colspan="8" class="cell-sub" style="text-align:center;padding:20px">Решений пока нет</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ============================================================ вкладка «Сверка плательщика» */
+const MASK = p => p.slice(0,4)+'***'+p.slice(-4);
+function payerScenario(kind){
+  const channel = kind.endsWith('_pt') ? 'PARTNER' : 'BB_CLIENT';
+  const base = {channel, partner:channel==='PARTNER'?'FinPay KG':'', client:channel==='PARTNER'?'client_'+hex(8):'bb_'+hex(6), clientName:channel==='PARTNER'?'Клиент партнёра':'Петров Пётр', amount:7000, bbStatus:'PENDING', mtStatus:'PROCESSED', paymentId:guid(), knp:knpGen(), recipientPhone:'79093881549', recipientName:'ИВАНОВ ИВАН ИВАНОВИЧ'};
+  if(kind==='match'){
+    const op = makeOp({...base, payerMatch:'MATCH', payerMasked:'7909***1549', payerName:'Иванов Иван И.', bbStatus:'CONFIRMED', finalAt:new Date(NOW), rubr:6950});
+    say('mt','Сверка плательщика',`Операция ${op.id}: плательщик совпал (MATCH), зачисление RUBR`,null);
+  } else if(kind==='unknown'){
+    makeOp({...base, payerMatch:'UNKNOWN', payerMasked:'', payerName:'', unknownAt:new Date(NOW)});
+    toast('Данных плательщика нет: ждём до 15 минут (кнопка «+15 минут»)');
+  } else if(kind==='rejected'){
+    const op = makeOp({...base, mtStatus:'REJECTED', payerMatch:'MISMATCH', payerMasked:'7916***1631', payerName:'Петрова А. П.', hangType:'PAYER_MISMATCH', hangReason:'REJECTED с автовозвратом me2me: несовпадение плательщика'});
+    blockClient(op, 'несовпадение плательщика (отказ провайдера me2me)');
+    say('mt','Несовпадение плательщика',`P1: операция ${op.id}, канал ${op.channel==='PARTNER'?'партнёр, '+op.partner:'клиент ББ'}, Multitransfer, отказ me2me, плательщик ${op.payerMasked}, получатель ${MASK(op.recipientPhone)}. Блокировка СБП клиента`,'P1');
+  } else {
+    const op = makeOp({...base, payerMatch:'MISMATCH', payerMasked:'7916***1631', payerName:'Петрова А. П.', hangType:'PAYER_MISMATCH', hangReason:'PROCESSED, плательщик не совпал с получателем'});
+    blockClient(op, 'несовпадение плательщика');
+    say('mt','Несовпадение плательщика',`P1: операция ${op.id}, канал ${op.channel==='PARTNER'?'партнёр, '+op.partner:'клиент ББ'}, Multitransfer, плательщик ${op.payerMasked}, получатель ${MASK(op.recipientPhone)}. Зачисления нет, блокировка СБП клиента`,'P1');
+  }
+}
+function blockClient(op, reason){
+  BLOCKS.push({id:++blkSeq, client:op.client, clientName:op.clientName, channel:op.channel, reason, since:new Date(NOW), opId:op.id, state:'BLOCKED'});
+}
+function advance15(){
+  NOW = new Date(NOW.getTime()+15*60000);
+  let n=0;
+  OPS.filter(o=>o.payerMatch==='UNKNOWN' && !o.hangType && o.unknownAt && NOW-o.unknownAt>=15*60000).forEach(o=>{
+    o.hangType='NO_PAYER_DATA'; o.hangReason='Провайдер не вернул данные плательщика за 15 минут после PROCESSED'; n++;
+    say('mt','Нет данных плательщика',`P2: операция ${o.id}, данные плательщика не пришли за 15 минут после PROCESSED, операция ушла в зависшие без блокировки клиента`,'P2');
+  });
+  render(); toast('Прошло 15 минут: '+fmtDT(NOW)+(n?`, в зависшие ушло: ${n}`:'')); previewOut();
+}
+const BLOCK_WHERE = ch => ch==='PARTNER' ? 'sbpBlockedByAntifraud (клиент партнёра)' : 'ACL: sbp_deposit / sbp_withdrawal (клиент ББ)';
+function tabPayer(){
+  const payerOps = OPS.filter(o=>o.payerMatch);
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Сценарии <span class="tag" style="margin-left:6px">симуляция</span></h3><div class="hint">Провайдер вернул PROCESSED: ББ сверяет телефон (видимые цифры маски) и ФИО плательщика с получателем</div></div></div>
+      <div class="panel-b" style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-sm" data-pay="match">Плательщик совпал</button>
+        <button class="btn btn-sm" data-pay="mismatch_bb">Не совпал - клиент ББ</button>
+        <button class="btn btn-sm" data-pay="mismatch_pt">Не совпал - клиент партнёра</button>
+        <button class="btn btn-sm" data-pay="rejected_bb">Отказ me2me у провайдера - клиент ББ</button>
+        <button class="btn btn-sm" data-pay="unknown_bb">Нет данных плательщика</button>
+        <button class="btn btn-sm" id="btnPlus15">+15 минут</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>Результаты сверки плательщика</h3></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Операция</th><th>Канал</th><th>Получатель</th><th>Плательщик (маска)</th><th>Результат</th><th>Статус</th><th>Зависание</th></tr></thead>
+        <tbody>${payerOps.slice().reverse().map(o=>`<tr><td class="mono cell-strong">${esc(o.id)}</td><td>${o.channel==='BB_CLIENT'?'Клиент ББ':esc(o.partner)}</td>
+          <td class="cell-sub">${esc(o.recipientName)}<br>${esc(MASK(o.recipientPhone))}</td>
+          <td class="cell-sub">${o.payerMasked?esc(o.payerName)+'<br>'+esc(o.payerMasked):'нет данных'}</td>
+          <td>${o.payerMatch==='MATCH'?badge('b-success','MATCH'):o.payerMatch==='MISMATCH'?badge('b-error','MISMATCH'):badge('b-warning','UNKNOWN')}</td>
+          <td>${stBadge(o.bbStatus)}</td><td class="cell-sub">${o.hangType?esc(o.hangType):'-'}</td></tr>`).join('') || '<tr><td colspan="7" class="cell-sub" style="text-align:center;padding:20px">Операций пока нет. Запустите сценарий</td></tr>'}</tbody>
+      </table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>Блокировки СБП по несовпадению плательщика <span class="tag" style="margin-left:6px">комплаенс</span></h3><div class="hint">Новые QR по СБП клиенту не выпускаются ни через одного провайдера. Снятие и подтверждение - только комплаенс, причина обязательна</div></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Клиент</th><th>Канал</th><th>Где ставится блокировка</th><th>Причина</th><th>С</th><th>Операция</th><th>Состояние</th><th style="text-align:center">Действия</th></tr></thead>
+        <tbody>${BLOCKS.slice().reverse().map(b=>`<tr><td class="cell-strong">${esc(b.clientName)}<div class="cell-sub mono">${esc(b.client)}</div></td><td>${b.channel==='BB_CLIENT'?'Клиент ББ':'Клиент партнёра'}</td><td class="cell-sub" style="white-space:normal;min-width:170px">${esc(BLOCK_WHERE(b.channel))}</td><td class="cell-sub">${esc(b.reason)}</td><td class="cell-sub">${fmtDT(b.since)}</td><td class="mono">${esc(b.opId)}</td>
+          <td>${b.state==='BLOCKED'?badge('b-error','заблокирован'):b.state==='CONFIRMED'?badge('b-warning','блокировка подтверждена'):badge('b-success','снята')}</td>
+          <td style="text-align:center">${b.state==='BLOCKED'?`<button class="btn btn-sm" data-blk="${b.id}" data-act="release">Снять</button> <button class="btn btn-sm" data-blk="${b.id}" data-act="keep">Оставить</button>`:''}</td></tr>`).join('') || '<tr><td colspan="8" class="cell-sub" style="text-align:center;padding:20px">Блокировок нет</td></tr>'}</tbody>
+      </table></div>
+    </div>
+    ${COMPLIANCE_LOG.length ? `<div class="panel"><div class="panel-h"><div><h3>Журнал решений комплаенса</h3></div></div><div class="twrap"><table class="grid"><thead><tr><th>Клиент</th><th>Решение</th><th>Причина</th><th>Кто</th><th>Когда</th></tr></thead><tbody>${COMPLIANCE_LOG.slice().reverse().map(c=>`<tr><td class="cell-strong">${esc(c.client)}</td><td>${c.act==='release'?badge('b-success','снять блокировку'):badge('b-warning','оставить блокировку')}</td><td class="cell-sub">${esc(c.reason)}</td><td class="cell-sub">${esc(c.by)}</td><td class="cell-sub">${fmtDT(c.at)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+}
+function decideBlock(id, act){
+  const b = BLOCKS.find(x=>x.id===id);
+  openModal(`
+    <div class="modal-h"><h3>${act==='release'?'Снять блокировку СБП':'Оставить блокировку СБП'} - ${esc(b.clientName)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="helper-note"><span>ℹ️</span><span>Блокировка: ${esc(BLOCK_WHERE(b.channel))}. Операция ${esc(b.opId)} остаётся зависшей: по ней отдельно принимается решение accept или cancel в разделе «Клиринг». При cancel по PROCESSED нужен возврат плательщику, процесс согласуется с MT.</span></div>
+      <div class="field"><label>Причина <span style="color:var(--error)">*</span></label><textarea id="blkReason" rows="3" placeholder="Обязательно в обоих случаях"></textarea></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnBlk">Сохранить</button></div>`);
+  $('#btnBlk').addEventListener('click',()=>{
+    const reason = $('#blkReason').value.trim();
+    if(!reason){ $('#blkReason').style.borderColor='var(--error)'; toast('Укажите причину'); return; }
+    b.state = act==='release' ? 'RELEASED' : 'CONFIRMED';
+    COMPLIANCE_LOG.push({client:b.clientName, act, reason, by:COMPLIANCE, at:new Date(NOW)});
+    closeModal(); render(); toast(act==='release'?'Блокировка снята':'Блокировка подтверждена');
+  });
+}
+
+/* ============================================================ вкладка «Реестр и отчёты» */
+const CLASSES = {
+  EXTRA_AT_MT:'Есть у провайдера, нет у ББ',
+  MISSING_AT_MT:'Есть у ББ с финальным статусом, нет у провайдера',
+  STATUS:'Расходится статус',
+  AMOUNT:'Расходится сумма или комиссия',
+  D2_CHANGED:'Изменения при повторной загрузке D-2',
+  COUNT:'Количество строк не совпадает с заявленным',
+};
+function runRegistry(){
+  const d1 = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate()-1);
+  const o = state.regOpts;
+  const mine = OPS.filter(x=>x.finalAt && iso(x.finalAt)===iso(d1) && x.knp);
+  let reg = mine.map(x=>({knp:x.knp, status:x.bbStatus==='CONFIRMED'?'PROCESSED':'REJECTED', amount:x.amount, op:x}));
+  const disc = [];
+  if(o.missing && reg.length){ const r=reg.shift(); disc.push({cls:'MISSING_AT_MT', knp:r.knp, status:r.op.bbStatus, amount:r.amount, op:r.op.id}); }
+  if(o.status && reg.length){ const r=reg[0]; r.status = r.status==='PROCESSED'?'REJECTED':'PROCESSED'; disc.push({cls:'STATUS', knp:r.knp, status:r.status, amount:r.amount, op:r.op.id}); }
+  if(o.amount && reg.length>1){ const r=reg[1]; r.amount = r.amount-100; disc.push({cls:'AMOUNT', knp:r.knp, status:r.status, amount:r.amount, op:r.op.id}); }
+  if(o.extra){ const knp=knpGen(); reg.push({knp, status:'PROCESSED', amount:2500, op:null}); disc.push({cls:'EXTRA_AT_MT', knp, status:'PROCESSED', amount:2500, op:'-'}); }
+  const declared = reg.length + (o.count?2:0);
+  if(o.count) disc.push({cls:'COUNT', knp:'-', status:`заявлено ${declared}, получено ${reg.length}`, amount:0, op:'-'});
+  if(o.d2) disc.push({cls:'D2_CHANGED', knp:knpGen(), status:'статус изменился PROCESSED → REJECTED', amount:4000, op:'-'});
+  const bbOps = mine.length, bbSum = mine.reduce((s,x)=>s+x.amount,0);
+  const rpt = {id:REPORTS.length+1, date:d1, countBb:bbOps, countReg:reg.length, sumBb:bbSum, sumReg:reg.reduce((s,x)=>s+x.amount,0), disc, at:new Date(NOW)};
+  REPORTS.push(rpt);
+  rpt.disc.forEach(d=>say('mt','Сверка с реестром',`${CLASSES[d.cls]}: КНП ${d.knp}, ${d.status}${d.amount?`, ${fmtN(d.amount)} ₽`:''}`));
+  say('mt','Отчёт сверки',`Отчёт сверки за ${fmtD(d1)}: операций у ББ ${rpt.countBb} на ${fmtN(rpt.sumBb)} ₽, в реестре ${rpt.countReg} на ${fmtN(rpt.sumReg)} ₽, расхождений ${rpt.disc.length}${rpt.disc.length?'':' (отчёт отправляется и при нуле расхождений)'}`, null);
+  render(); previewOut();
+}
+function incident(){
+  const op = OPS.find(x=>x.clearing==='ACCEPTED') || OPS.find(x=>x.clearing==='CANCELLED');
+  if(!op){ toast('Нет операций с решением клиринга: сначала примите решение'); return; }
+  const real = op.clearing==='ACCEPTED' ? 'REJECTED' : 'PROCESSED';
+  say('mt','Финансовый инцидент',`P1: решение ${op.decision} по ${op.id} противоречит реестру (у провайдера ${real}). Требуется разбор`,'P1');
+  previewOut();
+}
+function openReport(id){
+  const r = REPORTS.find(x=>x.id===id);
+  openModal(`
+    <div class="modal-h"><h3>Отчёт сверки за ${fmtD(r.date)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <dl class="deflist cols3"><div><dt>Операций у ББ</dt><dd>${r.countBb} · ${fmtN(r.sumBb)} ₽</dd></div><div><dt>Строк в реестре</dt><dd>${r.countReg} · ${fmtN(r.sumReg)} ₽</dd></div><div><dt>Расхождений</dt><dd>${r.disc.length}</dd></div></dl>
+      <div class="hairline"></div>
+      <div class="field"><label>Расхождения по классам</label>${Object.keys(CLASSES).map(k=>`<div class="cell-sub">${esc(CLASSES[k])}: <b>${r.disc.filter(d=>d.cls===k).length}</b></div>`).join('')}</div>
+      <div class="field"><label>Несопоставленные строки</label>${r.disc.length?`<pre class="raw">${esc(r.disc.map(d=>`${CLASSES[d.cls]} | КНП ${d.knp} | ${d.status} | ${d.amount||''} | ${d.op}`).join('\n'))}</pre>`:'<div class="cell-sub">нет</div>'}</div>
+    </div>
+    <div class="modal-f"><button class="btn btn-primary" data-close-modal>Закрыть</button></div>`);
+}
+function tabRegistry(){
+  const d1 = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate()-1), o = state.regOpts;
+  const chk = (k,l) => `<div class="toggle-row"><div><div class="tt">${l}</div></div><button class="switch ${o[k]?'on':''}" data-opt="${k}"><span class="knob"></span></button></div>`;
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Сверка с реестром MT <span class="tag" style="margin-left:6px">симуляция</span></h3><div class="hint">Реестр за D-1 (${fmtD(d1)}, МСК) сопоставляется по КНП. Повторно загружается D-2. Каждое расхождение - алерт, отчёт уходит в чат даже при нуле</div></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-sm" id="btnIncident">Реестр противоречит решению клиринга</button><button class="btn btn-primary btn-sm" id="btnRunReg">Запустить сверку за D-1</button></div></div>
+      <div class="panel-b">
+        <div class="field-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px">
+          ${chk('extra','Строка есть у MT, нет у ББ')}${chk('missing','Операция есть у ББ, нет в реестре')}${chk('status','Расходится статус')}
+          ${chk('amount','Расходится сумма')}${chk('d2','Изменения в повторной загрузке D-2')}${chk('count','Количество строк не совпадает с заявленным')}
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>Отчёты сверки</h3></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Дата реестра</th><th>Операций у ББ</th><th>Сумма ББ, ₽</th><th>Строк в реестре</th><th>Сумма реестра, ₽</th><th>Расхождений</th><th>Сформирован</th><th></th></tr></thead>
+        <tbody>${REPORTS.slice().reverse().map(r=>`<tr><td class="cell-strong">${fmtD(r.date)}</td><td class="mono">${r.countBb}</td><td class="mono">${fmtN(r.sumBb)}</td><td class="mono">${r.countReg}</td><td class="mono">${fmtN(r.sumReg)}</td><td>${r.disc.length?badge('b-warning',String(r.disc.length)):badge('b-success','0')}</td><td class="cell-sub">${fmtDT(r.at)}</td><td><button class="btn btn-sm" data-rep="${r.id}">Открыть</button></td></tr>`).join('') || '<tr><td colspan="8" class="cell-sub" style="text-align:center;padding:20px">Отчётов пока нет</td></tr>'}</tbody>
+      </table></div>
+    </div>
+    <div class="helper-note"><span>ℹ️</span><span>Финансовая сверка «реестр ↔ расчётный счёт» относится ко второму этапу и в этом прототипе не показана.</span></div>`;
+}
+
+/* ============================================================ вкладка «Выгрузка операций» */
+const EXPORT_HEAD = 'bb_operation_id;channel;partner_id;provider_requested;provider_actual;created_at;final_at;x_request_id_create;mt_payment_id;mt_payment_num;mt_payment_system_transfer_num;mt_status;bb_status;amount;transfer_money;accepted_total_fee;receive_agent_fee;bank_fee;rubr_credited;bb_fee;payer_match;clearing_decision';
+function exportOps(){
+  const e = state.exp, from = new Date(e.from+'T00:00:00'), to = new Date(e.to+'T23:59:59');
+  const rows = OPS.filter(o=>{
+    if(o.provider!==e.provider) return false;
+    const d = e.basis==='final' ? o.finalAt : o.created;
+    if(!d || d<from || d>to) return false;
+    if(e.status && o.bbStatus!==e.status) return false;
+    if(e.partner && o.partner!==e.partner) return false;
+    return true;
+  });
+  const lines = rows.map(o=>[o.id,o.channel,o.partner?o.partner.toLowerCase().replace(/\s+/g,'_'):'',o.provider.toUpperCase(),o.provider.toUpperCase(),isoDT(o.created),isoDT(o.finalAt),o.xCreate,o.paymentId,o.paymentNum,o.knp,o.mtStatus,o.bbStatus,money(o.amount),money(o.amount),'0.00','30.00','10.00',o.rubr==null?'':money(o.rubr),o.rubr==null?'':'50.00',o.payerMatch||'',o.decision||''].join(';'));
+  const name = `mt_operations_${e.from.replace(/-/g,'')}_${e.to.replace(/-/g,'')}.csv`;
+  if(!rows.length) toast('Операций по фильтрам нет: файл содержит только заголовок');
+  showFile(name, [EXPORT_HEAD].concat(lines).join('\n'), 'Персональные данные в выгрузку для сверки не включаются; номера телефонов - только в выгрузке бизнес-мониторинга с правами комплаенса');
+}
+function tabExport(){
+  const e = state.exp, partners = [...new Set(OPS.map(o=>o.partner).filter(Boolean))];
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Выгрузка операций за период</h3><div class="hint">Для ручной сверки с MT (спорные периоды, ежемесячно). Админка → СБП → Сверка → «Выгрузить операции»</div></div>
+        <button class="btn btn-primary btn-sm" id="btnExportOps">Выгрузить операции</button></div>
+      <div class="panel-b">
+        <div class="field-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+          <div class="field"><label>Провайдер</label>${optSelect('exProv',PROVIDERS.map(p=>({v:p.iname,l:p.label})),e.provider)}</div>
+          <div class="field"><label>Период с</label><input type="date" id="exFrom" value="${e.from}"></div>
+          <div class="field"><label>Период по</label><input type="date" id="exTo" value="${e.to}"></div>
+          <div class="field"><label>Период считать</label>${optSelect('exBasis',[{v:'final',l:'По дате финального статуса'},{v:'created',l:'По дате создания'}],e.basis)}<div class="cell-sub">Для сверки с реестром - по дате финального статуса</div></div>
+          <div class="field"><label>Статус</label>${optSelect('exStatus',[{v:'',l:'Все'},{v:'CONFIRMED',l:'CONFIRMED'},{v:'FAILED',l:'FAILED'},{v:'PENDING',l:'PENDING'},{v:'EXPIRED',l:'EXPIRED'}],e.status)}</div>
+          <div class="field"><label>Партнёр</label>${optSelect('exPart',[{v:'',l:'Все'}].concat(partners.map(p=>({v:p,l:p}))),e.partner)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================ страница */
+function render(){
+  setNavActive('navRec');
+  const tabs = [['hung','Зависшие заявки'],['clearing','Клиринг'],['payer','Сверка плательщика'],['registry','Реестр и отчёты'],['export','Выгрузка операций']];
+  $('#stage').innerHTML = `
+    <div class="acc-card"><h1>Сверка СБП</h1>
+      <p class="sub">Сверка плательщика, клиринг зависших заявок, сверка с реестром провайдера и выгрузка операций для ручной сверки. Время виртуальное: ${fmtDT(NOW)}</p></div>
+    <div class="rtabs" style="margin-top:0">${tabs.map(([k,l])=>`<button class="rtab clickable ${state.tab===k?'active':''}" data-tab="${k}">${l}</button>`).join('')}</div>
+    ${state.tab==='hung'?tabHung():state.tab==='clearing'?tabClearing():state.tab==='payer'?tabPayer():state.tab==='registry'?tabRegistry():tabExport()}`;
+  bindEvents();
+}
+function bindEvents(){
+  $all('[data-tab]').forEach(b=>b.addEventListener('click',()=>{ state.tab=b.dataset.tab; render(); }));
+  bindCustomSelects($('#stage'));
+  const sel = (id, fn) => $all(`[data-select-opt="${id}"]`).forEach(o=>o.addEventListener('click',()=>{ fn(o.dataset.value); render(); }));
+  const inp = (id, fn) => $('#'+id)?.addEventListener('change',e=>{ fn(e.target.value); render(); });
+  /* зависшие */
+  sel('hfType', v=>state.hungF.type=v); sel('hfProv', v=>state.hungF.provider=v);
+  inp('hfFrom', v=>state.hungF.from=v); inp('hfTo', v=>state.hungF.to=v);
+  $('#btnExportHung')?.addEventListener('click', exportHung);
+  $('#btnPoll')?.addEventListener('click', pollAuto);
+  /* клиринг */
+  $('#btnUpload')?.addEventListener('click', uploadResult);
+  $all('[data-dec]').forEach(b=>b.addEventListener('click',()=>{ const r=state.imp.rows.find(x=>x.n===Number(b.dataset.row)); r.dec=b.dataset.dec; const i=$(`[data-reason="${r.n}"]`); if(i) r.reason=i.value; render(); }));
+  $all('[data-reason]').forEach(i=>i.addEventListener('input',()=>{ state.imp.rows.find(x=>x.n===Number(i.dataset.reason)).reason=i.value; }));
+  $all('[data-apply]').forEach(b=>b.addEventListener('click',()=>{ const r=state.imp.rows.find(x=>x.n===Number(b.dataset.apply)); if(!r.dec){ toast('Выберите решение: Accept или Cancel'); return; } if(applyDecision(r, r.dec, r.reason)){ render(); toast('Решение записано в журнал'); } }));
+  $all('[data-bulk]').forEach(b=>b.addEventListener('click',()=>{
+    const type=b.dataset.bulk, rows=state.imp.rows.filter(r=>!r.done && r.sug===type);
+    if(!rows.length){ toast('Нет строк с таким предложением'); return; }
+    openModal(`<div class="modal-h"><h3>Принять ${type} пачкой (${rows.length})</h3><button class="modal-x" data-close-modal>✕</button></div>
+      <div class="modal-b"><div class="field"><label>Причина для всех строк <span style="color:var(--error)">*</span></label><textarea id="bulkReason" rows="2"></textarea></div></div>
+      <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnBulk">Применить</button></div>`);
+    $('#btnBulk').addEventListener('click',()=>{ const reason=$('#bulkReason').value.trim(); if(!reason){ $('#bulkReason').style.borderColor='var(--error)'; toast('Причина обязательна'); return; } let ok=0; rows.forEach(r=>{ if(applyDecision(r,type,reason)) ok++; }); closeModal(); render(); toast(`Применено решений: ${ok} из ${rows.length}`); });
+  }));
+  /* плательщик */
+  $all('[data-pay]').forEach(b=>b.addEventListener('click',()=>{ OUT=[]; payerScenario(b.dataset.pay.replace('mismatch_bb','mismatch').replace('mismatch_pt','mismatch_pt').replace('rejected_bb','rejected').replace('unknown_bb','unknown')); render(); previewOut(); }));
+  $('#btnPlus15')?.addEventListener('click', ()=>{ OUT=[]; advance15(); });
+  $all('[data-blk]').forEach(b=>b.addEventListener('click',()=>decideBlock(Number(b.dataset.blk), b.dataset.act)));
+  /* реестр */
+  $all('[data-opt]').forEach(b=>b.addEventListener('click',()=>{ state.regOpts[b.dataset.opt]=!state.regOpts[b.dataset.opt]; render(); }));
+  $('#btnRunReg')?.addEventListener('click',()=>{ OUT=[]; runRegistry(); });
+  $('#btnIncident')?.addEventListener('click',()=>{ OUT=[]; incident(); });
+  $all('[data-rep]').forEach(b=>b.addEventListener('click',()=>openReport(Number(b.dataset.rep))));
+  /* выгрузка */
+  sel('exProv', v=>state.exp.provider=v); sel('exBasis', v=>state.exp.basis=v); sel('exStatus', v=>state.exp.status=v); sel('exPart', v=>state.exp.partner=v);
+  inp('exFrom', v=>state.exp.from=v); inp('exTo', v=>state.exp.to=v);
+  $('#btnExportOps')?.addEventListener('click', exportOps);
+}
+$('#navRec').addEventListener('click',()=>{ render(); });
+
+/* ---------- демо-данные ---------- */
+(function seed(){
+  makeOp({id:'op_201', channel:'PARTNER', partner:'FinPay KG', clientName:'Клиент партнёра', amount:15000, created:at(5,14,32), hangType:'NO_RESPONSE_CREATE', hangReason:'503 on create', reqType:'create', requestAt:at(5,14,32), mtOutcome:{found:true, status:'PROCESSED', amount:15000, paymentId:guid(), knp:'312407142'}});
+  makeOp({id:'op_202', channel:'PARTNER', partner:'CashBridge', clientName:'Клиент партнёра', amount:3000, created:at(5,15,1), hangType:'NO_RESPONSE_QR', hangReason:'timeout on qr', reqType:'qr', xQr:guid(), requestAt:at(5,15,1), paymentId:'c0d600f8-e845-4747-a7cb-d88f4f3391f4', knp:'312407143', mtOutcome:{found:true, status:'CHECKED', amount:3000, paymentId:'c0d600f8-e845-4747-a7cb-d88f4f3391f4', knp:'312407143'}});
+  makeOp({id:'op_203', channel:'BB_CLIENT', partner:'', clientName:'Петров Пётр', amount:7000, created:at(11,9,20), bbStatus:'PENDING', hangType:'NO_FINAL_STATUS', hangReason:'CHECKED дольше qrTtl + запас, опрос продолжается', paymentId:guid(), knp:knpGen(), mtOutcome:{found:true, status:'CHECKED', amount:7000, paymentId:'', knp:''}});
+  makeOp({id:'op_204', channel:'PARTNER', partner:'FinPay KG', clientName:'Клиент партнёра', amount:12000, created:at(10,18,40), bbStatus:'EXPIRED', hangType:'LATE_PAYMENT', hangReason:'PROCESSED по операции, закрытой как EXPIRED', paymentId:guid(), knp:'312408001', mtOutcome:{found:true, status:'PROCESSED', amount:12000, paymentId:guid(), knp:'312408001'}});
+  makeOp({id:'op_205', channel:'BB_CLIENT', partner:'', clientName:'Сидорова Анна', amount:4500, created:at(12,11,5), hangType:'UNKNOWN_STATUS', hangReason:'Статус MT вне маппинга: PROCESSING', paymentId:guid(), knp:knpGen(), mtOutcome:{found:false}});
+  makeOp({id:'op_206', channel:'BB_CLIENT', partner:'', clientName:'Орлов Олег', amount:20000, created:at(9,16,15), hangType:'NO_RESPONSE_CREATE', hangReason:'503 on create', reqType:'create', requestAt:at(9,16,15), mtOutcome:{found:true, status:'REJECTED', amount:20000, paymentId:guid(), knp:knpGen()}});
+  makeOp({id:'op_207', channel:'PARTNER', partner:'CashBridge', clientName:'Клиент партнёра', amount:9000, created:at(13,13,2), hangType:'LATE_PAYMENT', bbStatus:'EXPIRED', hangReason:'PROCESSED по операции, закрытой как EXPIRED', paymentId:guid(), knp:'312409010', mtOutcome:{found:true, status:'PROCESSED', amount:8500, paymentId:guid(), knp:'312409010', comment:'сумма у MT меньше'}});
+  confirmed('op_101','PARTNER','FinPay KG',10000,at(13,9,10),at(13,9,14));
+  confirmed('op_102','BB_CLIENT','',25000,at(13,11,40),at(13,11,43));
+  confirmed('op_103','PARTNER','CashBridge',3500,at(12,23,58),at(13,0,1));
+  confirmed('op_104','PARTNER','FinPay KG',8000,at(12,15,22),at(12,15,25));
+  const f = makeOp({id:'op_105', channel:'BB_CLIENT', partner:'', clientName:'Иванова Мария', amount:6000, created:at(13,15,0), finalAt:at(13,15,30), bbStatus:'FAILED', mtStatus:'REJECTED', paymentId:guid(), knp:knpGen()});
+})();
+
+render();
+</script>
+</body>
+</html>
