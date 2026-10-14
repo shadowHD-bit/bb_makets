@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мониторинг СБП — прототип (дополнение к реальным экранам)</title>
+<style>
+:root{
+  --text-strong:#171717; --text-sub:#5c5c5c; --text-soft:#a3a3a3; --text-disabled:#c7c7c7;
+  --bg-app:#fafafa; --bg-white:#fff; --bg-weak:#f7f7f7; --bg-soft:#ebebeb;
+  --stroke-soft:#ececec; --stroke-med:#e2e2e2;
+  --purple-50:#faf5ff; --purple-100:#f3e8ff; --purple-200:#e9d5ff; --purple-300:#d8b4fe;
+  --purple-400:#c084fc; --purple-500:#a855f7; --purple-600:#9333ea; --purple-700:#7e22ce;
+  --primary:#8b3ce0; --primary-hover:#7a2fd0; --primary-a10:rgba(139,60,224,.09); --primary-a14:rgba(139,60,224,.13);
+  --success:#1fc16b; --success-bg:#e3f7ec; --success-dark:#0b4627;
+  --warning:#fa7319; --warning-bg:#fff3eb; --warning-dark:#c77a12;
+  --error:#fb3748; --error-bg:#ffebec; --error-dark:#a2131f;
+  --info:#8b3ce0; --info-bg:#f5eefd;
+  --faded:#8a8a8a; --faded-bg:#f2f2f2;
+  --radius-6:6px;--radius-8:8px;--radius-10:10px;--radius-12:12px;--radius-16:16px;--radius-full:999px;
+  --shadow-xs:0 1px 2px 0 rgba(10,13,20,.04);
+  --shadow-sm:0 2px 4px 0 rgba(14,18,27,.03),0 6px 10px 0 rgba(14,18,27,.05);
+  --shadow-pop:0 12px 24px 0 rgba(14,18,27,.10),0 1px 2px 0 rgba(14,18,27,.04);
+  --font: -apple-system,"Segoe UI",ui-sans-serif,system-ui,sans-serif;
+  --font-mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --side-w:264px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg-app);color:var(--text-strong);font-family:var(--font);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+::placeholder{color:var(--text-soft)}
+a{color:inherit}
+svg{display:block}
+
+/* ============================================================ shell */
+.shell{display:flex;min-height:100vh}
+
+/* ============================================================ SIDEBAR — 1:1 из bb2-partners-prototype.html */
+.side{width:var(--side-w);flex:0 0 var(--side-w);background:var(--bg-white);border-right:1px solid var(--stroke-soft);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.side-brand{display:flex;align-items:center;gap:10px;padding:16px 16px 14px}
+.side-brand .mark{width:36px;height:36px;border-radius:var(--radius-full);flex:0 0 36px;background:linear-gradient(135deg,var(--purple-700),var(--purple-400));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12.5px}
+.side-brand .who{min-width:0;flex:1}
+.side-brand .name{font-size:14.5px;font-weight:600;color:var(--text-strong);line-height:1.25}
+.side-brand .sub{font-size:11.5px;color:var(--text-soft);line-height:1.2;margin-top:1px}
+.side-brand .expand{color:var(--text-soft);flex:0 0 16px;cursor:default}
+.side-divider{border:0;border-top:1px solid var(--stroke-soft);margin:0 16px}
+.side-scroll{flex:1;overflow-y:auto;padding:12px 12px 8px}
+.side-group{margin-bottom:2px}
+.side-group-label{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-soft);padding:14px 8px 6px}
+.side-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 8px;border:0;background:none;border-radius:var(--radius-8);font-size:13.5px;font-weight:500;color:var(--text-strong);text-align:left;cursor:default;-webkit-user-select:none;user-select:none}
+.side-item .ic{width:17px;height:17px;flex:0 0 17px;color:var(--text-sub);display:flex;align-items:center;justify-content:center}
+.side-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-item .chev{flex:0 0 12px;color:var(--text-soft)}
+.side-item.group-open .ic,.side-item.group-open .lbl{color:var(--text-strong)}
+.side-sub{display:flex;flex-direction:column;gap:1px;padding:2px 0 6px 6px;position:relative}
+.side-sub .side-item{font-size:13px;padding:7px 8px 7px 10px}
+.side-sub .side-item .ic{width:15px;height:15px;flex:0 0 15px}
+.side-item.clickable{cursor:pointer}
+.side-item.clickable:hover{background:var(--bg-weak)}
+.side-item.clickable .mk{width:5px;height:5px;border-radius:99px;background:var(--purple-300);flex:0 0 5px;margin-left:4px;opacity:.9}
+.side-item.nav-active .mk{background:var(--primary)}
+.side-item.nav-active{background:var(--primary-a10);color:var(--primary);font-weight:500;box-shadow:inset 3px 0 0 0 var(--primary);border-radius:var(--radius-8)}
+.side-item.nav-active .ic{color:var(--primary)}
+.side-foot{padding:12px}
+.side-collapse{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft);padding:8px 8px;cursor:default}
+
+/* ============================================================ TOPBAR — 1:1 */
+.topbar{height:56px;flex:0 0 56px;background:var(--bg-white);border-bottom:1px solid var(--stroke-soft);display:flex;align-items:center;justify-content:flex-end;padding:0 20px;position:sticky;top:0;z-index:5;gap:14px}
+.lang-pill{display:flex;align-items:center;gap:6px;border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:6px 10px;font-size:12.5px;font-weight:500;color:var(--text-strong);cursor:default}
+.lang-pill .flag{font-size:12px}
+.lang-pill .chev{color:var(--text-soft);width:9px;height:9px}
+.topbar-divider{width:1px;height:24px;background:var(--stroke-soft)}
+.top-profile{display:flex;align-items:center;gap:9px;cursor:default}
+.top-profile .av{width:32px;height:32px;border-radius:var(--radius-full);background:#ffe7c2;color:#a3660a;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex:0 0 32px;position:relative}
+.top-profile .av .dot{position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:99px;background:var(--success);border:2px solid var(--bg-white)}
+.top-profile .who .n{font-size:12.5px;font-weight:600;color:var(--text-strong);line-height:1.3}
+.top-profile .who .e{font-size:11.5px;color:var(--text-soft);line-height:1.3}
+.top-icon{width:30px;height:30px;border-radius:var(--radius-8);border:1px solid var(--stroke-med);display:flex;align-items:center;justify-content:center;color:var(--text-sub);cursor:default}
+
+/* ============================================================ main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.stage{flex:1;padding:18px 20px 40px;width:100%}
+
+.acc-card{background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:20px;box-shadow:var(--shadow-xs);padding:22px 24px 16px;margin-bottom:14px}
+.acc-card h1{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.acc-card p.sub{margin:0;color:var(--text-sub);font-size:12.5px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-8);border:1px solid var(--stroke-med);background:var(--bg-white);color:var(--text-strong);font-size:12.5px;font-weight:500;padding:7px 13px;cursor:pointer;box-shadow:var(--shadow-xs);transition:background .12s,border-color .12s}
+.btn:hover{background:var(--bg-weak);border-color:#d4d4d4}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.panel{background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-12);box-shadow:var(--shadow-xs)}
+.panel + .panel{margin-top:14px}
+.panel-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--stroke-soft)}
+.panel-h h3{font-size:13.5px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.panel-h .hint{font-size:11.5px;color:var(--text-soft);margin-top:1px}
+.panel-b{padding:16px}
+.panel-h.collapsible{cursor:pointer;user-select:none}
+.panel-chev{background:none;border:0;padding:4px;margin:0;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--text-soft);cursor:pointer;border-radius:var(--radius-8);transition:transform .15s}
+.panel-chev:hover{color:var(--text-strong);background:var(--bg-weak)}
+.panel-chev.open{transform:rotate(180deg)}
+.panel[data-collapsed="true"] > .panel-h{border-bottom:0}
+.panel[data-collapsed="true"] > .panel-b,
+.panel[data-collapsed="true"] > .twrap{display:none}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--stroke-soft)}
+.toggle-row:last-child{border-bottom:0}
+.toggle-row .tt{font-size:13px;font-weight:500}
+.ts{font-size:11.5px;color:var(--text-soft)}
+.toggle-row .ts{margin-top:2px;max-width:480px}
+.switch{position:relative;width:36px;height:21px;flex:0 0 36px;border-radius:99px;background:var(--stroke-med);cursor:pointer;transition:background .15s;border:0;padding:0}
+.switch.on{background:var(--primary)}
+.switch .knob{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:99px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.switch.on .knob{left:17px}
+.switch[disabled]{opacity:.45;cursor:not-allowed}
+
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11.5px;font-weight:500;color:var(--text-sub)}
+.field input,.field select,.field textarea{border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:8px 10px;font-size:12.5px;background:var(--bg-white);width:100%;outline:0}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10)}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.hairline{border:0;border-top:1px solid var(--stroke-soft);margin:14px 0}
+
+.twrap{overflow-x:auto;border-radius:var(--radius-12)}
+table.grid{width:100%;border-collapse:collapse;font-size:12.5px}
+table.grid thead th{text-align:left;font-size:10.5px;font-weight:600;color:var(--text-soft);text-transform:uppercase;letter-spacing:.03em;padding:9px 14px;border-bottom:1px solid var(--stroke-soft);white-space:nowrap;background:var(--bg-white)}
+table.grid tbody td{padding:11px 14px;border-bottom:1px solid var(--stroke-soft);vertical-align:middle}
+table.grid tbody tr:last-child td{border-bottom:0}
+.cell-strong{font-weight:500;color:var(--text-strong)}
+.cell-sub{font-size:11.5px;color:var(--text-soft);margin-top:1px}
+.mono{font-family:var(--font-mono);font-size:11.5px;color:var(--text-sub)}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--radius-full);font-size:11px;font-weight:600;white-space:nowrap}
+.badge .d{width:6px;height:6px;border-radius:99px}
+.b-success{background:var(--success-bg);color:var(--success-dark)} .b-success .d{background:var(--success)}
+.b-warning{background:var(--warning-bg);color:var(--warning-dark)} .b-warning .d{background:var(--warning)}
+.b-error{background:var(--error-bg);color:var(--error-dark)} .b-error .d{background:var(--error)}
+.b-info{background:var(--info-bg);color:var(--primary)} .b-info .d{background:var(--primary)}
+.b-faded{background:var(--faded-bg);color:var(--faded)} .b-faded .d{background:var(--faded)}
+.tag{display:inline-flex;padding:2.5px 8px;border-radius:var(--radius-6);font-size:10.5px;font-weight:600;background:var(--bg-soft);color:var(--text-sub)}
+.tag.new{background:var(--info-bg);color:var(--primary)}
+.tag.existing{background:var(--faded-bg);color:var(--faded)}
+
+.helper-note{font-size:11.5px;color:var(--text-soft);background:var(--bg-weak);border-radius:var(--radius-8);padding:8px 10px;display:flex;gap:7px;align-items:flex-start}
+.helper-note b{color:var(--text-sub)}
+
+.overlay{position:fixed;inset:0;background:rgba(23,23,23,.42);display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:50;overflow-y:auto}
+.overlay.show{display:flex}
+.modal{background:var(--bg-white);border-radius:var(--radius-16);box-shadow:var(--shadow-pop);width:100%;max-width:480px;overflow:hidden}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--stroke-soft)}
+.modal-h h3{margin:0;font-size:14.5px;font-weight:600}
+.modal-x{width:26px;height:26px;border-radius:var(--radius-8);border:0;background:none;color:var(--text-soft);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:var(--bg-weak);color:var(--text-strong)}
+.modal-b{padding:18px;display:flex;flex-direction:column;gap:13px;max-height:64vh;overflow-y:auto}
+.modal-f{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--stroke-soft)}
+
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:var(--text-strong);color:#fff;padding:10px 15px;border-radius:var(--radius-10);font-size:12.5px;font-weight:500;box-shadow:var(--shadow-pop);opacity:0;transform:translateY(6px);transition:all .18s}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ---- кастомный дропдаун (как fbtn/fmenu в bb2-partners-prototype.html) ---- */
+.popwrap{position:relative}
+.fbtn{display:flex;align-items:center;justify-content:space-between;gap:7px;width:100%;height:36px;padding:0 11px;border:1px solid var(--stroke-med);border-radius:var(--radius-8);background:var(--bg-white);box-shadow:var(--shadow-xs);cursor:pointer;font-size:12.5px}
+.fbtn:hover{border-color:#d4d4d4}
+.fbtn .fval{color:var(--text-strong);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbtn .fchev{color:var(--text-soft);flex:0 0 8px;transition:transform .15s}
+.fbtn.open .fchev{transform:rotate(180deg)}
+.fmenu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-10);box-shadow:var(--shadow-pop);max-height:240px;overflow-y:auto;padding:5px;z-index:40;display:none}
+.fmenu.show{display:block}
+.fmenu button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 9px;border:0;background:none;border-radius:var(--radius-8);font-size:12.5px;color:var(--text-strong);cursor:pointer;text-align:left}
+.fmenu button:hover{background:var(--bg-weak)}
+.fmenu button.sel{color:var(--primary);font-weight:600}
+
+/* ---- карточка клиента/партнёра (как в bb2-partners-prototype.html) ---- */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-sub);cursor:pointer;margin-bottom:12px;font-weight:500}
+.backlink:hover{color:var(--primary)}
+.rec-card{background:transparent;padding:0;margin-bottom:16px}
+.rec-top{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.rec-back{width:44px;height:44px;border-radius:var(--radius-10);border:1px solid var(--stroke-soft);background:var(--bg-white);display:flex;align-items:center;justify-content:center;color:var(--primary);flex:0 0 44px}
+.rec-headrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rec-headrow h1{font-size:18px;font-weight:600;margin:0;letter-spacing:-.005em}
+.rec-pill{display:inline-flex;padding:3px 11px;border-radius:var(--radius-full);font-size:11.5px;font-weight:600}
+.rec-meta{display:flex;align-items:center;gap:16px;margin-top:8px;font-size:12px;color:var(--text-soft);flex-wrap:wrap}
+.rec-meta .idcopy{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono)}
+.rtabs{display:flex;gap:2px;border-bottom:1px solid var(--stroke-soft);margin:18px 0 18px;overflow-x:auto}
+.rtab{padding:9px 4px;margin-right:18px;font-size:12.5px;font-weight:500;color:var(--text-disabled);border-bottom:2px solid transparent;cursor:not-allowed;background:none;border-top:0;border-left:0;border-right:0;white-space:nowrap}
+.rtab.active{color:var(--primary);border-bottom-color:var(--primary);cursor:default}
+.rtab.clickable{color:var(--text-sub);cursor:pointer}
+.rtab.clickable:hover{color:var(--text-strong)}
+.rtab.clickable.active{color:var(--primary)}
+.deflist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 20px;min-width:0}
+.deflist.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.deflist.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.deflist dt{font-size:11px;color:var(--text-soft);font-weight:500;text-transform:uppercase;letter-spacing:.02em;margin-bottom:3px}
+.deflist dd{margin:0;font-size:13px;font-weight:500;color:var(--text-strong)}
+.deflist dd.muted{color:var(--text-soft);font-weight:400}
+@media (max-width:1180px){.deflist.cols4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.field-grid > .panel + .panel{margin-top:0}
+.tg-feed{padding:12px;display:flex;flex-direction:column;gap:10px;max-height:640px;overflow-y:auto;background:var(--bg-weak);border-radius:0 0 var(--radius-12) var(--radius-12)}
+.tg-msg{background:var(--bg-white);border:1px solid var(--stroke-soft);border-left:4px solid var(--faded);border-radius:var(--radius-10);padding:9px 11px;box-shadow:var(--shadow-xs)}
+.tg-msg.sev-P1{border-left-color:var(--error)} .tg-msg.sev-P2{border-left-color:var(--warning)} .tg-msg.sev-P3{border-left-color:var(--faded)} .tg-msg.sev-ok{border-left-color:var(--success)}
+.tg-h{font-size:12px;color:var(--text-sub);margin-bottom:3px}
+.tg-b{font-size:12.5px;line-height:1.4;word-break:break-word}
+.tg-f{font-size:11px;color:var(--text-soft);margin-top:5px}
+.tg-f a,.cell-sub a{color:var(--primary);text-decoration:none} .tg-f a:hover,.cell-sub a:hover{text-decoration:underline}
+pre.raw{margin:0;padding:10px 12px;background:var(--bg-weak);border:1px solid var(--stroke-soft);border-radius:var(--radius-8);font-family:var(--font-mono);font-size:11.5px;line-height:1.45;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="side">
+    <div class="side-brand">
+      <div class="mark">BI</div>
+      <div class="who"><div class="name">Bitbanker</div><div class="sub">Admin Panel</div></div>
+      <span class="expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 9l4-4 4 4M8 15l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <hr class="side-divider">
+    <nav class="side-scroll">
+      <div class="side-group-label">Рабочее место</div>
+      <div class="side-group">
+        <button class="side-item"><span class="ic">{{ICON_GRID}}</span><span class="lbl">Обзор</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_CLOCK}}</span><span class="lbl">Процессы</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item group-open"><span class="ic">{{ICON_PEOPLE}}</span><span class="lbl">Клиенты</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item" id="navClient"><span class="ic">{{ICON_PERSON}}</span><span class="lbl">Аккаунты</span><span class="mk"></span></button>
+          <button class="side-item"><span class="ic">{{ICON_FOLDER}}</span><span class="lbl">Внешние клиенты</span></button>
+        </div>
+        <button class="side-item group-open"><span class="ic">{{ICON_BAR}}</span><span class="lbl">Аналитика</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item clickable" id="navMonitoring"><span class="ic">{{ICON_CLOCK}}</span><span class="lbl">Мониторинг СБП</span><span class="mk"></span></button>
+        </div>
+      </div>
+
+      <div class="side-group-label">Финансовые продукты</div>
+      <div class="side-group">
+        <button class="side-item group-open"><span class="ic">{{ICON_DOC}}</span><span class="lbl">ОПС / PSP</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item clickable" id="navOps"><span class="ic">{{ICON_FOLDER}}</span><span class="lbl">Операции СБП</span><span class="mk"></span></button>
+        </div>
+        <button class="side-item"><span class="ic">{{ICON_VAULT}}</span><span class="lbl">Депозитарий</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_TREND}}</span><span class="lbl">Биржа</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+        <button class="side-item"><span class="ic">{{ICON_COIN}}</span><span class="lbl">Криптоброкер</span><span class="chev">{{ICON_CHEV_R}}</span></button>
+      </div>
+
+      <div class="side-group-label">Управление платформой</div>
+      <div class="side-group">
+        <button class="side-item group-open"><span class="ic">{{ICON_GEAR}}</span><span class="lbl">Настройки</span><span class="chev">{{ICON_CHEV_D}}</span></button>
+        <div class="side-sub">
+          <button class="side-item clickable" id="navSbpSettings"><span class="ic">{{ICON_SBP}}</span><span class="lbl">СБП</span><span class="mk"></span></button>
+        </div>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="side-collapse"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Свернуть</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="lang-pill"><span class="flag">🇷🇺</span> Русский<svg class="chev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 5l3.5-3.5L8 5" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="topbar-divider"></div>
+      <div class="top-profile">
+        <div class="av">SA<span class="dot"></span></div>
+        <div class="who"><div class="n">Super Admin</div><div class="e">super-admin@admin.com</div></div>
+      </div>
+      <div class="top-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="overlay" id="overlay"><div class="modal" id="modalBox"></div></div>
+
+<script>
+const ICONS = {
+  ICON_GRID: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>',
+  ICON_CLOCK: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_PEOPLE: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 14.3c2.6.4 4.5 2.6 4.5 5.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  ICON_PERSON: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c0-4.1 3.4-7.5 7.5-7.5s7.5 3.4 7.5 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_FOLDER: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  ICON_DOC: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 2.5h9l4.5 4.5V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12h7M8.5 16h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  ICON_BAR: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  ICON_VAULT: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M12 10v4M10 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  ICON_TREND: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_COIN: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 15c0 1.1 1.1 2 2.5 2s2.5-.7 2.5-1.7c0-2.6-5-1-5-3.6 0-1 1.1-1.7 2.5-1.7s2.5.9 2.5 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 7.3v1.2M12 15.5v1.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  ICON_GEAR: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2 5.6 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  ICON_CHEV_R: '<svg width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M1.5 1l4.5 5-4.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_CHEV_D: '<svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5l5 4.5 5-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  ICON_SBP: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M15 6l5 6-5 6M9 6l-5 6 5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+document.querySelector('.side-scroll').innerHTML = document.querySelector('.side-scroll').innerHTML.replace(/\{\{(\w+)\}\}/g, (_,k)=>ICONS[k]||'');
+
+
+
+
+
+/* ============================================================
+   Прототип «Мониторинг подключения и ошибки» - по bt-mt-monitoring-srs.md и разделам 4, 11, 12 черновика 3.0.
+   Экран аналитический: показывает состояние провайдеров, журнал алертов и то, как они выглядят в общем чате СБП,
+   бизнес-метрики, маппинг ошибок, настройки порогов и карточку операции для поддержки.
+   Значения - демо. Время - виртуальное (кнопка «+1 час» проверяет паузу между повторными алертами).
+   ============================================================ */
+const PROVIDERS = [
+  {iname:'pay2me', label:'pay2me'},
+  {iname:'vtb', label:'ВТБ'},
+  {iname:'bt6', label:'BT6 (Runa)'},
+  {iname:'mt', label:'Multitransfer'},
+];
+const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map(p=>[p.iname,p.label]));
+const PROVIDER_OPTIONS = PROVIDERS.map(p=>p.iname);
+
+/* виртуальные часы */
+let NOW = new Date(2026,9,14,10,0,0);
+const pad = n => String(n).padStart(2,'0');
+const fmtDT = d => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtD = d => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+const fmtN = v => Number(v).toLocaleString('ru-RU');
+const hex = n => Array.from({length:n},()=>Math.floor(Math.random()*16).toString(16)).join('');
+const guid = () => `${hex(8)}-${hex(4)}-${hex(4)}-${hex(4)}-${hex(12)}`;
+
+/* состояние провайдеров (расчётное): errorRate - доля ошибок за 5 мин, p95 - мс, lag - отставание поллера, мин */
+let ST = {
+  pay2me:{state:'AVAILABLE', errorRate:0.02, p95:780,  lag:1, treasury:12400000, balStatus:'OK'},
+  vtb:   {state:'AVAILABLE', errorRate:0.03, p95:910,  lag:1, treasury:8100000,  balStatus:'OK'},
+  bt6:   {state:'MAINTENANCE', errorRate:0.00, p95:0,  lag:0, treasury:3000000,  balStatus:'OK'},
+  mt:    {state:'AVAILABLE', errorRate:0.04, p95:1450, lag:2, treasury:6800000,  balStatus:'OK', estimated:4200000, certDays:37},
+};
+
+/* пороги мониторинга - фиксированные значения из черновика 3.0 (разделы 11 и 12), в админке не редактируются */
+const FIX = {certDaysP2:30, certDaysP1:7, errP2:0.2, errP1:0.5, latencyMs:10000, pollerLagMin:5, summaryTime:'09:00', payerUnknownMin:15, payerMismatchN:'', bizConvDrop:20, bizRejGrow:2};
+/* настройки алертов по балансу: строка на провайдера (как существующие настройки алертов казначейского счёта) */
+let BAL = {
+  pay2me:{enabled:true, threshold:'1000000', intervalMin:'60', chatId:'-1001234567890'},
+  vtb:{enabled:true, threshold:'1000000', intervalMin:'60', chatId:'-1001234567890'},
+  bt6:{enabled:false, threshold:'1000000', intervalMin:'60', chatId:''},
+  mt:{enabled:true, threshold:'2000000', intervalMin:'60', chatId:'-1001234567890'},
+};
+const CERT_DATE = '20.11.2026';
+const VAULT = {pay2me:'vault://sbp/pay2me', vtb:'vault://sbp/vtb', bt6:'vault://sbp/bt6', mt:'vault://sbp/mt (ключ и сертификат mTLS, креды)'};
+/* фиксированные пороги подключения для карточки провайдера */
+const FIXED_ROWS = [
+  ['Срок действия mTLS-сертификата','30 дней / 7 дней','P2 / P1'],
+  ['Ошибки mTLS-рукопожатия подряд','3','P1'],
+  ['Получение токена','Ошибка дольше 60 с','P1'],
+  ['Доля 5xx/503/таймаутов на create и QR за 5 минут','более 20% / более 50% (открывает circuit breaker)','P2 / P1'],
+  ['Латентность p95 за 5 минут','более 10 с','P2'],
+  ['Отставание поллера','самая старая операция без опроса более 5 минут','P2'],
+  ['Загрузка реестра D-1','не загружен к 12:00 МСК','P2'],
+  ['Нетто-поступление от провайдера','не пришло к 15:00 МСК следующего рабочего дня','P2'],
+  ['Callback','ни одного за час при наличии PROCESSED','P3'],
+  ['Флаг техработ','включён или выключен','P3'],
+  ['Ежедневная сводка (heartbeat)','09:00 МСК','P3'],
+];
+
+/* маппинг ошибок: alert = {sev, burstOnly, note} */
+const ERRORS = [
+  {code:'KYC_DATA_INVALID', how:'400 на create, текст про данные отправителя', http:'422', client:'Проверьте данные профиля', retry:'После исправления данных', alert:{sev:'P2', burstOnly:true, note:'Нет; всплеск - P2'}},
+  {code:'KYC_ME2ME_REJECTED', how:'Ошибка на create (НСПК не подтвердил me2me)', http:'422', client:'Пополнение по СБП недоступно, обратитесь в поддержку', retry:'Нет', alert:{sev:'P3', note:'P3'}},
+  {code:'PROVIDER_ACCOUNT_BLOCKED', how:'Ошибка на create (счёт заблокирован)', http:'403', client:'Пополнение по СБП недоступно, обратитесь в поддержку', retry:'Нет', alert:{sev:'P2', note:'P2'}},
+  {code:'PROVIDER_ANTIFRAUD_REJECTED', how:'Ошибка на create (антифрод)', http:'403', client:'Пополнение по СБП недоступно, обратитесь в поддержку', retry:'Нет', alert:{sev:'P2', burstOnly:true, note:'P2 при всплеске'}},
+  {code:'PROVIDER_LIMIT_EXCEEDED', how:'Ошибка на create / REJECTED при оплате', http:'400', client:'Превышен лимит пополнения по СБП: доступно X ₽, лимит обновится в 00:00 МСК', retry:'Переключение на резервного, если настроено', alert:{sev:'P2', burstOnly:true, note:'Нет; всплеск - P2'}},
+  {code:'PROVIDER_NO_RESPONSE', how:'503 или таймаут на create / QR', http:'502', client:'Не удалось сформировать QR, попробуйте ещё раз', retry:'Новой операцией, старая - в клиринг. Переключение на резервного - только при таймауте на create', alert:{sev:'P2', burstOnly:true, note:'P2 при всплеске, P1 при 100%'}},
+  {code:'PROVIDER_UNAVAILABLE', how:'500 без error (обрыв соединения)', http:'503', client:'Не удалось сформировать QR, попробуйте ещё раз', retry:'Новой операцией', alert:{sev:'P1', burstOnly:true, note:'P1 при всплеске'}},
+  {code:'PROVIDER_AUTH_ERROR', how:'401/403 от Keycloak или API', http:'503', client:'Не удалось сформировать QR, попробуйте ещё раз', retry:'После обновления токена, один раз', alert:{sev:'P1', note:'P1'}},
+  {code:'PROVIDER_MTLS_ERROR', how:'Ошибка TLS-рукопожатия', http:'503', client:'Не удалось сформировать QR, попробуйте ещё раз', retry:'Нет', alert:{sev:'P1', note:'P1'}},
+  {code:'PROVIDER_QR_ALREADY_ISSUED', how:'Ошибка на qr-processing/confirm', http:'409', client:'-', retry:'Нет', alert:{sev:'P2', note:'P2 (ошибка логики ББ)'}},
+  {code:'PAYMENT_REJECTED', how:'Статус REJECTED', http:'вебхук payed = false', client:'Платёж не прошёл', retry:'Клиент создаёт новый QR', alert:null},
+  {code:'PROVIDER_ERROR', how:'Любой другой код', http:'502', client:'Не удалось выполнить операцию, попробуйте позже', retry:'Нет', alert:{sev:'P2', note:'P2, с error.uuid'}},
+];
+
+/* бизнес-метрики (demo): cur - текущее, bad - значение при симуляции превышения */
+let BIZ = [
+  {key:'conv', name:'Конверсия CHECKED → PROCESSED', rule:()=>`Падение более ${FIX.bizConvDrop}% к среднему за 7 дней`, sev:'P2', cur:'78% (среднее 84%)', bad:'60% (среднее 84%)', alerting:false, msg:'Конверсия CHECKED → PROCESSED упала на 29% к среднему за 7 дней'},
+  {key:'rej', name:'Доля REJECTED и автовозвратов me2me', rule:()=>`Рост более чем в ${FIX.bizRejGrow} раза к среднему`, sev:'P2', cur:'6% (среднее 5%)', bad:'14% (среднее 5%)', alerting:false, msg:'Доля REJECTED и автовозвратов me2me выросла в 2,8 раза к среднему'},
+  {key:'payer', name:'Несовпадение плательщика (MISMATCH)', rule:()=>`Любое - по операции; более N в сутки${FIX.payerMismatchN?' ('+FIX.payerMismatchN+')':' (N не задано)'} - сводно`, sev:'P1', cur:'0 за сутки', bad:'1 за сутки', alerting:false, msg:''},
+  {key:'unknown', name:'Нет данных плательщика (UNKNOWN)', rule:()=>`Данных нет ${FIX.payerUnknownMin} мин после PROCESSED`, sev:'P2', cur:'0', bad:'1 операция', alerting:false, msg:'Провайдер не вернул данные плательщика, операция ушла в зависшие'},
+  {key:'switch', name:'Доля переключений на резервного', rule:()=>'Более 10% счетов за час', sev:'P2', cur:'3,1%', bad:'12,4%', alerting:false, msg:'Доля переключений на резервного провайдера 12,4% за час (порог 10%)'},
+  {key:'late', name:'Поздние оплаты после истечения QR', rule:()=>'Любая', sev:'P2', cur:'0', bad:'1', alerting:false, msg:'Оплата после истечения QR: операция ушла в клиринг'},
+  {key:'limits', name:'Объём пополнений к лимитам MT', rule:()=>'Клиенты, упёршиеся в лимит - в ежедневную сводку', sev:null, cur:'2 клиента', bad:'2 клиента', alerting:false, msg:''},
+];
+
+/* журнал алертов, чат, операции */
+let OUT = [];         // сообщения, ушедшие в чат при последнем действии (превью)
+let ALERTS = [];      // {id,time,provider,type,sev,text,opId,kind}
+let OPS = [];         // карточки операций
+let LAST = {};        // ключ алерта -> время последней отправки (мс)
+let seq = 0, opSeq = 100;
+const TYPES = {balance:'Баланс', cert:'Сертификат', errorRate:'Доля ошибок', latency:'Латентность', poller:'Поллер', registry:'Реестр', callback:'Callback', maintenance:'Техработы', biz:'Бизнес-метрика', payer:'Несовпадение плательщика', error:'Ошибка по коду', summary:'Сводка', cb:'Circuit breaker'};
+const ICON_SEV = {P1:'🔴', P2:'🟠', P3:'⚪'};
+
+let state = { page:'mon', tab:'state', op:null, back:'mon', prov:null };
+
+function $(s,r){return (r||document).querySelector(s)}
+function $all(s,r){return Array.from((r||document).querySelectorAll(s))}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(msg){
+  const wrap=$('#toastWrap'); const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show'); setTimeout(()=>el.remove(),200)},2600);
+}
+function openModal(html){ $('#modalBox').innerHTML=html; $('#overlay').classList.add('show'); $all('[data-close-modal]').forEach(b=>b.addEventListener('click',closeModal)); bindCustomSelects($('#modalBox')); }
+function closeModal(){ $('#overlay').classList.remove('show'); $('#modalBox').innerHTML=''; }
+$('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
+
+/* ---- кастомный дропдаун: рендер + биндинг (замена нативного <select>) ---- */
+function customSelect(id, selected, o){
+  o = o || {};
+  const values = o.options || PROVIDER_OPTIONS;
+  const emptyLabel = o.emptyLabel; /* если задан - первая опция с пустым значением */
+  const cur = selected ? (PROVIDER_NAMES[selected] || selected) : (emptyLabel || '');
+  return `
+    <div class="popwrap" data-select-id="${id}">
+      <button type="button" class="fbtn" data-select-toggle="${id}">
+        <span class="fval" data-select-val="${id}">${esc(cur)}</span>
+        <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="fmenu" data-select-menu="${id}">
+        ${emptyLabel ? `<button type="button" data-select-opt="${id}" data-value="" class="${!selected?'sel':''}">${esc(emptyLabel)}</button>` : ''}
+        ${values.map(opt=>`<button type="button" data-select-opt="${id}" data-value="${opt}" class="${opt===selected?'sel':''}">${esc(PROVIDER_NAMES[opt])}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+function getSelectValue(id){ const el = $(`[data-select-menu="${id}"] .sel`); return el ? el.dataset.value : undefined; }
+function bindCustomSelects(root){
+  $all('[data-select-toggle]', root).forEach(btn=>btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const id = btn.dataset.selectToggle;
+    const menu = $(`[data-select-menu="${id}"]`, root);
+    const isOpen = menu.classList.contains('show');
+    $all('.fmenu', root).forEach(m=>m.classList.remove('show'));
+    $all('.fbtn', root).forEach(b=>b.classList.remove('open'));
+    if(!isOpen){
+      /* fixed - чтобы меню не обрезалось overflow у .modal-b */
+      const r = btn.getBoundingClientRect();
+      const below = window.innerHeight - r.bottom - 12;
+      menu.style.position='fixed'; menu.style.left=r.left+'px'; menu.style.width=r.width+'px'; menu.style.right='auto';
+      if(below < 180 && r.top > below){ menu.style.top='auto'; menu.style.bottom=(window.innerHeight-r.top+6)+'px'; menu.style.maxHeight=Math.min(240,r.top-12)+'px'; }
+      else { menu.style.bottom='auto'; menu.style.top=(r.bottom+6)+'px'; menu.style.maxHeight=Math.min(240,below)+'px'; }
+      menu.classList.add('show'); btn.classList.add('open');
+    }
+  }));
+  $all('[data-select-opt]', root).forEach(opt=>opt.addEventListener('click',()=>{
+    const id = opt.dataset.selectOpt;
+    $all(`[data-select-opt="${id}"]`, root).forEach(o=>o.classList.remove('sel'));
+    opt.classList.add('sel');
+    $(`[data-select-val="${id}"]`, root).textContent = opt.textContent;
+    $(`[data-select-menu="${id}"]`, root).classList.remove('show');
+    $(`[data-select-toggle="${id}"]`, root).classList.remove('open');
+  }));
+}
+document.addEventListener('scroll', e=>{ if(e.target.closest && e.target.closest('.fmenu')) return; $all('#modalBox .fmenu.show').forEach(m=>m.classList.remove('show')); $all('#modalBox .fbtn.open').forEach(b=>b.classList.remove('open')); }, true);
+document.addEventListener('click', ()=>{ $all('.fmenu.show').forEach(m=>m.classList.remove('show')); $all('.fbtn.open').forEach(b=>b.classList.remove('open')); });
+
+function setNavActive(id){
+  $all('.side-item.clickable').forEach(b=>b.classList.remove('nav-active'));
+  $('#'+id)?.classList.add('nav-active');
+}
+function toggleCollapse(key){
+  const panel = $(`[data-panel="${key}"]`);
+  const collapsed = panel.getAttribute('data-collapsed') === 'true';
+  state.collapsed[key] = !collapsed;
+  panel.setAttribute('data-collapsed', state.collapsed[key] ? 'true':'false');
+  $(`[data-panel="${key}"] .panel-chev`).classList.toggle('open', !state.collapsed[key]);
+}
+
+
+
+
+
+/* ---------- общие ---------- */
+const sevBadge = s => !s ? '<span class="badge b-success"><span class="d"></span>восстановлено</span>' : `<span class="badge ${s==='P1'?'b-error':s==='P2'?'b-warning':'b-faded'}"><span class="d"></span>${s}</span>`;
+const stateBadge = s => `<span class="badge ${s==='AVAILABLE'?'b-success':s==='MAINTENANCE'?'b-warning':s==='CIRCUIT_OPEN'?'b-error':'b-faded'}"><span class="d"></span>${s}</span>`;
+const PENCIL = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5L11 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+
+/* добавить алерт; cooldownMin - пауза между повторами (Infinity - один раз), key - ключ дедупликации */
+function addAlert(o){
+  const key = o.key || `${o.provider}:${o.type}:${o.sev}`;
+  const last = LAST[key];
+  if(last !== undefined && o.cooldownMin !== 0 && (NOW.getTime() - last) < o.cooldownMin*60000){
+    const left = o.cooldownMin===Infinity ? '' : ` Повтор возможен через ${Math.ceil((o.cooldownMin*60000-(NOW.getTime()-last))/60000)} мин`;
+    toast('Алерт подавлен: пауза между повторами.'+left);
+    return null;
+  }
+  LAST[key] = NOW.getTime();
+  const a = {id:++seq, time:new Date(NOW), provider:o.provider, type:o.type, sev:o.sev, text:o.text, opId:o.opId||null, kind:'alert'};
+  ALERTS.push(a); OUT.push(a); return a;
+}
+function addRecovery(provider, type, text){
+  const a = {id:++seq, time:new Date(NOW), provider, type, sev:null, text, opId:null, kind:'recovery'};
+  ALERTS.push(a); OUT.push(a); return a;
+}
+const balCd = p => Number(BAL[p].intervalMin);
+const COOLDOWN = 60;
+
+/* ---------- сценарии ---------- */
+const SCENARIOS = [
+  {id:'err25', label:'Доля ошибок MT: 25%', run(){ ST.mt.errorRate=0.25; const a=addAlert({provider:'mt',type:'errorRate',sev:'P2',cooldownMin:COOLDOWN,text:`Доля ошибок провайдерского класса 25% за 5 мин (порог P2: ${Math.round(FIX.errP2*100)}%). Circuit breaker не открывается`}); if(a) toast('Алерт P2 отправлен в чат СБП'); }},
+  {id:'err55', label:'Доля ошибок MT: 55%', run(){ ST.mt.errorRate=0.55; const was=ST.mt.state; ST.mt.state='CIRCUIT_OPEN'; const a=addAlert({provider:'mt',type:'errorRate',sev:'P1',cooldownMin:COOLDOWN,text:`Доля ошибок провайдерского класса 55% за 5 мин (порог P1: ${Math.round(FIX.errP1*100)}%). Circuit breaker открыт`}); if(was!=='CIRCUIT_OPEN') addAlert({provider:'mt',type:'cb',sev:'P3',cooldownMin:0,text:'Провайдер Multitransfer: состояние CIRCUIT_OPEN, ротация переключает партнёров с включённым «при недоступности» на резервного'}); if(a) toast('Алерт P1 отправлен, circuit breaker открыт'); }},
+  {id:'cbClose', label:'Закрыть circuit breaker MT', run(){ if(ST.mt.state!=='CIRCUIT_OPEN'){ toast('Circuit breaker MT не открыт'); return; } ST.mt.state='AVAILABLE'; ST.mt.errorRate=0.04; addRecovery('mt','cb','Multitransfer: circuit breaker закрыт, провайдер снова AVAILABLE'); toast('Отправлено сообщение о восстановлении'); }},
+  {id:'balLow', label:'Баланс pay2me ниже порога', run(){ if(!BAL.pay2me.enabled){ toast('Алерты по балансу pay2me выключены'); return; } ST.pay2me.treasury=800000; ST.pay2me.balStatus='BELOW_THRESHOLD'; addAlert({provider:'pay2me',type:'balance',sev:'P2',cooldownMin:balCd('pay2me'),text:`Остаток казначейского счёта 800 000 RUBR ниже порога ${fmtN(BAL.pay2me.threshold)}`}); }},
+  {id:'balOk', label:'Баланс pay2me восстановлен', run(){ if(ST.pay2me.balStatus==='OK'){ toast('Баланс pay2me в норме'); return; } ST.pay2me.treasury=12400000; ST.pay2me.balStatus='OK'; delete LAST['pay2me:balance:P2']; addRecovery('pay2me','balance','pay2me: остаток казначейского счёта восстановлен выше порога'); toast('Отправлено сообщение «баланс восстановлен»'); }},
+  {id:'mtBal', label:'Расчётный баланс MT ниже порога', run(){ if(!BAL.mt.enabled){ toast('Алерты по балансу MT выключены'); return; } ST.mt.estimated=700000; addAlert({provider:'mt',type:'balance',sev:'P2',cooldownMin:balCd('mt'),text:`Расчётный баланс аккаунта у Multitransfer ≈ 700 000 ₽ (оценка, не факт) ниже порога ${fmtN(BAL.mt.threshold)}`}); }},
+  {id:'cert28', label:'Сертификат: 28 дней', run(){ ST.mt.certDays=28; const a=addAlert({provider:'mt',type:'cert',sev:'P2',cooldownMin:Infinity,text:`Сертификат mTLS истекает через 28 дней (до ${fmtD(new Date(NOW.getTime()+28*86400000))})`}); if(a) toast('Алерт P2 отправлен (на пороге один раз)'); }},
+  {id:'cert7', label:'Сертификат: 7 дней', run(){ ST.mt.certDays=7; const a=addAlert({provider:'mt',type:'cert',sev:'P1',cooldownMin:Infinity,text:`Сертификат mTLS истекает через 7 дней (до ${fmtD(new Date(NOW.getTime()+7*86400000))})`}); if(a) toast('Алерт P1 отправлен'); }},
+  {id:'maint', label:'Включить техработы MT', run(){ ST.mt.state='MAINTENANCE'; addAlert({provider:'mt',type:'maintenance',sev:'P3',cooldownMin:0,text:'Включён флаг техработ Multitransfer (информирование)'}); toast('Информирование P3 отправлено'); }},
+  {id:'maintOff', label:'Снять техработы MT', run(){ if(ST.mt.state!=='MAINTENANCE'){ toast('Техработы MT не включены'); return; } ST.mt.state='AVAILABLE'; addAlert({provider:'mt',type:'maintenance',sev:'P3',cooldownMin:0,text:'Флаг техработ Multitransfer снят'}); }},
+  {id:'error', label:'Ошибка провайдера по коду…', run(){ openErrorModal(); }},
+  {id:'summary', label:'Ежедневная сводка', run(){ sendSummary(); }},
+];
+
+function makeOp(o){
+  const op = Object.assign({id:'op_'+(++opSeq), created:new Date(NOW), provider:'mt', partner:'FinPay KG', client:'client_7f3c1a9e', amount:'5 000', status:'FAILED', code:null, uuid:guid(), reqId:guid(), http:'', raw:'', clientText:'', alertSev:null, payerMatch:null, switched:null}, o);
+  OPS.push(op); return op;
+}
+function rawFor(code, uuid){
+  if(code==='PROVIDER_NO_RESPONSE') return 'HTTP 503 / таймаут клиента 35 с - тело ответа отсутствует';
+  if(code==='PROVIDER_UNAVAILABLE') return 'HTTP 500 - объекта error в ответе нет (обрыв соединения)';
+  if(code==='PROVIDER_MTLS_ERROR') return 'TLS handshake failed: certificate verify failed';
+  if(code==='PAYMENT_REJECTED') return JSON.stringify({documentStateList:[{paymentId:guid(),paymentState:'REJECTED',reason:'me2me: плательщик не совпал',paymentDateUpdated:fmtDT(NOW)}],error:{code:0,uuid}},null,2);
+  return JSON.stringify({error:{code:400,message:'<сообщение провайдера>',externalCode:null,details:null,uuid}},null,2);
+}
+function simulateError(code, burst){
+  const m = ERRORS.find(e=>e.code===code);
+  const op = makeOp({code, http:m.http, clientText:m.client, uuid:guid()});
+  op.raw = rawFor(code, op.uuid);
+  let sent = null;
+  if(m.alert && (!m.alert.burstOnly || burst)){
+    sent = addAlert({provider:'mt', type:'error', sev:m.alert.sev, cooldownMin:COOLDOWN, key:`mt:error:${code}:${m.alert.sev}`, opId:op.id,
+      text:`${code}: ${m.how}. error.uuid ${op.uuid}, x-request-id ${op.reqId}`});
+    if(sent) op.alertSev = m.alert.sev;
+  } else if(m.alert && m.alert.burstOnly){
+    toast('Одиночная ошибка: алерт не отправляется, только при всплеске ('+m.alert.note+')');
+  }
+  return {op, sent};
+}
+function sendSummary(){
+  const day = ALERTS.filter(a=>a.kind==='alert');
+  const c = s => day.filter(a=>a.sev===s).length;
+  addAlert({provider:'mt', type:'summary', sev:'P3', cooldownMin:0, key:'summary',
+    text:`Сводка по каналу за сутки. Алерты: P1 ${c('P1')}, P2 ${c('P2')}, P3 ${c('P3')}. Переключения на резервного: недоступность 3, лимит 1, KYC 0 (по партнёру - в отчёте). Отказов по лимитам провайдера 4, клиентов, упёршихся в лимит, 2. Состав «состояния канала» уточняется (открытый вопрос)`});
+  toast('Сводка отправлена в чат СБП');
+}
+function openErrorModal(){
+  openModal(`
+    <div class="modal-h"><h3>Ошибка провайдера (симуляция)</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Код bb2</label>${optSelect('errCode', ERRORS.map(e=>({v:e.code,l:e.code})), 'PROVIDER_ACCOUNT_BLOCKED')}</div>
+      <div class="toggle-row"><div><div class="tt">Это всплеск</div><div class="ts">Для кодов с алертом «при всплеске» - много таких ошибок за период</div></div><button class="switch" id="swBurst"><span class="knob"></span></button></div>
+      <div class="helper-note"><span>ℹ️</span><span>Будет создана операция с ответом провайдера, error.uuid и x-request-id. Алерт уходит по колонке «Алерт» таблицы маппинга.</span></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnRunError">Выполнить</button></div>
+  `);
+  $('#swBurst').addEventListener('click',()=>$('#swBurst').classList.toggle('on'));
+  $('#btnRunError').addEventListener('click',()=>{
+    const code = getSelectValue('errCode'), burst = $('#swBurst').classList.contains('on');
+    OUT = []; const r = simulateError(code, burst);
+    closeModal(); state.back='mon'; state.page='op'; state.op=r.op.id; render(); previewOut();
+    toast(r.sent ? `Алерт ${r.sent.sev} отправлен, операция ${r.op.id}` : `Операция ${r.op.id} создана без алерта`);
+  });
+}
+
+/* выпадающий список с произвольными значениями */
+function optSelect(id, options, selected){
+  const cur = options.find(o=>o.v===selected);
+  return `
+    <div class="popwrap" data-select-id="${id}">
+      <button type="button" class="fbtn" data-select-toggle="${id}">
+        <span class="fval" data-select-val="${id}">${esc(cur?cur.l:'')}</span>
+        <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="fmenu" data-select-menu="${id}">
+        ${options.map(o=>`<button type="button" data-select-opt="${id}" data-value="${o.v}" class="${o.v===selected?'sel':''}">${esc(o.l)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ---------- экран ---------- */
+function renderPage(){
+  const tabs = [['state','Состояние'],['biz','Бизнес-метрики']];
+  return `
+    <div class="acc-card">
+      <h1>Мониторинг СБП</h1>
+      <p class="sub">Состояние провайдеров и бизнес-метрики. Алерты уходят в общий чат СБП (Telegram), на экране они показываются только как превью после действия. Время виртуальное: ${fmtDT(NOW)}</p>
+    </div>
+    <div class="rtabs" style="margin-top:0">
+      ${tabs.map(([k,l])=>`<button class="rtab clickable ${state.tab===k?'active':''}" data-tab="${k}">${l}</button>`).join('')}
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" id="btnPlus1h" style="align-self:center">+1 час</button>
+    </div>
+    ${state.tab==='state' ? tabState() : tabBiz()}
+  `;
+}
+
+function provCard(p){
+  const s = ST[p.iname];
+  const errBadge = s.errorRate*1 >= Number(FIX.errP1) ? 'b-error' : s.errorRate >= Number(FIX.errP2) ? 'b-warning' : 'b-success';
+  const latBadge = s.p95 > Number(FIX.latencyMs) ? 'b-warning' : 'b-success';
+  const lagBadge = s.lag > Number(FIX.pollerLagMin) ? 'b-warning' : 'b-success';
+  const certRow = s.certDays!==undefined ? `<div><dt>Срок сертификата mTLS</dt><dd><span class="badge ${s.certDays<=Number(FIX.certDaysP1)?'b-error':s.certDays<=Number(FIX.certDaysP2)?'b-warning':'b-success'}"><span class="d"></span>${s.certDays} дн.</span></dd></div>` : '';
+  const estRow = s.estimated!==undefined ? `<div><dt>Расчётный баланс у провайдера</dt><dd>≈ ${fmtN(s.estimated)} ₽ <span class="tag">оценка</span></dd></div>` : '';
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>${esc(p.label)}</h3></div>${stateBadge(s.state)}</div>
+      <div class="panel-b">
+        <dl class="deflist">
+          <div><dt>Доля ошибок за 5 мин</dt><dd><span class="badge ${errBadge}"><span class="d"></span>${Math.round(s.errorRate*100)}%</span></dd></div>
+          <div><dt>Латентность p95</dt><dd><span class="badge ${latBadge}"><span class="d"></span>${s.p95?fmtN(s.p95)+' мс':'—'}</span></dd></div>
+          <div><dt>Отставание поллера</dt><dd><span class="badge ${lagBadge}"><span class="d"></span>${s.lag} мин</span></dd></div>
+          <div><dt>Казначейский счёт, RUBR</dt><dd>${fmtN(s.treasury)} <span class="badge ${s.balStatus==='OK'?'b-success':'b-warning'}" style="margin-left:4px"><span class="d"></span>${s.balStatus}</span></dd></div>
+          ${certRow}${estRow}
+        </dl>
+        ${s.state==='CIRCUIT_OPEN' ? '<div class="helper-note" style="margin-top:10px"><span>ℹ️</span><span>Закрытие без трафика к провайдеру - открытый вопрос №5: по истечении окна, пробным запросом или вручную</span></div>' : ''}
+      </div>
+    </div>`;
+}
+function tabState(){
+  return `
+    <div class="field-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start">
+      ${PROVIDERS.map(provCard).join('')}
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="panel-h"><div><h3>Сценарии <span class="tag" style="margin-left:6px">симуляция</span></h3><div class="hint">Запустите событие и посмотрите, какой алерт уйдёт в чат СБП и как изменится состояние провайдера. Повторный алерт на то же событие подавляется паузой</div></div></div>
+      <div class="panel-b" style="display:flex;flex-wrap:wrap;gap:8px">
+        ${SCENARIOS.map(s=>`<button class="btn btn-sm" data-scn="${s.id}">${esc(s.label)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function tabBiz(){
+  return `
+    <div class="panel">
+      <div class="panel-h"><div><h3>Бизнес-метрики</h3><div class="hint">Показатели потока операций. Сверка плательщика и блокировка СБП описаны в SRS сверки, здесь - алерты по её результатам</div></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Метрика</th><th>Порог</th><th>Сейчас</th><th>Severity</th><th>Статус</th><th style="text-align:center">Действия</th></tr></thead>
+        <tbody>${BIZ.map(m=>`
+          <tr>
+            <td class="cell-strong">${esc(m.name)}</td>
+            <td class="cell-sub" style="white-space:normal;min-width:220px">${esc(m.rule())}</td>
+            <td class="mono">${esc(m.alerting?m.bad:m.cur)}</td>
+            <td>${m.sev?sevBadge(m.sev):'<span class="tag">в сводку</span>'}</td>
+            <td>${m.sev ? `<span class="badge ${m.alerting?(m.sev==='P1'?'b-error':'b-warning'):'b-success'}"><span class="d"></span>${m.alerting?'вне нормы':'в норме'}</span>` : '<span class="badge b-faded"><span class="d"></span>без алерта</span>'}</td>
+            <td style="text-align:center">${m.sev ? `<button class="btn btn-sm" data-biz="${m.key}">${m.alerting?'Вернуть в норму':'Симулировать превышение'}</button>` : ''}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ---------- превью сообщений в общий чат СБП ---------- */
+function bubble(a){
+  return `
+    <div class="tg-msg ${a.sev?'sev-'+a.sev:'sev-ok'}">
+      <div class="tg-h">${a.sev?`${ICON_SEV[a.sev]} <b>${a.sev}</b>`:'🟢 <b>Восстановлено</b>'} · ${esc(PROVIDER_NAMES[a.provider]||a.provider)} · ${esc(TYPES[a.type])}</div>
+      <div class="tg-b">${esc(a.text)}</div>
+      <div class="tg-f">${fmtDT(a.time)}</div>
+    </div>`;
+}
+function previewOut(){
+  if(!OUT.length) return;
+  const items = OUT.slice(); OUT = [];
+  openModal(`
+    <div class="modal-h"><h3>Сообщения в общий чат СБП (Telegram)</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b" style="background:var(--bg-weak)">${items.map(bubble).join('')}</div>
+    <div class="modal-f"><button class="btn btn-primary" data-close-modal>Закрыть</button></div>
+  `);
+}
+
+/* ---------- Настройки → СБП → Провайдеры ---------- */
+function renderProvList(){
+  return `
+    <div class="acc-card">
+      <h1>Настройки СБП</h1>
+      <p class="sub">Провайдеры СБП: карточка провайдера содержит блок мониторинга - алерты по балансу, чат, срок сертификата</p>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><div><h3>Провайдеры СБП</h3></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Провайдер</th><th>Статус</th><th>Алерт по балансу</th><th>Порог, RUBR</th><th>Чат алертов</th><th>Срок сертификата</th><th style="text-align:center">Действия</th></tr></thead>
+        <tbody>${PROVIDERS.map(p=>{ const b=BAL[p.iname], st=ST[p.iname];
+          return `<tr>
+            <td class="cell-strong">${esc(p.label)}</td>
+            <td>${stateBadge(st.state)}</td>
+            <td><span class="badge ${b.enabled?'b-success':'b-faded'}"><span class="d"></span>${b.enabled?'включён':'выключен'}</span></td>
+            <td class="mono">${fmtN(b.threshold)}</td>
+            <td class="mono">${b.chatId?esc(b.chatId):'<span class="muted">не задан</span>'}</td>
+            <td>${st.certDays!==undefined?`${CERT_DATE} (${st.certDays} дн.)`:'<span class="muted">-</span>'}</td>
+            <td style="text-align:center"><button class="btn btn-sm" data-prov-open="${p.iname}">Открыть</button></td>
+          </tr>`; }).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+function renderProv(){
+  const iname = state.prov, p = PROVIDERS.find(x=>x.iname===iname), st = ST[iname], b = BAL[iname];
+  const certRow = st.certDays!==undefined ? `<div><dt>Срок действия сертификата mTLS</dt><dd>${CERT_DATE} <span class="badge ${st.certDays<=FIX.certDaysP1?'b-error':st.certDays<=FIX.certDaysP2?'b-warning':'b-success'}" style="margin-left:4px"><span class="d"></span>${st.certDays} дн.</span></dd></div>` : '';
+  return `
+    <div class="backlink" id="btnBackProv">← Провайдеры СБП</div>
+    <div class="rec-card">
+      <div class="rec-headrow"><h1>${esc(p.label)}</h1>${stateBadge(st.state)}</div>
+      <div class="rec-meta"><span>Карточка провайдера</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><div><h3>Подключение</h3><div class="hint">Секреты в админке не показываются и не редактируются - только ссылка на запись в Vault и срок действия сертификата</div></div></div>
+      <div class="panel-b">
+        <dl class="deflist">
+          <div><dt>Секреты</dt><dd class="mono" style="white-space:normal">${esc(VAULT[iname])}</dd></div>
+          ${certRow}
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><div><h3>Алерты по балансу <span class="tag existing" style="margin-left:6px">существует</span></h3><div class="hint">Настройки алертов о снижении остатка казначейского счёта: по строке на провайдера</div></div>
+        <button class="btn btn-sm" data-edit-bal="${iname}">Изменить</button></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Алерты</dt><dd><span class="badge ${b.enabled?'b-success':'b-faded'}"><span class="d"></span>${b.enabled?'включены':'выключены'}</span></dd></div>
+          <div><dt>Порог остатка, RUBR</dt><dd>${fmtN(b.threshold)}</dd></div>
+          <div><dt>Повтор алерта, мин</dt><dd>${esc(b.intervalMin)}</dd></div>
+          <div><dt>Чат алертов</dt><dd class="mono">${b.chatId?esc(b.chatId):'<span class="muted">не задан</span>'}</dd></div>
+          <div><dt>Остаток казначейского счёта</dt><dd>${fmtN(st.treasury)} <span class="badge ${st.balStatus==='OK'?'b-success':'b-warning'}" style="margin-left:4px"><span class="d"></span>${st.balStatus}</span></dd></div>
+          ${st.estimated!==undefined?`<div><dt>Расчётный баланс у провайдера</dt><dd>≈ ${fmtN(st.estimated)} ₽ <span class="tag">оценка</span></dd></div>`:''}
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><div><h3>Пороги мониторинга <span class="tag" style="margin-left:6px">фиксированы</span></h3><div class="hint">Не настраиваются в админке, заданы требованиями. Алерты уходят в общий чат СБП</div></div></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Проверка</th><th>Порог</th><th>Severity</th></tr></thead>
+        <tbody>${FIXED_ROWS.map(r=>`<tr><td class="cell-strong">${esc(r[0])}</td><td>${esc(r[1])}</td><td class="cell-sub">${esc(r[2])}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+function editBalance(iname){
+  const b = BAL[iname];
+  openModal(`
+    <div class="modal-h"><h3>Алерты по балансу - ${esc(PROVIDER_NAMES[iname])}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="toggle-row"><div><div class="tt">Слать алерт о снижении остатка</div></div><button class="switch ${b.enabled?'on':''}" id="swBal"><span class="knob"></span></button></div>
+      <div class="field"><label>Порог остатка, RUBR</label><input id="balThr" inputmode="decimal" value="${esc(b.threshold)}"></div>
+      <div class="field"><label>Повтор алерта, мин</label><input id="balInt" inputmode="numeric" value="${esc(b.intervalMin)}"></div>
+      <div class="field"><label>Чат алертов</label><input id="balChat" value="${esc(b.chatId)}" placeholder="Не задан"><div class="cell-sub">При включённых алертах обязателен</div></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveBal">Сохранить</button></div>
+  `);
+  $('#swBal').addEventListener('click',()=>$('#swBal').classList.toggle('on'));
+  $('#btnSaveBal').addEventListener('click',()=>{
+    const en = $('#swBal').classList.contains('on'), thr = $('#balThr').value.trim(), itv = $('#balInt').value.trim(), chat = $('#balChat').value.trim();
+    if(!/^\d+(\.\d+)?$/.test(thr) || Number(thr)<=0){ toast('Порог - число больше 0'); return; }
+    if(!/^\d+$/.test(itv) || Number(itv)<=0){ toast('Повтор алерта - целое число минут больше 0'); return; }
+    if(en && !chat){ toast('Укажите чат алертов'); return; }
+    Object.assign(b, {enabled:en, threshold:thr, intervalMin:itv, chatId:chat});
+    closeModal(); render(); toast('Настройки сохранены');
+  });
+}
+
+/* ---------- Операции СБП ---------- */
+function renderOpsList(){
+  const stBadge = x => `<span class="badge ${x==='CONFIRMED'?'b-success':x==='FAILED'?'b-error':'b-info'}"><span class="d"></span>${x}</span>`;
+  return `
+    <div class="acc-card">
+      <h1>Операции СБП</h1>
+      <p class="sub">Карточка операции доступна поддержке: код bb2, сырой ответ провайдера, error.uuid и x-request-id</p>
+    </div>
+    <div class="panel">
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Операция</th><th>Создана</th><th>Партнёр</th><th>Провайдер</th><th>Сумма, ₽</th><th>Статус</th><th>Код bb2</th><th>Алерт</th></tr></thead>
+        <tbody>${OPS.slice().reverse().map(o=>`<tr>
+          <td class="mono"><a href="#" data-op="${o.id}">${esc(o.id)}</a></td>
+          <td class="cell-sub">${fmtDT(o.created)}</td>
+          <td class="cell-strong">${esc(o.partner)}</td>
+          <td>${esc(PROVIDER_NAMES[o.provider])}</td>
+          <td class="mono">${esc(o.amount)}</td>
+          <td>${stBadge(o.status)}</td>
+          <td class="mono">${esc(o.code||'-')}</td>
+          <td>${o.alertSev?sevBadge(o.alertSev):'<span class="cell-sub">нет</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ---------- карточка операции (поддержка) ---------- */
+function renderOpPage(){
+  const o = OPS.find(x=>x.id===state.op);
+  if(!o) return '<div class="acc-card"><h1>Операция не найдена</h1></div>';
+  const m = ERRORS.find(e=>e.code===o.code);
+  const partnerBody = o.code ? JSON.stringify({code:o.code, message:o.clientText||'', data:{correlationId:o.reqId, providerRef:o.uuid}}, null, 2) : JSON.stringify({id:o.id, status:o.status, qr_url:'https://qr.nspk.ru/AD201015E9RB443Q8EK88IRE16AHVM8C'}, null, 2);
+  return `
+    <div class="backlink" id="btnBackMon">← ${state.back==='ops'?'Операции СБП':'Мониторинг СБП'}</div>
+    <div class="rec-card">
+      <div class="rec-headrow"><h1>Операция ${esc(o.id)}</h1><span class="rec-pill" style="${o.status==='CONFIRMED'?'background:var(--success-bg);color:var(--success-dark)':'background:var(--error-bg);color:var(--error-dark)'}">${esc(o.status)}</span></div>
+      <div class="rec-meta"><span>${esc(o.partner)}</span><span>${esc(o.client)}</span><span>${esc(PROVIDER_NAMES[o.provider])}</span><span>${fmtDT(o.created)}</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><div><h3>Ответ провайдера <span class="tag" style="margin-left:6px">для поддержки</span></h3><div class="hint">Код bb2, сырой ответ, error.uuid и x-request-id - для обращения в поддержку провайдера и сверки зависших заявок</div></div></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Код bb2</dt><dd class="mono">${esc(o.code||'-')}</dd></div>
+          <div><dt>error.uuid провайдера</dt><dd class="mono">${esc(o.uuid)}</dd></div>
+          <div><dt>x-request-id</dt><dd class="mono">${esc(o.reqId)}</dd></div>
+        </dl>
+        <div class="hairline"></div>
+        <div class="field"><label>Сырой ответ провайдера</label><pre class="raw">${esc(o.raw)}</pre></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><div><h3>Что получили аудитории</h3></div></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Клиент ББ видит</dt><dd style="white-space:normal">${esc(o.clientText||'-')}</dd></div>
+          <div><dt>HTTP партнёру</dt><dd class="mono">${esc(o.http)}</dd></div>
+          <div><dt>Алерт в чат СБП</dt><dd>${o.alertSev?sevBadge(o.alertSev):'<span class="muted">не отправлялся</span>'}</dd></div>
+        </dl>
+        <div class="hairline"></div>
+        <div class="field"><label>Ответ партнёрского API <span class="tag" style="margin-left:6px">correlationId и providerRef - новые данные в data</span></label><pre class="raw">${esc(partnerBody)}</pre></div>
+        ${m ? `<div class="cell-sub">Повтор: ${esc(m.retry)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function render(){
+  const nav = state.page==='mon' ? 'navMonitoring' : (state.page==='provlist' || state.page==='prov') ? 'navSbpSettings' : 'navOps';
+  setNavActive(nav);
+  $('#stage').innerHTML = state.page==='op' ? renderOpPage() : state.page==='ops' ? renderOpsList() : state.page==='provlist' ? renderProvList() : state.page==='prov' ? renderProv() : renderPage();
+  bindEvents();
+}
+
+function bindEvents(){
+  $all('[data-tab]').forEach(b=>b.addEventListener('click',()=>{ state.tab=b.dataset.tab; render(); }));
+  $('#btnPlus1h')?.addEventListener('click',()=>{ NOW = new Date(NOW.getTime()+3600000); render(); toast('Прошёл час: '+fmtDT(NOW)); });
+  $all('[data-scn]').forEach(b=>b.addEventListener('click',()=>{ const sc=SCENARIOS.find(x=>x.id===b.dataset.scn); OUT=[]; sc.run(); if(sc.id!=='error'){ render(); previewOut(); } }));
+  $all('[data-op]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); state.back = state.page==='ops' ? 'ops' : 'mon'; state.page='op'; state.op=a.dataset.op; render(); }));
+  $('#btnBackMon')?.addEventListener('click',()=>{ state.page = state.back==='ops' ? 'ops' : 'mon'; render(); });
+  $all('[data-prov-open]').forEach(b=>b.addEventListener('click',()=>{ state.prov=b.dataset.provOpen; state.page='prov'; render(); }));
+  $('#btnBackProv')?.addEventListener('click',()=>{ state.page='provlist'; render(); });
+  $all('[data-edit-bal]').forEach(b=>b.addEventListener('click',()=>editBalance(b.dataset.editBal)));
+  $all('[data-biz]').forEach(b=>b.addEventListener('click',()=>{
+    const m = BIZ.find(x=>x.key===b.dataset.biz);
+    if(m.alerting){ m.alerting=false; render(); return; }
+    m.alerting = true; OUT = [];
+    if(m.key==='payer'){
+      const op = makeOp({status:'PROCESSED', code:'PAYER_MISMATCH', http:'-', clientText:'Платёж принят, зачисление ожидает разбора', payerMatch:'MISMATCH', alertSev:'P1', raw:JSON.stringify({payerPhoneMasked:'7916***1631',payerName:'И*** П.',recipientPhone:'79093881549',payerMatch:'MISMATCH'},null,2)});
+      addAlert({provider:'mt', type:'payer', sev:'P1', cooldownMin:0, opId:op.id, text:`Несовпадение плательщика: операция ${op.id}, канал партнёр, FinPay KG, Multitransfer, телефон плательщика 7916***1631, получатель 7909***1549. Блокировка СБП клиента`});
+    } else if(m.sev && m.msg){
+      addAlert({provider:'mt', type:'biz', sev:m.sev, cooldownMin:COOLDOWN, key:'biz:'+m.key, text:m.msg});
+    }
+    render(); previewOut();
+  }));
+  bindCustomSelects($('#stage'));
+}
+
+/* меню: обработчики навешиваются один раз */
+$('#navMonitoring').addEventListener('click',()=>{ state.page='mon'; render(); });
+$('#navSbpSettings').addEventListener('click',()=>{ state.page='provlist'; render(); });
+$('#navOps').addEventListener('click',()=>{ state.page='ops'; render(); });
+
+/* начальные данные журнала */
+(function seed(){
+  const t = m => new Date(NOW.getTime()-m*60000);
+  const push = (min, o) => { const a={id:++seq,time:t(min),opId:null,kind:o.sev?'alert':'recovery'}; Object.assign(a,o); ALERTS.push(a); };
+  push(1500, {provider:'pay2me', type:'balance', sev:'P2', text:'Остаток казначейского счёта 940 000 RUBR ниже порога 1 000 000'});
+  push(1380, {provider:'pay2me', type:'balance', sev:null, text:'pay2me: остаток казначейского счёта восстановлен выше порога'});
+  push(1260, {provider:'mt', type:'maintenance', sev:'P3', text:'Включён флаг техработ Multitransfer (информирование)'});
+  push(1200, {provider:'mt', type:'maintenance', sev:'P3', text:'Флаг техработ Multitransfer снят'});
+  push(300, {provider:'vtb', type:'errorRate', sev:'P2', text:'Доля ошибок провайдерского класса 22% за 5 мин (порог P2: 20%)'});
+})();
+
+(function seedOps(){
+  const t = m => new Date(NOW.getTime()-m*60000);
+  makeOp({created:t(190), status:'CONFIRMED', provider:'pay2me', partner:'FinPay KG', client:'client_7f3c1a9e', amount:'12 000', code:null, http:'200', uuid:'-', raw:JSON.stringify({documentStateList:[{paymentId:guid(),paymentState:'PROCESSED',paymentDateUpdated:'14.10.2026 07:02'}],error:{code:0}},null,2)});
+  const a = makeOp({created:t(95), status:'FAILED', provider:'mt', partner:'FinPay KG', client:'client_1a22bb90', amount:'5 000', code:'PROVIDER_NO_RESPONSE', http:'502', clientText:'Не удалось сформировать QR, попробуйте ещё раз'}); a.raw = rawFor(a.code, a.uuid);
+  const b = makeOp({created:t(40), status:'FAILED', provider:'mt', partner:'CashBridge', client:'client_9d0c44e1', amount:'30 000', code:'PROVIDER_ACCOUNT_BLOCKED', http:'403', clientText:'Пополнение по СБП недоступно, обратитесь в поддержку', alertSev:'P2'}); b.raw = rawFor(b.code, b.uuid);
+})();
+
+render();
+</script>
+</body>
+</html>
