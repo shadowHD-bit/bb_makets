@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЛК партнера BB 2.0 - прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+const c = (v) => `hsl(var(--${v}) / <alpha-value>)`;
+const scale = (p, keys) => Object.fromEntries(keys.map((k) => [k, c(`${p}-${k}`)]));
+const tone = (n) => ({ dark: c(`${n}-dark`), base: c(`${n}-base`), light: c(`${n}-light`), lighter: c(`${n}-lighter`) });
+const fs = (size, lh, ls, fw) => [size, { lineHeight: lh, letterSpacing: ls, fontWeight: fw }];
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        inter: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['DM Mono', 'JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
+      colors: {
+        neutral: scale('neutral', ['0', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']),
+        bg: scale('bg', ['strong-950', 'surface-800', 'sub-300', 'soft-200', 'weak-50', 'white-0']),
+        text: scale('text', ['strong-950', 'sub-600', 'soft-400', 'disabled-300', 'white-0']),
+        stroke: scale('stroke', ['strong-950', 'sub-300', 'soft-200', 'white-0']),
+        static: { black: c('static-black'), white: c('static-white') },
+        primary: { dark: c('primary-dark'), darker: c('primary-darker'), base: c('primary-base'),
+          'alpha-24': 'hsl(var(--primary-alpha-24))', 'alpha-16': 'hsl(var(--primary-alpha-16))', 'alpha-10': 'hsl(var(--primary-alpha-10))' },
+        success: tone('success'), error: tone('error'), warning: tone('warning'),
+        information: tone('information'), faded: tone('faded'), feature: tone('feature'),
+        orange: { 'alpha-16': 'hsl(var(--orange-alpha-16))', 'alpha-10': 'hsl(var(--orange-alpha-10))' },
+        red: { 500: c('red-500'), 600: c('red-600'), 700: c('red-700'), 'alpha-16': 'hsl(var(--red-alpha-16))', 'alpha-10': 'hsl(var(--red-alpha-10))' },
+        purple: { 200: c('purple-200'), 950: c('purple-950') },
+        'state-success': '#00cb79',
+      },
+      fontSize: {
+        'title-h4': fs('2rem', '2.5rem', '-0.005em', '500'),
+        'title-h5': fs('1.5rem', '2rem', '0em', '500'),
+        'title-h6': fs('1.25rem', '1.75rem', '0em', '500'),
+        'label-xl': fs('1.5rem', '2rem', '-0.015em', '500'),
+        'label-lg': fs('1.125rem', '1.5rem', '-0.015em', '500'),
+        'label-md': fs('1rem', '1.5rem', '-0.011em', '500'),
+        'label-sm': fs('.875rem', '1.25rem', '-0.006em', '500'),
+        'label-xs': fs('.75rem', '1rem', '0em', '500'),
+        'paragraph-lg': fs('1.125rem', '1.5rem', '-0.015em', '400'),
+        'paragraph-md': fs('1rem', '1.5rem', '-0.011em', '400'),
+        'paragraph-sm': fs('.875rem', '1.25rem', '-0.006em', '400'),
+        'paragraph-xs': fs('.75rem', '1rem', '0em', '400'),
+        'subheading-xs': fs('.75rem', '1rem', '0.04em', '500'),
+        'subheading-2xs': fs('.6875rem', '.75rem', '0.02em', '500'),
+      },
+      boxShadow: {
+        'regular-xs': '0 1px 2px 0 #0a0d1408',
+        'regular-sm': '0 2px 4px #1b1c1d0a',
+        'regular-md': '0 16px 32px -12px #0e121b1a',
+        'toggle-switch': '0 6px 10px 0 #0e121b0f, 0 2px 4px 0 #0e121b08',
+        'switch-thumb': '0 4px 8px 0 #1b1c1d0f, 0 2px 4px 0 #0e121b14',
+        'modal': '0 24px 48px -12px rgba(14,18,27,0.28)',
+      },
+      borderRadius: { 28: '28px', 24: '24px', 20: '20px', 16: '16px', 14: '14px', 12: '12px', 10: '10px', 8: '8px', 6: '6px' },
+    },
+  },
+};
+</script>
+<style>
+:root {
+  --neutral-950: 221.54 31.71% 8.04%; --neutral-900: 226.15 21.31% 11.96%; --neutral-800: 227.14 17.07% 16.08%;
+  --neutral-700: 221.25 15.69% 20%; --neutral-600: 222 10.87% 36.08%; --neutral-500: 221.05 7.76% 48.04%;
+  --neutral-400: 220 11.48% 64.12%; --neutral-300: 218.57 15.22% 81.96%; --neutral-200: 220 17.65% 90%;
+  --neutral-100: 210 30% 96.08%; --neutral-50: 216 33.33% 97.06%; --neutral-0: 0 0% 100%;
+  --blue-500: 227.94 100% 60%; --blue-50: 228 100% 96%; --blue-950: 228.14 70.49% 23.92%; --blue-200: 228 100% 87.65%;
+  --blue-400: 222.12 100% 70.39%; --blue-alpha-24: 227.94 100% 60% / 24%; --blue-alpha-16: 227.94 100% 60% / 16%;
+  --orange-950: 24.2 70.49% 23.92%; --orange-500: 24.13 100% 63.92%; --orange-400: 23.84 100% 70.39%; --orange-600: 24 90% 56%;
+  --orange-200: 23.81 100% 87.65%; --orange-50: 24 100% 96.08%;
+  --orange-alpha-16: 24.13 100% 63.92% / 16%; --orange-alpha-10: 24.13 100% 63.92% / 10%; --orange-alpha-24: 24.13 100% 63.92% / 24%;
+  --red-950: 355.12 70.49% 23.92%; --red-700: 355.09 69.8% 48.04%; --red-600: 355 80.36% 56.08%; --red-500: 354.8 96.08% 60%;
+  --red-400: 354.83 100% 70.39%; --red-200: 355.24 100% 87.65%; --red-50: 357 100% 96.08%;
+  --red-alpha-16: 354.8 96.08% 60% / 16%; --red-alpha-10: 354.8 96.08% 60% / 10%; --red-alpha-24: 354.8 96.08% 60% / 24%;
+  --green-950: 148.47 72.84% 15.88%; --green-600: 147.95 71.57% 40%; --green-500: 148.15 72.32% 43.92%;
+  --green-400: 147.78 72.32% 56.08%; --green-200: 148.24 71.83% 86.08%; --green-50: 147.69 72.22% 92.94%;
+  --green-alpha-24: 148.15 72.32% 43.92% / 24%; --green-alpha-16: 148.15 72.32% 43.92% / 16%;
+  --yellow-950: 42.16 60.66% 23.92%; --yellow-500: 41.94 92.31% 54.12%; --yellow-200: 41.9 100% 87.65%; --yellow-50: 43.9 100% 91.96%;
+  --purple-950: 257.8 63.64% 28.04%; --purple-800: 258 63.73% 40%; --purple-700: 257.96 64.08% 48.04%; --purple-600: 255.93 72.32% 56.08%;
+  --purple-500: 255.93 88.04% 63.92%; --purple-400: 252.18 88.08% 70.39%; --purple-200: 249.52 100% 87.65%; --purple-50: 252 100% 96.08%;
+  --purple-alpha-24: 255.93 83.51% 61.96% / 24%; --purple-alpha-16: 255.93 83.51% 61.96% / 16%; --purple-alpha-10: 255.93 83.51% 61.96% / 10%;
+
+  --primary-dark: var(--purple-800); --primary-darker: var(--purple-700); --primary-base: var(--purple-500);
+  --primary-alpha-24: var(--purple-alpha-24); --primary-alpha-16: var(--purple-alpha-16); --primary-alpha-10: var(--purple-alpha-10);
+  --static-black: var(--neutral-950); --static-white: var(--neutral-0);
+  --bg-strong-950: var(--neutral-950); --bg-surface-800: var(--neutral-800); --bg-sub-300: var(--neutral-300);
+  --bg-soft-200: var(--neutral-200); --bg-weak-50: var(--neutral-50); --bg-white-0: var(--neutral-0);
+  --text-strong-950: var(--neutral-950); --text-sub-600: var(--neutral-600); --text-soft-400: var(--neutral-400);
+  --text-disabled-300: var(--neutral-300); --text-white-0: var(--neutral-0);
+  --stroke-strong-950: var(--neutral-950); --stroke-sub-300: var(--neutral-300); --stroke-soft-200: var(--neutral-200); --stroke-white-0: var(--neutral-0);
+  --faded-dark: var(--neutral-800); --faded-base: var(--neutral-500); --faded-light: var(--neutral-200); --faded-lighter: var(--neutral-100);
+  --information-dark: var(--blue-950); --information-base: var(--blue-500); --information-light: var(--blue-200); --information-lighter: var(--blue-50);
+  --warning-dark: var(--orange-950); --warning-base: var(--orange-500); --warning-light: var(--orange-200); --warning-lighter: var(--orange-50);
+  --error-dark: var(--red-950); --error-base: var(--red-500); --error-light: var(--red-200); --error-lighter: var(--red-50);
+  --success-dark: var(--green-950); --success-base: var(--green-500); --success-light: var(--green-200); --success-lighter: var(--green-50);
+  --feature-dark: var(--purple-950); --feature-base: var(--purple-500); --feature-light: var(--purple-200); --feature-lighter: var(--purple-50);
+
+  --balance-card-gradient: radial-gradient(ellipse at 50% 0%, #4a3a8a 0%, #2d2456 25%, #1a1530 50%, #110f1f 100%);
+  --sidebar-surface: #0e0e10;
+  --sidebar-overlay:
+    radial-gradient(ellipse 90% 60% at 25% 10%, rgba(140,110,255,0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 70% 80%, rgba(100,70,230,0.14) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 40% at 50% 0%, rgba(255,255,255,0.1) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(110,100,140,0.45) 0%, rgba(70,65,90,0.22) 15%, rgba(50,50,60,0.1) 40%, rgba(40,40,50,0.06) 60%, rgba(55,50,70,0.14) 80%, rgba(70,65,90,0.3) 100%);
+  --sidebar-overlay-blur: 40px;
+  --sidebar-ring: hsl(0 0% 100% / 0.06);
+  --sidebar-control-text: hsl(var(--neutral-400));
+  --sidebar-control-hover-text: hsl(var(--neutral-0));
+  --sidebar-item-active-bg: linear-gradient(to right, hsl(var(--neutral-400) / 0.5), hsl(var(--neutral-500) / 0.3), hsl(var(--neutral-600) / 0.15));
+  --sidebar-item-inactive-text: hsl(var(--neutral-400));
+  --sidebar-item-inactive-hover-text: hsl(var(--neutral-200));
+  --sidebar-item-icon-active-bg: hsl(var(--neutral-500));
+  --sidebar-item-icon-inactive-bg: hsl(var(--neutral-600) / 0.4);
+  --sidebar-divider: hsl(var(--neutral-600) / 0.4);
+  --sidebar-secondary-description: hsl(var(--neutral-500));
+  --sidebar-usercard-bg: hsl(var(--neutral-800) / 0.6);
+  --sidebar-usercard-hover-bg: hsl(var(--neutral-700) / 0.6);
+  --sidebar-user-name: hsl(var(--neutral-300));
+  --sidebar-user-name-hover: hsl(var(--neutral-0));
+  --sidebar-user-email: hsl(var(--neutral-600));
+  --sidebar-user-email-hover: hsl(var(--neutral-400));
+  --sidebar-settings: hsl(var(--neutral-600));
+  --sidebar-settings-hover: hsl(var(--neutral-300));
+  --sidebar-badge-border: hsl(var(--neutral-700));
+  --sidebar-badge-text: hsl(var(--neutral-400));
+}
+.dark {
+  --bg-strong-950: var(--neutral-0); --bg-surface-800: var(--neutral-200); --bg-sub-300: var(--neutral-600);
+  --bg-soft-200: var(--neutral-700); --bg-weak-50: var(--neutral-900); --bg-white-0: var(--neutral-950);
+  --text-strong-950: var(--neutral-0); --text-sub-600: var(--neutral-400); --text-soft-400: var(--neutral-500);
+  --text-disabled-300: var(--neutral-600); --text-white-0: var(--neutral-950);
+  --stroke-strong-950: var(--neutral-0); --stroke-sub-300: var(--neutral-600); --stroke-soft-200: var(--neutral-700); --stroke-white-0: var(--neutral-950);
+  --faded-dark: var(--neutral-300); --faded-base: var(--neutral-500); --faded-light: var(--neutral-alpha-24); --faded-lighter: var(--neutral-alpha-16);
+  --neutral-alpha-24: 220 11.48% 64.12% / 24%; --neutral-alpha-16: 220 11.48% 64.12% / 16%;
+  --information-dark: var(--blue-400); --information-light: var(--blue-alpha-24); --information-lighter: var(--blue-alpha-16);
+  --warning-dark: var(--orange-400); --warning-base: var(--orange-600); --warning-light: var(--orange-alpha-24); --warning-lighter: var(--orange-alpha-16);
+  --error-dark: var(--red-400); --error-base: var(--red-600); --error-light: var(--red-alpha-24); --error-lighter: var(--red-alpha-16);
+  --success-dark: var(--green-400); --success-base: var(--green-600); --success-light: var(--green-alpha-24); --success-lighter: var(--green-alpha-16);
+  --primary-dark: var(--purple-600); --primary-darker: var(--purple-400);
+  --feature-dark: var(--purple-400); --feature-light: var(--purple-alpha-24); --feature-lighter: var(--purple-alpha-16);
+  --balance-card-gradient: radial-gradient(ellipse at 50% 0%, #7c5fd6 0%, #5b44b2 25%, #3d2d7a 50%, #2a1e5c 75%, #1a1530 100%);
+}
+html, body { height: 100%; }
+body { margin: 0; font-family: Inter, system-ui, sans-serif; background: hsl(var(--bg-white-0)); color: hsl(var(--text-strong-950)); -webkit-font-smoothing: antialiased; }
+.sidebar-scroll { scrollbar-width: none; }
+.sidebar-scroll::-webkit-scrollbar { display: none; }
+.hl-on [data-new] { position: relative; outline: 2px dashed hsl(var(--primary-base)); outline-offset: 3px; }
+.hl-on [data-new]:not([data-new="s"])::after {
+  content: 'Новое для партнера'; position: absolute; top: -11px; right: 14px; z-index: 6; pointer-events: none;
+  background: hsl(var(--primary-base)); color: #fff; font: 500 10px/16px Inter, system-ui, sans-serif;
+  letter-spacing: .02em; padding: 0 8px; border-radius: 9999px; white-space: nowrap;
+}
+.thin-scroll { scrollbar-width: thin; scrollbar-color: hsl(var(--stroke-sub-300)) transparent; }
+button { font-family: inherit; }
+i[class^="ri-"] { line-height: 1; }
+input[type=checkbox] { accent-color: hsl(var(--primary-base)); }
+</style>
+</head>
+<body>
+<div id="app" class="flex h-dvh w-full overflow-hidden"></div>
+
+<script>
+/* ============================================================
+   Прототип ЛК партнера BB 2.0. Оболочка, токены и компоненты
+   повторяют web-client (banking/web-client-dev).
+   Состав и поведение разделов - по ТЗ ClickUp 869erxy8k.
+   ============================================================ */
+const SYMBOL = `<svg xmlns="http://www.w3.org/2000/svg" width="154.41" height="111" viewBox="0 0 154.41 111" fill="none"><path d="M110.01 0C128.401 0 143.311 14.9088 143.311 33.2998C143.311 38.8971 141.927 44.1707 139.487 48.8006C139.24 49.27 139.385 49.8533 139.824 50.1519C148.628 56.1442 154.41 66.2469 154.41 77.7002C154.41 96.0912 139.501 111 121.11 111H11.8472C11.0763 111 10.5953 110.165 10.9823 109.498L35.0111 68.1016C35.398 67.435 34.917 66.5996 34.1462 66.5996H1.0015C0.231086 66.5996 -0.249963 65.7651 0.136158 65.0984L37.551 0.498814C37.7298 0.190082 38.0596 0 38.4164 0H110.01ZM69.7416 11.0996C69.3848 11.0996 69.055 11.2897 68.8762 11.5985L44.1936 54.2205C43.8076 54.8872 44.2886 55.7217 45.059 55.7217H78.5114C79.2827 55.7217 79.7636 56.5579 79.3757 57.2246L55.4223 98.3965C55.0344 99.0632 55.5154 99.8994 56.2867 99.8994H121.008C133.341 99.899 143.335 89.892 143.318 77.5586C143.302 65.2487 133.318 55.2777 121.008 55.2773C120.178 55.2773 119.885 53.7421 120.61 53.339C127.529 49.4929 132.211 42.1099 132.211 33.6328C132.211 21.1886 122.122 11.0999 109.678 11.0996H69.7416Z" fill="currentColor"/></svg>`;
+const WORDMARK = `<svg xmlns="http://www.w3.org/2000/svg" width="499.471" height="90.2672" viewBox="0 0 499.471 90.2672" fill="none"><path d="M119.107 89.5052C107.179 89.5052 99.5195 82.1519 99.5195 70.4882C99.5195 49.8962 99.5195 30.8896 99.5195 11.0149C99.5195 10.4626 99.9672 10.0142 100.52 10.0142H109.82C110.372 10.0142 110.82 10.4619 110.82 11.0142V25.6224C110.82 26.1747 111.268 26.6224 111.82 26.6224H128.718C129.478 26.6224 129.961 27.4369 129.595 28.1034L125.337 35.8654C125.161 36.1855 124.825 36.3844 124.46 36.3844H111.82C111.268 36.3844 110.82 36.8321 110.82 37.3844V69.8543C110.82 76.1933 114.461 79.8699 120.488 79.8699C122.888 79.8699 126.589 79.4321 129.068 78.8476C129.734 78.6906 130.407 79.1832 130.407 79.867V86.8849C130.407 87.3143 130.134 87.697 129.724 87.8256C126.484 88.8421 122.741 89.5052 119.107 89.5052Z" fill="currentColor"/><path d="M75.3568 88.7455C74.8045 88.7455 74.3568 88.2978 74.3568 87.7455V27.6234C74.3568 27.0711 74.8045 26.6234 75.3568 26.6234H84.6573C85.2095 26.6234 85.6573 27.0711 85.6573 27.6234V87.7455C85.6573 88.2978 85.2095 88.7455 84.6573 88.7455H75.3568Z" fill="currentColor"/><path d="M465.717 88.7456C465.165 88.7456 464.717 88.2979 464.717 87.7456V27.6235C464.717 27.0712 465.165 26.6235 465.717 26.6235H474.39C474.942 26.6235 475.39 27.0712 475.39 27.6235V32.1133C475.39 33.1474 476.897 33.5754 477.542 32.7669C481.424 27.899 487.092 25.1022 493.973 25.1022C495.55 25.1022 497.127 25.1803 498.705 25.4593C499.359 25.5749 499.669 26.3079 499.336 26.8826L494.689 34.9063C494.567 35.1165 494.342 35.2446 494.099 35.2446C483.426 35.2446 476.018 42.5978 476.018 54.2615V87.7456C476.018 88.2979 475.57 88.7456 475.018 88.7456H465.717Z" fill="currentColor"/><path d="M426.788 90.267C408.33 90.267 394.895 76.8283 394.895 57.6846C394.895 38.5408 408.079 25.1022 426.411 25.1022C443.99 25.1022 456.169 37.1462 456.169 55.7829C456.169 57.1586 456.082 58.446 455.907 59.8663C455.846 60.3607 455.422 60.7273 454.924 60.7273H407.376C406.803 60.7273 406.345 61.2085 406.397 61.779C407.444 73.1412 415.572 81.1389 426.537 81.1389C434.712 81.1389 441.62 76.955 444.287 70.479C444.488 69.9917 445.013 69.7091 445.522 69.8469L453.908 72.1186C454.456 72.2672 454.773 72.8441 454.579 73.3784C450.617 84.2892 439.591 90.267 426.788 90.267ZM444.061 51.5991C444.636 51.5991 445.094 51.1152 445.036 50.5436C443.97 40.1658 436.135 34.2303 426.537 34.2303C416.742 34.2303 408.926 40.5805 406.905 50.4495C406.782 51.0504 407.252 51.5991 407.865 51.5991H444.061Z" fill="currentColor"/><path d="M340.464 88.7459C339.912 88.7459 339.464 88.2982 339.464 87.7459V1C339.464 0.447716 339.912 0 340.464 0H349.764C350.317 0 350.764 0.447715 350.764 1V52.5027C350.764 53.3905 351.835 53.8381 352.467 53.2142L379.1 26.9123C379.287 26.7274 379.54 26.6238 379.803 26.6238H390.672C391.562 26.6238 392.008 27.6986 391.381 28.3293L369.064 50.7479C368.72 51.0933 368.675 51.6362 368.958 52.0332L393.963 87.166C394.434 87.8281 393.961 88.7459 393.148 88.7459H382.157C381.84 88.7459 381.541 88.5952 381.353 88.3399L360.996 60.7729C360.633 60.2815 359.918 60.2274 359.486 60.6586L351.059 69.0555C350.87 69.2431 350.764 69.498 350.764 69.7638V87.7459C350.764 88.2982 350.317 88.7459 349.764 88.7459H340.464Z" fill="currentColor"/><path d="M277.377 88.7456C276.824 88.7456 276.377 88.2979 276.377 87.7456V27.6235C276.377 27.0712 276.824 26.6235 277.377 26.6235H286.049C286.602 26.6235 287.049 27.0712 287.049 27.6235V31.2919C287.049 32.2932 288.459 32.7393 289.131 31.9971C293.25 27.4513 299.245 25.1022 306.135 25.1022C319.946 25.1022 329.363 34.7374 329.363 48.9368V87.7456C329.363 88.2979 328.916 88.7456 328.363 88.7456H319.063C318.511 88.7456 318.063 88.2979 318.063 87.7456V51.5991C318.063 41.9639 312.413 35.3713 303.247 35.3713C293.83 35.3713 287.677 42.2174 287.677 51.5991V87.7456C287.677 88.2979 287.229 88.7456 286.677 88.7456H277.377Z" fill="currentColor"/><path d="M235.266 90.267C222.71 90.267 213.795 83.6744 213.795 72.1375C213.795 61.7415 221.454 55.149 233.131 53.2473L254.389 49.8326C254.874 49.7547 255.23 49.3363 255.23 48.8453V47.5422C255.23 39.5551 249.203 34.8642 241.042 34.8642C233.283 34.8642 226.886 39.2183 224.008 45.8568C223.769 46.4082 223.117 46.6665 222.582 46.3926L215.447 42.7398C215.003 42.5129 214.793 41.9922 214.971 41.527C219.076 30.7733 229.282 25.1022 241.042 25.1022C255.23 25.1022 266.531 33.5964 266.531 47.5422V87.7456C266.531 88.2979 266.083 88.7456 265.531 88.7456H256.858C256.306 88.7456 255.858 88.2979 255.858 87.7456V83.9561C255.858 82.9761 254.518 82.5274 253.843 83.2378C249.389 87.9239 242.931 90.267 235.266 90.267ZM237.777 81.3924C248.575 81.3924 255.23 74.7999 255.23 64.0236V59.8751C255.23 59.2586 254.678 58.7889 254.069 58.8881L235.015 61.9951C228.862 63.1361 224.97 66.5592 224.97 71.6304C224.97 78.0961 230.244 81.3924 237.777 81.3924Z" fill="currentColor"/><path d="M174.843 90.2672C166.733 90.2672 159.115 87.1907 153.814 81.4765C153.156 80.7671 151.865 81.2097 151.865 82.1773V87.7459C151.865 88.2982 151.417 88.7459 150.865 88.7459H142.192C141.64 88.7459 141.192 88.2982 141.192 87.7459V1C141.192 0.447716 141.64 0 142.192 0H151.493C152.045 0 152.493 0.447715 152.493 1V32.7138C152.493 33.6786 153.778 34.1239 154.441 33.4228C159.604 27.9629 166.979 25.1024 174.843 25.1024C192.547 25.1024 205.48 38.4143 205.48 57.6848C205.48 76.8286 192.547 90.2672 174.843 90.2672ZM173.336 79.8713C185.139 79.8713 194.179 70.9967 194.179 57.6848C194.179 44.3729 185.139 35.3716 173.336 35.3716C161.533 35.3716 152.493 44.3729 152.493 57.6848C152.493 70.9967 161.533 79.8713 173.336 79.8713Z" fill="currentColor"/><path d="M33.6503 90.2672C25.5406 90.2672 17.9223 87.1907 12.6218 81.4765C11.9637 80.7671 10.6727 81.2097 10.6727 82.1773V87.7459C10.6727 88.2982 10.225 88.7459 9.67267 88.7459H1C0.447715 88.7459 0 88.2982 0 87.7459V1C0 0.447716 0.447715 0 1 0H10.3005C10.8528 0 11.3005 0.447715 11.3005 1V32.7138C11.3005 33.6786 12.586 34.1239 13.2489 33.4228C18.4121 27.9629 25.787 25.1024 33.6503 25.1024C51.3544 25.1024 64.2871 38.4143 64.2871 57.6848C64.2871 76.8286 51.3544 90.2672 33.6503 90.2672ZM32.5899 79.8713C44.3926 79.8713 53.8792 70.9967 53.8792 57.6848C53.8792 44.3729 44.3926 35.3716 32.5899 35.3716C20.7871 35.3716 11.3005 44.3729 11.3005 57.6848C11.3005 70.9967 20.7871 79.8713 32.5899 79.8713Z" fill="currentColor"/><path d="M74.0065 1.51458C74.0065 0.962297 74.4542 0.514582 75.0065 0.514582H84.5622C85.1145 0.514582 85.5622 0.962297 85.5622 1.51458V11.0703C85.5622 11.6226 85.1145 12.0703 84.5622 12.0703H75.0065C74.4542 12.0703 74.0065 11.6226 74.0065 11.0703V1.51458Z" fill="currentColor"/></svg>`;
+
+const cx = (...a) => a.filter(Boolean).join(' ');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const pad = (n) => String(n).padStart(2, '0');
+const fmtDT = (d) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const num = (n, d = 2) => Number(n).toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/ /g, ' ');
+const signed = (n, d = 2) => (n > 0 ? '+' : n < 0 ? '-' : '') + num(Math.abs(n), d);
+const mask = (a) => (a && a.length > 10 ? a.slice(0, 4) + '…' + a.slice(-4) : a || '');
+const I = (n, c = "") => `<i class="ri-${n} inline-block ${c}"></i>`;
+const pct = (v) => String(v).replace('.', ',');
+const feeStr = (p, a) => `${pct(p)}% / ${a} ₽`;
+
+/* ---------- состояние ---------- */
+const NOW = Date.now();
+const S = {
+  admin: false, hl: false, partner: true, manual: true, iban: true, bridge: 'on',
+  theme: 'light', zoom: '80', panelOpen: true, route: 'home', sbBig: false, sbOpen: true, dd: null, cal: null, expanded: { assets: false, exchange: false },
+  conv: false, convBal: false, aw: false,
+  c: { feePct: '1.5', feeAbs: '50', bbPct: '1.8', bbAbs: '0', convLow: '0', convUp: '500000',
+       awAddr: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', awLow: '100', awUp: '5000', hook1: 'https://nodex.io/hooks/payment', hook2: '' },
+  d: {},
+  pauseHours: 3, pauseUntil: null,
+  apiKey: 'bb_pk_8f3a91c2d7e04b55a6c1', secret: 'bb_sk_••••••••••••••••••••', secretFresh: false,
+  modal: null, toast: null, pill: null,
+  F: { circuit: 'all', source: 'all', op: 'all', type: 'all', status: 'all', period: 'all', q: '', cid: '' },
+  JF: { period: 'all', setting: 'all', who: 'all' },
+  kyc: { id: '', email: '', create: true, amount: '', state: null, link: '', payLink: '', err: '' },
+  kc: { from: '2026-08-01', to: '2026-10-20' },
+  docs: [
+    { g: 'Договоры', n: 'Договор BitBanker - Nodex.pdf', d: '12.08.2026' },
+    { g: 'Приложения к договорам', n: 'Приложение 1. Тарифы.pdf', d: '12.08.2026' },
+    { g: 'Приложения к договорам', n: 'Допсоглашение 1. IBAN-выплаты.pdf', d: '02.09.2026' },
+    { g: 'Документы KYB', n: 'Устав.pdf', d: '05.08.2026' },
+    { g: 'Документы KYB', n: 'Выписка из ЕГРЮЛ.pdf', d: '05.08.2026' },
+  ],
+  H: [
+    { id: 'TX-4F7K2X9M', k: 'sbp', st: 'pending', age: 0, tm: '20.10.2026, 15:47', due: '16:02', legs: [{ c: 'RUBR', a: 10000 }], qr: 10172.94, cl: 'R123456', src: 'API', bb: 172.94, pf: 150, link: 'https://pay.bitbanker.org/q/7Hk2xP', n: '4912' },
+    { id: 'TX-9A21BD7C', k: 'sbp', st: 'done', age: 0, tm: '20.10.2026, 14:10', legs: [{ c: 'RUBR', a: 10000 }], qr: 10172.94, cl: 'R123456', src: 'Виджет', bb: 172.94, pf: 150, link: 'https://pay.bitbanker.org/q/Qw83mN', n: '4911', conv: '10 000 RUBR → 91,74 USDT по курсу 109,00' },
+    { id: 'TX-1C55E0AA', k: 'iban', st: 'processing', age: 0, tm: '20.10.2026, 13:02', legs: [{ c: 'USDT', a: -1250 }], cl: 'R120077', n: '8841', rcp: 'Ivan Petrov, DE89 3704 0044 0532 0130 00', body: 1200, bbfee: 60, credit: '1 104,48 EUR', rate: '1 USDT = 0,9204 EUR' },
+    { id: 'TX-77B90C12', k: 'sbp', st: 'canceled', age: 1, tm: '19.10.2026, 18:20', legs: [{ c: 'RUBR', a: 10000 }], qr: 10172.94, cl: 'R120411', src: 'Ручная ссылка', bb: 172.94, pf: 150, link: 'https://pay.bitbanker.org/q/Zr41tY', n: '4890', why: 'Срок оплаты вышел, оплаты не было (статус провайдера expired)' },
+    { id: 'TX-5D3E9F40', k: 'topup', st: 'review', age: 1, tm: '19.10.2026, 11:34', legs: [{ c: 'USDT', a: 2000 }], from: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', hash: 'a91f3c0e77b2d45e9c10fa22b6d83a07c5e1f9d4a3b208c6e7d15f0a92b3c03e' },
+    { id: 'TX-2E8A6B31', k: 'exchange', st: 'done', age: 2, tm: '18.10.2026, 10:05', legs: [{ c: 'RUBR', a: -90000 }, { c: 'USDT', a: 825.6 }], rate: '109,00', fee: '0,83 USDT', ord: '№1204, рыночный' },
+    { id: 'TX-6F0C4D95', k: 'otc', st: 'done', age: 3, tm: '17.10.2026, 16:40', legs: [{ c: 'RUBR', a: -90000 }, { c: 'USDT', a: 828 }], rate: '108,70', deal: '№337' },
+    { id: 'TX-3B7D1E58', k: 'transfer', st: 'done', age: 3, tm: '17.10.2026, 12:15', legs: [{ c: 'USDT', a: -2000 }], dir: 'Основной → Счет выплат' },
+    { id: 'TX-8C2F5A60', k: 'withdraw', st: 'processing', age: 4, tm: '16.10.2026, 09:48', legs: [{ c: 'USDT', a: -5000 }], to: 'TWd3Lp8vRk2Qm5Nz7Yc1Hx4Bj9Ue6Ak2Lp', hash: 'c07d19ab45e3f2086a1b7c93d4e5f6a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4', netfee: '1,00' },
+    { id: 'TX-0A9B3C74', k: 'iban', st: 'done', age: 6, tm: '14.10.2026, 17:22', legs: [{ c: 'USDT', a: -840 }], cl: 'R119902', n: '8802', rcp: 'Anna Schmidt, DE02 1203 0000 0000 2020 51', body: 800, bbfee: 40, credit: '736,32 EUR', rate: '1 USDT = 0,9204 EUR' },
+    { id: 'TX-4E1D8F26', k: 'iban', st: 'canceled', age: 8, tm: '12.10.2026, 15:01', legs: [{ c: 'USDT', a: -300 }], cl: 'R118540', n: '8760', rcp: 'Olga Ivanova, LT12 1000 0111 0100 1000', body: 290, bbfee: 10, credit: '-', rate: '-', why: 'Отклонена, средства возвращены партнеру' },
+    { id: 'TX-9D6A0B83', k: 'sbp', st: 'error', age: 9, tm: '11.10.2026, 13:55', legs: [{ c: 'RUBR', a: 5000 }], qr: 5086.47, cl: 'R117330', src: 'API', bb: 86.47, pf: 75, link: 'https://pay.bitbanker.org/q/Lk92aS', n: '4851', why: 'Отклонена провайдером (статус declined)' },
+    { id: 'TX-7A4C2E19', k: 'withdraw', st: 'done', age: 12, tm: '08.10.2026, 10:30', legs: [{ c: 'USDT', a: -3000 }], to: 'TWd3Lp8vRk2Qm5Nz7Yc1Hx4Bj9Ue6Ak2Lp', hash: 'e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a3928170600', netfee: '1,00' },
+  ],
+  J: [
+    { t: '07.09.2026, 14:32', s: 'Комиссия партнера для клиента, СБП', a: '1,2% / 50 ₽', b: '1,5% / 50 ₽', who: 'Партнер' },
+    { t: '07.09.2026, 11:05', s: 'Автовывод', a: 'Выключен', b: 'Включен', who: 'Партнер' },
+    { t: '06.09.2026, 18:47', s: 'Адрес кошелька автовывода', a: 'TQn9…7fMz', b: 'TWd3…k2Lp', who: 'Партнер' },
+    { t: '05.09.2026, 09:14', s: 'Верхний порог автовывода', a: '5 000 USDT', b: '10 000 USDT', who: 'Партнер' },
+    { t: '04.09.2026, 16:20', s: 'Автоконвертация в USDT', a: 'Выключена', b: 'Включена', who: 'Оператор' },
+    { t: '02.09.2026, 12:00', s: 'Комиссия BitBanker, пополнение по СБП', a: '1,7% / 0 ₽', b: '1,8% / 0 ₽', who: 'Оператор' },
+    { t: '01.09.2026, 10:30', s: 'Максимальная сумма оплаты по СБП', a: '300 000 ₽', b: '500 000 ₽', who: 'Оператор' },
+  ],
+  bal: { rub: 1284530.4, usdt: 18420.55, free: 6200, frozen: 1250 },
+};
+S.d = { ...S.c };
+
+const who = () => (S.admin ? 'Оператор' : 'Партнер');
+const paused = () => !!(S.pauseUntil && S.pauseUntil > Date.now());
+const pauseText = () => `Вывод средств приостановлен до ${fmtDT(new Date(S.pauseUntil))} — изменён адрес кошелька`;
+function log(setting, was, now, actor) {
+  if (was === now) return;
+  S.J.unshift({ t: fmtDT(new Date()), s: setting, a: was, b: now, who: actor || who() });
+}
+function toast(msg, kind = 'info') {
+  S.toast = { msg, kind };
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { S.toast = null; render(); }, 4200);
+}
+let pauseTimer;
+function startPause() {
+  if (!S.pauseHours || S.pauseHours <= 0) { S.pauseUntil = null; return; }
+  S.pauseUntil = Date.now() + S.pauseHours * 3600 * 1000;
+  clearTimeout(pauseTimer);
+  pauseTimer = setTimeout(() => { render(); }, Math.min(S.pauseHours * 3600 * 1000, 2147483000));
+}
+
+/* ---------- атомы интерфейса ---------- */
+const BTN_BASE = 'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap border border-transparent font-inter text-label-sm font-medium transition duration-200 disabled:pointer-events-none disabled:opacity-50 [&_i]:text-base';
+const BTN_V = {
+  primary: 'bg-primary-base text-static-white hover:bg-primary-darker active:bg-primary-dark',
+  neutral: 'bg-bg-strong-950 text-text-white-0 hover:bg-bg-surface-800',
+  'neutral-stroke': 'bg-bg-white-0 text-text-sub-600 shadow-regular-xs ring-1 ring-inset ring-stroke-soft-200 hover:bg-bg-weak-50 hover:text-text-strong-950 hover:shadow-none',
+  'neutral-lighter': 'bg-bg-weak-50 text-text-sub-600 hover:bg-bg-white-0 hover:text-text-strong-950 hover:border-stroke-soft-200',
+  'neutral-ghost': 'bg-transparent text-text-sub-600 hover:bg-bg-weak-50 hover:text-text-strong-950',
+  'primary-lighter': 'bg-primary-alpha-10 text-primary-base hover:bg-bg-white-0 hover:border-primary-base',
+  'danger-lighter': 'bg-red-alpha-10 text-red-500 hover:bg-bg-white-0 hover:border-red-500',
+};
+const BTN_S = { default: 'h-12 px-5 rounded-8', sm: 'h-10 px-4 rounded-8', xs: 'h-9 px-3 rounded-8', 'icon-xs': 'h-9 w-9 p-0 rounded-8' };
+const btn = (label, attrs = '', v = 'primary', s = 'sm', extra = '') =>
+  `<button type="button" ${attrs} class="${cx(BTN_BASE, BTN_V[v], BTN_S[s], extra)}">${label}</button>`;
+
+const sw = (on, attrs, disabled = false) => `
+<button type="button" role="switch" aria-checked="${on}" ${attrs} ${disabled ? 'disabled' : ''} class="group/switch block h-5 w-8 shrink-0 p-0.5 outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}">
+  <div class="h-4 w-7 rounded-full p-0.5 transition duration-200 ease-out shadow-toggle-switch ${on ? 'bg-primary-base' : 'bg-bg-soft-200 group-hover/switch:bg-bg-sub-300'}">
+    <div class="pointer-events-none size-3 rounded-full bg-static-white shadow-switch-thumb transition-transform duration-200 ease-out ${on ? 'translate-x-3' : ''}"></div>
+  </div>
+</button>`;
+
+const TX_ST = {
+  done: ['Завершено', 'bg-success-lighter text-success-dark'],
+  pending: ['Ожидает', 'bg-orange-alpha-16 text-warning-base'],
+  processing: ['В обработке', 'bg-orange-alpha-16 text-warning-base'],
+  review: ['На проверке', 'bg-orange-alpha-16 text-warning-base'],
+  canceled: ['Отменено', 'bg-bg-weak-50 text-text-sub-600'],
+  error: ['Ошибка', 'bg-error-lighter text-error-dark'],
+  returned: ['Возвращено', 'bg-warning-lighter text-warning-base'],
+};
+const tag = (st) => `<div class="flex max-w-fit items-center justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-subheading-2xs ${TX_ST[st][1]}">${TX_ST[st][0]}</div>`;
+const chip = (text, cls = 'bg-bg-weak-50 text-text-sub-600') => `<span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-subheading-2xs ${cls}">${text}</span>`;
+
+const COIN = { RUBR: ['#7d52f4', '₽'], USDT: ['#26a17b', '₮'], EUR: ['#2563eb', '€'] };
+const coin = (c, size = 'size-8') => `<span class="flex ${size} shrink-0 items-center justify-center rounded-full text-label-sm text-white" style="background:${(COIN[c] || ['#717784', '?'])[0]}">${(COIN[c] || ['', '?'])[1]}</span>`;
+
+const field = (label, inner, { hint = '', err = '' } = {}) => `
+<div class="flex flex-col gap-1.5">
+  ${label ? `<label class="text-label-sm text-text-strong-950">${label}</label>` : ''}
+  ${inner}
+  ${err ? `<p class="text-paragraph-xs text-error-base">${err}</p>` : hint ? `<p class="text-paragraph-xs text-text-soft-400">${hint}</p>` : ''}
+</div>`;
+const input = (f, value, { ph = '', type = 'text', suffix = '', err = false, dis = false, mono = false } = {}) => `
+<div class="flex w-full divide-x divide-stroke-soft-200 overflow-hidden rounded-10 border bg-bg-white-0 transition focus-within:border-stroke-sub-300 ${err ? 'border-error-base' : 'border-stroke-soft-200'} ${dis ? 'bg-bg-weak-50' : ''}">
+  <div class="flex w-full min-w-0 items-center gap-2 px-3 py-2.5">
+    <input data-f="${f}" type="${type}" value="${esc(value)}" placeholder="${esc(ph)}" ${dis ? 'disabled' : ''} class="w-full min-w-0 bg-transparent text-label-sm text-text-strong-950 outline-none placeholder:text-text-soft-400 disabled:text-text-soft-400 ${mono ? 'font-mono' : ''}">
+  </div>
+  ${suffix ? `<span class="flex items-center bg-bg-weak-50 px-3 text-label-sm text-text-sub-600">${suffix}</span>` : ''}
+</div>`;
+const select = (f, value, options) => {
+  const id = 'dd-' + f;
+  const cur = options.find(([v]) => v === value);
+  const open = S.dd === id;
+  return `
+<div class="relative">
+  <button type="button" data-act="dd-open" data-id="${id}" class="flex w-full items-center justify-between gap-2 rounded-10 border bg-bg-white-0 px-3 py-2.5 text-left text-label-sm text-text-strong-950 transition ${open ? 'border-stroke-sub-300' : 'border-stroke-soft-200 hover:border-stroke-sub-300'}">
+    <span class="truncate">${cur ? cur[1] : ''}</span>${I('arrow-down-s-line', 'text-lg text-text-soft-400 transition ' + (open ? 'rotate-180' : ''))}
+  </button>
+  ${open ? `<div class="absolute left-0 right-0 top-[calc(100%+6px)] z-30 rounded-[12px] border border-stroke-soft-200 bg-bg-white-0 p-1.5 shadow-regular-md">
+    ${options.map(([v, l]) => `<button type="button" data-act="dd-set" data-f="${f}" data-v="${v}" class="flex w-full items-center justify-between gap-2 rounded-8 px-2.5 py-2 text-left text-label-sm ${v === value ? 'bg-bg-weak-50 text-text-strong-950' : 'text-text-sub-600 hover:bg-bg-weak-50'}">${l}${v === value ? I('check-line', 'text-base text-primary-base') : ''}</button>`).join('')}
+  </div>` : ''}
+</div>`;
+};
+
+const MONTHS_RU = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+function datePicker(f, value) {
+  const id = 'cal-' + f;
+  const [vy, vm, vd] = value.split('-').map(Number);
+  const open = S.cal && S.cal.id === id;
+  const y = open ? S.cal.y : vy;
+  const m = open ? S.cal.m : vm - 1;
+  const first = (new Date(y, m, 1).getDay() + 6) % 7;
+  const dim = new Date(y, m + 1, 0).getDate();
+  const today = new Date();
+  const cells = [];
+  for (let i = 0; i < first; i++) cells.push('<span></span>');
+  for (let d = 1; d <= dim; d++) {
+    const sel = y === vy && m === vm - 1 && d === vd;
+    const isToday = y === today.getFullYear() && m === today.getMonth() && d === today.getDate();
+    cells.push(`<button type="button" data-act="cal-set" data-f="${f}" data-v="${y}-${pad(m + 1)}-${pad(d)}" class="flex size-9 items-center justify-center rounded-full text-label-xs transition ${sel ? 'bg-primary-base text-static-white' : isToday ? 'text-primary-base hover:bg-bg-weak-50' : 'text-text-strong-950 hover:bg-bg-weak-50'}">${d}</button>`);
+  }
+  return `
+<div class="relative">
+  <button type="button" data-act="cal-open" data-id="${id}" data-f="${f}" class="flex w-full items-center gap-2 rounded-10 border bg-bg-white-0 px-3 py-2.5 text-left text-label-sm text-text-strong-950 transition ${open ? 'border-stroke-sub-300' : 'border-stroke-soft-200 hover:border-stroke-sub-300'}">
+    ${I('calendar-2-line', 'text-lg text-text-soft-400')}<span class="whitespace-nowrap">${pad(vd)}.${pad(vm)}.${vy}</span>
+  </button>
+  ${open ? `<div class="absolute left-0 top-[calc(100%+6px)] z-30 w-[300px] rounded-[16px] border border-stroke-soft-200 bg-bg-white-0 p-3 shadow-regular-md">
+    <div class="mb-2 flex items-center justify-between">
+      <button type="button" data-act="cal-nav" data-d="-1" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-sub-600 hover:bg-bg-weak-50">${I('arrow-left-s-line', 'text-base')}</button>
+      <span class="text-label-sm text-text-strong-950">${MONTHS_RU[m]} ${y}</span>
+      <button type="button" data-act="cal-nav" data-d="1" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-sub-600 hover:bg-bg-weak-50">${I('arrow-right-s-line', 'text-base')}</button>
+    </div>
+    <div class="grid grid-cols-7 gap-y-0.5 text-center">
+      ${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((w) => `<span class="flex h-8 items-center justify-center text-subheading-2xs uppercase text-text-soft-400">${w}</span>`).join('')}
+      ${cells.join('')}
+    </div>
+  </div>` : ''}
+</div>`;
+}
+const checkbox = (f, on, label) => `
+<button type="button" role="checkbox" aria-checked="${on}" data-act="chk" data-f="${f}" class="flex items-center gap-2 text-left text-paragraph-sm text-text-strong-950">
+  <span class="flex size-5 shrink-0 items-center justify-center rounded-6 border transition ${on ? 'border-primary-base bg-primary-base text-static-white' : 'border-stroke-sub-300 bg-bg-white-0'}">${on ? I('check-line', 'text-sm') : ''}</span>${label}
+</button>`;
+
+const copyBtn = (v) => `<button type="button" data-act="copy" data-v="${esc(v)}" class="inline-flex size-6 items-center justify-center rounded-6 text-text-soft-400 transition hover:text-text-strong-950">${I('file-copy-line', 'text-base')}</button>`;
+
+const sectionLabel = (t) => `<div class="flex items-center gap-3 px-4 pt-5 pb-1"><span class="shrink-0 font-mono text-subheading-2xs uppercase tracking-widest text-text-soft-400">${t}</span><div class="h-px flex-1 bg-stroke-soft-200"></div></div>`;
+
+const profileCard = (icon, title, desc, action, content) => `
+<div class="rounded-20 bg-bg-white-0 shadow-regular-sm lg:rounded-16 lg:shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+  <div class="flex items-center gap-3 px-8 py-5">
+    <div class="flex size-12 items-center justify-center rounded-full border border-stroke-soft-200 shadow-[0px_1px_2px_rgba(10,13,20,0.03)]">${I(icon, 'text-2xl text-text-sub-600')}</div>
+    <div class="flex-1"><p class="text-label-lg text-text-strong-950">${title}</p><p class="text-paragraph-sm text-text-sub-600">${desc}</p></div>
+    ${action || ''}
+  </div>
+  <div class="px-5 pb-5">${content}</div>
+</div>`;
+const dashCard = (cls, inner) => `<div class="rounded-[24px] border border-transparent bg-bg-white-0 shadow-[0_1px_8px_rgba(0,0,0,0.04)] ${cls || ''}">${inner}</div>`;
+
+const row = (icon, label, subtitle, right) => `
+<div class="flex w-full items-center gap-3 rounded-12 px-3 py-2.5 text-left">
+  <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-weak-50">${I(icon, 'text-lg text-text-sub-600')}</div>
+  <div class="flex min-w-0 flex-1 flex-col"><span class="truncate text-paragraph-sm text-text-strong-950">${label}</span>${subtitle ? `<span class="text-paragraph-xs text-text-soft-400">${subtitle}</span>` : ''}</div>
+  <div class="flex shrink-0 items-center gap-3 text-paragraph-sm text-text-sub-600">${right || ''}</div>
+</div>`;
+
+const nwWrap = (inner, cls = '') => `<div data-new class="${cls}">${inner}</div>`;
+const banner = (kind, icon, text, attrs = '') => {
+  const k = { warn: 'bg-warning-lighter text-warning-base', err: 'bg-error-lighter text-error-base', info: 'bg-information-lighter text-information-base', ok: 'bg-success-lighter text-success-base' }[kind];
+  return `<div ${attrs} class="flex items-start gap-2 rounded-12 px-3 py-2.5 text-paragraph-sm ${k}">${I(icon, 'mt-0.5 text-base')}<span class="flex-1">${text}</span></div>`;
+};
+
+/* ---------- навигация ---------- */
+const PARTNER_PAGES = {
+  home: 'Главная', assets: 'Активы и Вывод средств', history: 'История транзакций', 'kyc-sbp': 'KYC и оплата СБП',
+  'kyc-checks': 'KYC-проверки', exchange: 'Обмен', otc: 'OTC-сделки',
+  'p-commissions': 'Комиссии', 'p-requisites': 'Реквизиты', 'p-api': 'API', 'p-journal': 'Журнал изменений', 'p-kyc': 'KYC',
+  'p-documents': 'Документы', 'p-security': 'Безопасность', 'p-sessions': 'Сессии', 'p-notifications': 'Уведомления',
+  blocked: 'Раздел недоступен',
+};
+const partnerMain = () => [
+  { id: 'home', icon: 'home-4-line', label: 'Главная' },
+  { id: 'assets', icon: 'wallet-3-line', label: 'Активы и Вывод средств' },
+  { id: 'history', icon: 'history-line', label: 'История транзакций' },
+  ...(S.manual ? [{ id: 'kyc-sbp', icon: 'links-line', label: 'KYC и оплата СБП' }] : []),
+  { id: 'kyc-checks', icon: 'file-search-line', label: 'KYC-проверки' },
+  { id: 'exchange', icon: 'exchange-line', label: 'Обмен' },
+  { id: 'otc', icon: 'exchange-funds-line', label: 'OTC-сделки' },
+];
+const partnerProfile = [
+  { id: 'p-commissions', icon: 'percent-line', label: 'Комиссии', n: true },
+  { id: 'p-requisites', icon: 'bank-line', label: 'Реквизиты' },
+  { id: 'p-api', icon: 'code-s-slash-line', label: 'API' },
+  { id: 'p-journal', icon: 'file-list-3-line', label: 'Журнал изменений', n: true },
+  { id: 'p-kyc', icon: 'shield-check-line', label: 'KYC' },
+  { id: 'p-documents', icon: 'file-text-line', label: 'Документы' },
+  { id: 'p-security', icon: 'lock-line', label: 'Безопасность' },
+  { id: 'p-sessions', icon: 'timer-line', label: 'Сессии' },
+  { id: 'p-notifications', icon: 'notification-line', label: 'Уведомления' },
+];
+const regularMain = [
+  { id: 'home', icon: 'home-4-line', label: 'Главная' },
+  { id: 'assets', icon: 'wallet-3-line', label: 'Активы', ch: [['r-crypto', 'Криптоактивы'], ['r-fiat', 'Фиатные активы'], ['r-cards', 'Карты']] },
+  { id: 'exchange', icon: 'exchange-line', label: 'Обмен / Торговля', ch: [['r-exchange', 'Обмен'], ['r-trading', 'Торговля'], ['r-otc', 'OTC сделки']] },
+  { id: 'history', icon: 'history-line', label: 'История транзакций' },
+  { id: 'r-pay', icon: 'send-plane-line', label: 'Платежи', soon: true },
+  { id: 'r-inv', icon: 'line-chart-line', label: 'Инвестиции', soon: true },
+  { id: 'r-lend', icon: 'hand-coin-line', label: 'Кредитование', soon: true },
+];
+const regularProfile = [
+  { id: 'r-profile', icon: 'user-line', label: 'Профиль' },
+  { id: 'r-kyc', icon: 'shield-check-line', label: 'KYC' },
+  { id: 'r-security', icon: 'lock-line', label: 'Безопасность' },
+  { id: 'r-sessions', icon: 'timer-line', label: 'Сессии' },
+  { id: 'r-req', icon: 'bank-line', label: 'Реквизиты' },
+  { id: 'r-docs', icon: 'file-text-line', label: 'Документы', soon: true },
+  { id: 'r-notif', icon: 'notification-line', label: 'Уведомления' },
+  { id: 'r-api', icon: 'code-s-slash-line', label: 'API' },
+];
+const soonBadge = '<span class="rounded-full border border-[var(--sidebar-badge-border)] px-2 py-px text-[10px] leading-4 text-[var(--sidebar-badge-text)]">Скоро</span>';
+
+function sidebar() {
+  const prof = S.route.startsWith('p-') || S.route.startsWith('r-profile') || ['r-kyc', 'r-security', 'r-sessions', 'r-req', 'r-docs', 'r-notif', 'r-api'].includes(S.route);
+  const open = prof ? S.sbBig : S.sbOpen;
+  const width = open && prof ? 'w-[460px]' : open ? 'w-[240px]' : prof ? 'w-[292px]' : 'w-[72px]';
+  const main = S.partner ? partnerMain() : regularMain;
+  const sec = S.partner ? partnerProfile : regularProfile;
+  const itemCls = (active) => cx('group flex w-full items-center gap-3 rounded-full py-[5px] pl-[5px] text-left transition-colors', active ? 'text-static-white' : 'text-[var(--sidebar-item-inactive-text)] hover:text-[var(--sidebar-item-inactive-hover-text)]');
+  const icoCls = (active) => cx('flex size-[38px] shrink-0 items-center justify-center rounded-full transition-colors duration-300', active ? 'bg-[var(--sidebar-item-icon-active-bg)]' : open ? 'bg-[var(--sidebar-item-icon-inactive-bg)]' : '');
+  const labelWrap = open ? 'max-w-[170px] overflow-hidden opacity-100' : 'max-w-0 overflow-hidden opacity-0';
+
+  const mainHtml = main.map((it) => {
+    const childActive = it.ch && it.ch.some(([id]) => id === S.route);
+    const active = S.route === it.id || childActive;
+    const exp = it.ch && (S.expanded[it.id] || childActive) && open;
+    const head = `
+      <button type="button" data-act="${it.ch ? 'expand' : 'nav'}" data-to="${it.id}" class="${itemCls(active)}" ${active ? 'style="background:var(--sidebar-item-active-bg)"' : ''}>
+        <div class="${icoCls(active)}">${I(it.icon, 'text-xl')}</div>
+        <div class="flex flex-1 items-center gap-2 transition-all duration-500 ${labelWrap}">
+          <span class="flex-1 text-paragraph-sm ${it.label.length > 18 ? 'whitespace-normal leading-4' : 'whitespace-nowrap'}">${it.label}</span>
+          ${it.soon ? soonBadge : ''}${it.ch ? I('arrow-down-s-line', 'pr-2 text-base ' + (exp ? 'rotate-180' : '')) : ''}
+        </div>
+      </button>`;
+    const kids = exp ? `<div class="mt-2 ml-6">${it.ch.map(([id, l], i) => `
+      <div class="relative ${i < it.ch.length - 1 ? 'border-l border-neutral-500' : ''}">
+        <span class="absolute top-0 h-1/2 w-5 rounded-bl-xl border-b border-l border-neutral-500 ${i < it.ch.length - 1 ? '-left-px' : 'left-0'}"></span>
+        <button type="button" data-act="nav" data-to="${id}" class="flex w-full items-center gap-2 py-3 pr-2 text-left text-paragraph-sm transition ${i < it.ch.length - 1 ? 'pl-7' : 'pl-[30px]'} ${S.route === id ? 'text-static-white' : 'text-neutral-400 hover:text-static-white'}">${l}</button>
+      </div>`).join('')}</div>` : '';
+    return `<div>${head}${kids}</div>`;
+  }).join('');
+
+  const secHtml = sec.map((it) => {
+    const active = S.route === it.id;
+    return `<button type="button" data-act="nav" data-to="${it.id}" ${it.n ? 'data-new="s"' : ''} class="flex w-full items-center gap-2.5 rounded-full py-[5px] pr-3 pl-[5px] text-left text-paragraph-sm transition ${active ? 'text-static-white' : 'text-[var(--sidebar-item-inactive-text)] hover:text-[var(--sidebar-item-inactive-hover-text)]'}" ${active ? 'style="background:var(--sidebar-item-active-bg)"' : ''}>
+      <div class="flex size-8 shrink-0 items-center justify-center rounded-full ${active ? 'bg-[var(--sidebar-item-icon-active-bg)]' : 'bg-[var(--sidebar-item-icon-inactive-bg)]'}">${I(it.icon, 'text-base')}</div>
+      <span class="flex flex-1 items-center gap-1 whitespace-nowrap text-paragraph-sm">${it.label}${it.soon ? soonBadge : ''}</span></button>`;
+  }).join('');
+
+  const name = S.partner ? 'Nodex' : 'Иван Петров';
+  const email = S.partner ? 'n***@nodex.io' : 'i***@mail.ru';
+  const initials = S.partner ? 'NX' : 'ИП';
+  const profileTarget = S.partner ? 'p-commissions' : 'r-profile';
+
+  return `
+<div class="relative hidden shrink-0 lg:flex max-h-full">
+  <aside class="relative flex flex-col overflow-hidden rounded-[24px] bg-[var(--sidebar-surface)] transition-all duration-500 ease-in-out ${width}">
+    <div class="pointer-events-none absolute inset-0 rounded-[24px]" style="background:var(--sidebar-overlay);backdrop-filter:blur(var(--sidebar-overlay-blur));-webkit-backdrop-filter:blur(var(--sidebar-overlay-blur))"></div>
+    <div class="pointer-events-none absolute inset-0 rounded-[24px] ring-1 ring-inset ring-[var(--sidebar-ring)]"></div>
+    <div class="flex min-h-0 flex-1">
+      <div class="relative flex min-h-0 shrink-0 flex-col transition-all duration-500 ease-in-out ${open ? 'w-[240px]' : 'w-[72px]'}">
+        <nav class="relative flex min-h-0 flex-1 flex-col">
+          <div class="shrink-0 px-[13px] pt-5">
+            <div class="mb-6 flex items-center gap-3 py-[5px] pl-[5px]">
+              <button type="button" data-act="nav" data-to="home" class="flex size-[38px] shrink-0 items-center justify-center"><span class="h-7 text-static-white [&_svg]:h-7 [&_svg]:w-auto">${SYMBOL}</span></button>
+              <div class="flex flex-1 items-center justify-between transition-all duration-500 ${open ? 'max-w-[300px] opacity-100' : 'max-w-0 overflow-hidden opacity-0'}">
+                <span class="text-static-white [&_svg]:h-[17px] [&_svg]:w-auto">${WORDMARK}</span>
+                <button type="button" data-act="sb-toggle" class="flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--sidebar-control-text)] transition hover:text-[var(--sidebar-control-hover-text)]">${I('menu-3-fill', 'text-lg')}</button>
+              </div>
+            </div>
+          </div>
+          <div class="sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[13px] pb-4"><div class="flex flex-col gap-2.5">${mainHtml}</div></div>
+        </nav>
+        <div class="mt-auto shrink-0 px-[13px] pb-[13px]">
+          <button type="button" data-act="nav" data-to="${profileTarget}" class="group/profile relative flex w-full max-w-full shrink-0 items-center rounded-[22px] py-3 transition-all duration-200 active:scale-[0.98] ${open ? 'gap-3 bg-[var(--sidebar-usercard-bg)] px-3.5 hover:bg-[var(--sidebar-usercard-hover-bg)]' : 'justify-center hover:opacity-80'}">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-purple-200 text-label-md text-purple-950">${initials}</div>
+            <div class="flex flex-1 items-center justify-between overflow-hidden transition-all duration-500 ease-in-out ${open ? 'max-w-[220px] opacity-100' : 'max-w-0 opacity-0'}">
+              <div class="flex-1 overflow-hidden text-left">
+                <div class="truncate text-label-xs text-[var(--sidebar-user-name)] transition-colors group-hover/profile:text-[var(--sidebar-user-name-hover)]">${name}</div>
+                <div class="truncate text-paragraph-xs text-[var(--sidebar-user-email)] transition-colors group-hover/profile:text-[var(--sidebar-user-email-hover)]">${email}</div>
+              </div>
+              <div class="text-[var(--sidebar-settings)] transition-colors group-hover/profile:text-[var(--sidebar-settings-hover)]">${I('settings-line', 'text-base')}</div>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="relative flex min-h-0 shrink-0 flex-col overflow-hidden transition-all duration-500 ease-in-out ${prof ? 'w-[240px] opacity-100' : 'w-0 opacity-0'}">
+        <div class="pointer-events-none absolute top-0 left-0 w-px" style="height:calc(100% - 140px);background:linear-gradient(to bottom, transparent 0%, var(--sidebar-divider) 15%, var(--sidebar-divider) 85%, transparent 100%)"></div>
+        <div class="shrink-0 pt-5 pr-4 pb-2 pl-6"><p class="whitespace-nowrap text-label-sm text-static-white">Профиль</p><p class="mt-0.5 text-paragraph-xs text-[var(--sidebar-secondary-description)]">Управление аккаунтом</p></div>
+        <div class="mx-4 my-2 h-px shrink-0 bg-[var(--sidebar-divider)]"></div>
+        <nav class="sidebar-scroll flex min-h-0 flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pb-4">${secHtml}</nav>
+      </div>
+    </div>
+  </aside>
+  ${prof && !open ? `<button type="button" data-act="sb-toggle" class="absolute top-8 z-10 left-[72px] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-neutral-600/50 text-neutral-300 hover:bg-neutral-500/60 hover:text-static-white">${I('arrow-right-s-line', 'text-xs')}</button>` : ''}
+  ${!prof && !open ? `<button type="button" data-act="sb-toggle" class="absolute top-[24px] left-[76px] z-10 flex size-7 -translate-x-1/2 items-center justify-center rounded-full border border-stroke-soft-200 bg-bg-white-0 text-text-sub-600 shadow-[0px_1px_2px_rgba(10,13,20,0.06)] transition-colors hover:bg-bg-weak-50">${I('arrow-right-s-line', 'text-sm')}</button>` : ''}
+</div>`;
+}
+
+/* ---------- шапка страницы ---------- */
+function pageHeader(title) {
+  return `
+<div class="flex w-full items-center justify-between gap-6 pb-6">
+  <div class="min-w-0 flex-1"><p class="text-title-h5 font-medium leading-9 tracking-tight text-text-strong-950">${title}</p></div>
+  <div class="flex shrink-0 items-center gap-1.5">
+    <button type="button" data-act="lang" class="flex h-10 items-center gap-1.5 rounded-full border border-stroke-soft-200 px-3 text-text-soft-400 transition hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95">${I('global-line', 'text-lg')}<span class="text-label-xs">RU</span></button>
+    <button type="button" data-act="theme" class="relative flex size-10 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 transition-colors hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95">${I(S.theme === 'dark' ? 'sun-line' : 'moon-line', 'text-lg')}</button>
+  </div>
+</div>`;
+}
+
+/* ---------- страницы ---------- */
+const OPNAME = { sbp: 'Пополнение', topup: 'Пополнение', iban: 'Вывод', withdraw: 'Вывод', transfer: 'Перевод', exchange: 'Обмен', otc: 'OTC' };
+const KIND_TYPE = { sbp: 'Фиат', iban: 'Фиат', exchange: 'Фиат', otc: 'Фиат', topup: 'Крипто', withdraw: 'Крипто', transfer: 'Крипто' };
+const KIND_ICON = { sbp: 'qr-code-line', iban: 'bank-line', topup: 'arrow-down-line', withdraw: 'arrow-up-line', transfer: 'arrow-left-right-line', exchange: 'exchange-line', otc: 'exchange-funds-line' };
+const isClientOp = (h) => h.k === 'sbp' || h.k === 'iban';
+const toFrom = (h) => {
+  if (h.cl) return `Клиент ${h.cl}`;
+  if (h.k === 'topup') return mask(h.from);
+  if (h.k === 'withdraw') return mask(h.to);
+  if (h.k === 'transfer') return h.dir;
+  if (h.k === 'exchange') return 'RUBR → USDT';
+  return '—';
+};
+
+function amountCell(h) {
+  const dead = h.st === 'canceled' || h.st === 'error';
+  const lines = h.legs.map((l) => `<span class="${cx(l.a > 0 && !dead && 'text-state-success', dead && 'text-text-soft-400 line-through')}">${signed(l.a)} ${l.c}</span>`).join('');
+  let extra = '';
+  if (h.k === 'sbp' && h.st === 'done') extra = `<span class="text-paragraph-xs text-text-soft-400">QR ${num(h.qr)}</span>`;
+  if (h.k === 'sbp' && h.st === 'pending') extra = `<span class="text-paragraph-xs text-text-soft-400">к зачислению</span>`;
+  return `<div class="flex flex-col gap-0.5 whitespace-nowrap font-mono text-label-sm leading-5 tabular-nums">${lines}${extra}</div>`;
+}
+
+function filteredHistory() {
+  const F = S.F;
+  return S.H.filter((h) => {
+    if (F.circuit === 'clients' && !isClientOp(h)) return false;
+    if (F.circuit === 'own' && isClientOp(h)) return false;
+    if (F.source !== 'all' && h.src !== F.source) return false;
+    if (F.op !== 'all' && OPNAME[h.k] !== F.op) return false;
+    if (F.type !== 'all' && KIND_TYPE[h.k] !== F.type) return false;
+    if (F.status !== 'all' && h.st !== F.status) return false;
+    if (F.period !== 'all' && h.age > Number(F.period)) return false;
+    if (F.cid && !(h.cl || '').toLowerCase().includes(F.cid.toLowerCase())) return false;
+    if (F.q) {
+      const q = F.q.toLowerCase().replace(/\s/g, '');
+      const hay = [h.id, h.hash, h.cl, ...h.legs.map((l) => String(Math.abs(l.a)))].join('|').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function pill(id, label, value, options, isNew = false) {
+  const cur = options.find(([v]) => v === value);
+  const open = S.pill === id;
+  return `
+<div class="relative" ${isNew ? 'data-new="s"' : ''}>
+  <button type="button" data-act="pill" data-id="${id}" class="flex h-7 shrink-0 items-stretch rounded-full border border-stroke-soft-200 transition-colors hover:border-stroke-sub-300">
+    <span class="flex items-center pl-3 pr-2.5 text-label-xs text-text-soft-400">${label}</span>
+    <span class="flex items-center gap-1 border-l border-stroke-soft-200 pl-2.5 pr-3 text-label-xs text-text-strong-950">${cur ? cur[1] : ''}${I('expand-up-down-line', 'text-sm text-text-soft-400')}</span>
+  </button>
+  ${open ? `<div class="absolute left-0 top-9 z-30 w-[220px] rounded-[12px] border border-stroke-soft-200 bg-bg-white-0 p-1.5 shadow-regular-md">
+    ${options.map(([v, l]) => `<button type="button" data-act="pill-set" data-id="${id}" data-v="${v}" class="flex w-full items-center justify-between rounded-8 px-2.5 py-2 text-left text-paragraph-xs ${v === value ? 'bg-bg-weak-50 text-text-strong-950' : 'text-text-sub-600 hover:bg-bg-weak-50'}">${l}${v === value ? I('check-line', 'text-sm text-primary-base') : ''}</button>`).join('')}
+  </div>` : ''}
+</div>`;
+}
+
+const searchPill = (f, value, ph, w = 'w-[240px]', isNew = false) => `
+<div ${isNew ? 'data-new="s"' : ''} class="flex h-7 ${w} items-center gap-1.5 rounded-full border border-stroke-soft-200 px-3 transition-colors focus-within:border-stroke-sub-300">
+  ${I('search-line', 'text-sm text-text-soft-400')}
+  <input data-f="${f}" data-rerender="1" value="${esc(value)}" placeholder="${esc(ph)}" class="w-full bg-transparent text-label-xs text-text-strong-950 outline-none placeholder:text-text-soft-400">
+</div>`;
+
+const PERIODS = [['all', 'Все время'], ['1', 'Сегодня и вчера'], ['7', '7 дней'], ['30', '30 дней']];
+const STATUS_OPTS = [['all', 'Все'], ['done', 'Завершено'], ['pending', 'Ожидает'], ['processing', 'В обработке'], ['canceled', 'Отменено'], ['error', 'Ошибка'], ['review', 'На проверке'], ['returned', 'Возвращено']];
+
+function pageHistory() {
+  const rows = filteredHistory();
+  const tot = {};
+  rows.filter((h) => h.st === 'done').forEach((h) => h.legs.forEach((l) => {
+    tot[l.c] = tot[l.c] || { in: 0, out: 0 };
+    if (l.a > 0) tot[l.c].in += l.a; else tot[l.c].out += -l.a;
+  }));
+  const totHtml = Object.keys(tot).length
+    ? Object.entries(tot).map(([c, v]) => `<span class="inline-flex items-center gap-1.5 rounded-full bg-bg-white-0 px-2.5 py-1 font-mono text-paragraph-xs tabular-nums text-text-strong-950">${coin(c, 'size-4')}<span class="text-state-success">+${num(v.in)}</span><span class="text-text-soft-400">/</span><span>-${num(v.out)}</span> ${c}</span>`).join('')
+    : '<span class="text-paragraph-xs text-text-soft-400">Нет завершенных операций в выборке</span>';
+
+  const head = `
+<div class="flex w-full flex-col flex-wrap items-start gap-2 px-4 mb-6">
+  <div class="flex flex-wrap items-center gap-2">
+    ${pill('f-circuit', 'Контур', S.F.circuit, [['all', 'Все'], ['own', 'Собственные'], ['clients', 'Клиенты']], true)}
+    ${pill('f-source', 'Источник счета', S.F.source, [['all', 'Все'], ['Виджет', 'Виджет'], ['API', 'API'], ['Ручная ссылка', 'Ручная ссылка']], true)}
+    ${pill('f-op', 'Операция', S.F.op, [['all', 'Все'], ['Пополнение', 'Пополнение'], ['Вывод', 'Вывод'], ['Перевод', 'Перевод'], ['Обмен', 'Обмен'], ['OTC', 'OTC']])}
+    ${pill('f-type', 'Тип', S.F.type, [['all', 'Все'], ['Крипто', 'Крипто'], ['Фиат', 'Фиат']])}
+    ${pill('f-status', 'Статус', S.F.status, STATUS_OPTS)}
+    ${pill('f-period', 'Период', S.F.period, PERIODS)}
+  </div>
+  <div class="flex w-full flex-wrap items-center gap-2">
+    ${searchPill('F.q', S.F.q, 'Поиск по сумме, ID, хэшу', 'w-[260px]')}
+    ${searchPill('F.cid', S.F.cid, 'Client ID', 'w-[180px]', true)}
+    <div class="ml-auto flex items-center gap-2">${btn(I('download-2-line') + 'Выгрузить', 'data-act="export" data-new="s"', 'neutral-stroke', 'xs')}</div>
+  </div>
+</div>
+<div data-new class="mx-4 mb-4 flex flex-wrap items-center gap-3 rounded-12 bg-bg-weak-50 px-4 py-3">
+  <span class="text-label-xs text-text-soft-400">Всего получено / отправлено</span>${totHtml}
+</div>`;
+
+  const th = (t, cls = '') => `<th class="h-9 px-3 text-left align-middle text-label-xs font-normal text-text-soft-400 ${cls}"><span class="inline-flex items-center gap-1">${t}</span></th>`;
+  const body = rows.length ? rows.map((h) => `
+<tr data-act="open-tx" data-id="${h.id}" class="h-[72px] cursor-pointer border-b border-stroke-soft-200/50 transition-colors last:border-none hover:bg-bg-weak-50/60">
+  <td class="px-3"><div class="flex items-center gap-3">${coin(h.legs[h.legs.length > 1 ? 1 : 0].c)}<span class="flex flex-col gap-1"><span class="truncate text-label-sm text-text-strong-950">${h.legs.map((l) => l.c).join(' / ')}</span><span class="whitespace-nowrap font-mono text-paragraph-xs leading-4 text-text-soft-400">${h.tm}</span></span></div></td>
+  <td class="px-3">${amountCell(h)}</td>
+  <td class="px-3"><span class="whitespace-nowrap text-label-sm text-text-strong-950">${OPNAME[h.k]}</span></td>
+  <td class="px-3"><span class="inline-flex items-center gap-1.5 whitespace-nowrap text-paragraph-xs text-text-sub-600">${toFrom(h)}${h.from || h.to ? copyBtn(h.from || h.to) : ''}</span></td>
+  <td class="px-3"><span class="inline-flex items-center gap-1.5 truncate text-paragraph-xs text-text-sub-600">${h.hash ? mask(h.hash) + copyBtn(h.hash) + I('arrow-right-up-line', 'text-base') : '—'}</span></td>
+  <td class="px-3"><div class="flex flex-col items-start gap-1">${tag(h.st)}${h.st === 'pending' && h.due ? `<span class="text-paragraph-xs text-text-soft-400">до ${h.due}</span>` : ''}</div></td>
+</tr>`).join('') : `<tr><td colspan="6"><div class="flex flex-col items-center justify-center gap-2 py-12 text-center"><p class="text-label-sm text-text-sub-600">Ничего не найдено</p><p class="text-paragraph-xs text-text-soft-400">Измените фильтры или поисковый запрос</p>${btn('Сбросить фильтры', 'data-act="reset-filters"', 'neutral-stroke', 'xs', 'mt-2')}</div></td></tr>`;
+
+  return dashCard('pt-6 pb-[18px]', `${head}
+<div class="thin-scroll overflow-x-auto px-4"><table class="w-full min-w-[880px]">
+  <thead><tr class="max-h-7 rounded-full bg-bg-weak-50">${th('Монета / время', 'first:rounded-l-full')}${th('Сумма')}${th('Тип операции')}${th('Куда / Откуда')}${th('Хэш')}${th('Статус', 'last:rounded-r-full')}</tr></thead>
+  <tbody>${body}</tbody>
+</table></div>`);
+}
+
+function pageHome() {
+  const [w, f] = num(S.bal.usdt).split(',');
+  const acc = (label, val, cur, sub, isNew) => {
+    const [a, b] = num(val).split(',');
+    return `<div ${isNew ? 'data-new="s"' : ''} class="min-w-0 rounded-16 border border-stroke-soft-200 p-4">
+      <div class="mb-3 flex items-center gap-2">${coin(cur, 'size-7')}<span class="text-label-sm text-text-strong-950">${label}</span></div>
+      <div class="flex items-baseline"><span class="text-title-h5 font-medium tracking-tight text-text-strong-950">${a}</span><span class="text-title-h5 font-light tracking-tight text-text-soft-400">,${b}</span><span class="ml-1.5 text-label-sm text-text-soft-400">${cur}</span></div>
+      ${sub || ''}</div>`;
+  };
+  const payoutSub = `<div class="mt-2 flex flex-col gap-0.5 text-paragraph-xs"><span class="flex justify-between"><span class="text-text-soft-400">Свободно</span><span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.free)}</span></span><span class="flex justify-between"><span class="text-text-soft-400">Под выплаты</span><span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.frozen)}</span></span></div>`;
+  const hero = `
+<div class="overflow-hidden rounded-[24px] border border-transparent dark:border-neutral-700/50" style="background:var(--balance-card-gradient)">
+  <div class="flex items-center justify-between px-5 py-4"><div><p class="text-label-sm text-static-white">Остатки по счетам</p><p class="text-paragraph-xs text-neutral-400">Рублевый, основной USDT${S.iban ? ' и счет выплат' : ''}</p></div></div>
+  <div class="mx-1.5 mb-1.5 rounded-[20px] bg-bg-white-0 p-5"><div class="grid gap-3 ${S.iban ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}">
+    ${acc('Рублевый счет', S.bal.rub, 'RUBR')}
+    ${acc('Основной счет', S.bal.usdt, 'USDT')}
+    ${S.iban ? acc('Счет выплат', S.bal.free + S.bal.frozen, 'USDT', payoutSub, true) : ''}
+  </div></div>
+</div>`;
+  const last = S.H.slice(0, 5).map((h) => `
+<button type="button" data-act="open-tx" data-id="${h.id}" class="flex w-full items-center gap-3 rounded-12 px-2 py-2.5 text-left transition-colors hover:bg-bg-weak-50">
+  <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-weak-50">${I(KIND_ICON[h.k], 'text-lg text-text-sub-600')}</span>
+  <span class="flex min-w-0 flex-1 flex-col"><span class="truncate text-label-sm text-text-strong-950">${OPNAME[h.k]} · ${toFrom(h)}</span><span class="font-mono text-paragraph-xs text-text-soft-400">${h.tm}</span></span>
+  <span class="flex flex-col items-end gap-0.5">${amountCell(h)}</span>
+  <span class="w-[92px]">${tag(h.st)}</span>
+</button>`).join('');
+  const ops = dashCard('', `<div class="flex flex-col p-5">
+    <div class="mb-3 flex items-center justify-between"><span class="text-label-sm text-text-strong-950">Последние операции</span><button type="button" data-act="nav" data-to="history" class="text-label-xs text-primary-base transition hover:text-primary-dark">Все операции</button></div>
+    <div class="flex flex-col">${last}</div></div>`);
+  return `<div class="grid w-full min-w-0 grid-cols-1 gap-4 lg:gap-6">${nwWrap(hero, 'rounded-[24px]')}${ops}</div>`;
+}
+
+function accountRow(cur, title, sub, amount, actions, extra = '') {
+  return `<div class="flex items-center gap-4 rounded-16 border border-stroke-soft-200 p-4">
+    ${coin(cur, 'size-10')}
+    <div class="flex min-w-0 flex-1 flex-col"><span class="text-label-sm text-text-strong-950">${title}</span><span class="text-paragraph-xs text-text-soft-400">${sub}</span>${extra}</div>
+    <div class="flex flex-col items-end"><span class="font-mono text-label-md tabular-nums text-text-strong-950">${amount}</span><span class="text-paragraph-xs text-text-soft-400">${cur}</span></div>
+    <div class="flex shrink-0 items-center gap-2">${actions}</div></div>`;
+}
+function pageAssets() {
+  const rub = accountRow('RUBR', 'Рублевый счет', 'Поступления от клиентов по СБП и комиссия партнера', num(S.bal.rub), btn('Обменять', 'data-act="nav" data-to="exchange"', 'neutral-stroke', 'xs'));
+  const main = accountRow('USDT', 'Основной счет', 'Выручка партнера', num(S.bal.usdt),
+    btn(I('arrow-up-line') + 'Вывести', 'data-act="m-withdraw"', 'primary', 'xs') +
+    (S.iban ? btn('На счет выплат', 'data-act="m-own" data-v="main" data-new="s"', 'neutral-stroke', 'xs') : '') +
+    btn('Другому аккаунту', 'data-act="m-other" data-new="s"', 'neutral-stroke', 'xs'));
+  const pay = S.iban ? nwWrap(accountRow('USDT', 'Счет выплат на IBAN', 'Выплаты клиентам партнера', num(S.bal.free + S.bal.frozen),
+    btn('Пополнить', 'data-act="m-topup"', 'primary-lighter', 'xs') + btn('На основной', 'data-act="m-own" data-v="payout"', 'neutral-stroke', 'xs') + btn('Другому аккаунту', 'data-act="m-other"', 'neutral-stroke', 'xs'),
+    `<span class="mt-1 text-paragraph-xs text-text-sub-600">Свободно <span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.free)}</span> · под выплаты <span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.frozen)}</span></span>`), 'rounded-16') : '';
+  return dashCard('', `<div class="flex flex-col gap-3 p-5">
+    <div class="mb-1 text-label-sm text-text-strong-950">Счета</div>
+    ${paused() ? banner('warn', 'pause-circle-line', pauseText(), 'data-new') : ''}
+    ${rub}${main}${pay}
+    ${!S.iban ? '<p class="px-1 pt-1 text-paragraph-xs text-text-soft-400">Счет выплат появляется вместе с направлением выплат на IBAN</p>' : ''}
+  </div>`);
+}
+
+function stubPage(icon, title, text) {
+  return dashCard('', `<div class="flex flex-col items-center justify-center gap-2 px-6 py-20 text-center">
+    <div class="flex size-12 items-center justify-center rounded-full bg-bg-weak-50">${I(icon, 'text-2xl text-text-sub-600')}</div>
+    <p class="text-label-md text-text-strong-950">${title}</p><p class="max-w-[420px] text-paragraph-sm text-text-sub-600">${text}</p></div>`);
+}
+
+function pageKycSbp() {
+  const k = S.kyc;
+  const st = k.state;
+  const checkRow = `<div class="flex items-start gap-2">
+    <div class="flex-1">${field('ID клиента на вашей площадке', input('kyc.id', k.id, { ph: 'ID клиента' }), { hint: 'Демо: ID на …200 - на проверке, …300 - проверка пройдена, …400 - отказ, остальные - не найден' })}</div>
+    ${btn('Проверить', 'data-act="kyc-check"', 'primary', 'default', 'h-[42px] mt-[26px]')}
+  </div>`;
+  let body = '';
+  if (st === 'new') {
+    body = `<div class="flex flex-col gap-4">
+      ${field('Email клиента', input('kyc.email', k.email, { ph: 'client@example.com', type: 'email' }), { hint: 'Идентификатор клиента в системе BitBanker, нужен для отчетности перед регулятором. Дальше подставляется в оплаты как почта плательщика' })}
+      ${checkbox('kyc.create', k.create, 'Сразу создать ссылку на оплату СБП после прохождения KYC')}
+      ${k.create ? field('Сумма оплаты, ₽', input('kyc.amount', k.amount, { ph: '10000', suffix: '₽' })) : ''}
+      ${k.err ? `<p class="text-paragraph-xs text-error-base">${k.err}</p>` : ''}
+      <div>${btn('Создать ссылку на KYC', 'data-act="kyc-create"', 'primary', 'sm')}</div>
+      ${k.link ? banner('ok', 'check-line', `Ссылка на проверку: <span class="font-mono">${k.link}</span> ${copyBtn(k.link)}`) : ''}
+    </div>`;
+  } else if (st === 'check') {
+    body = `<div class="flex flex-col gap-3">${banner('info', 'time-line', 'Клиент на проверке. Можно повторно выдать ссылку на проверку')}
+      <div>${btn('Выдать ссылку на KYC повторно', 'data-act="kyc-create"', 'neutral-stroke', 'sm')}</div>
+      ${k.link ? banner('ok', 'check-line', `Ссылка на проверку: <span class="font-mono">${k.link}</span> ${copyBtn(k.link)}`) : ''}</div>`;
+  } else if (st === 'ok') {
+    body = `<div class="flex flex-col gap-4">${banner('ok', 'check-line', 'Проверка пройдена')}
+      ${field('Сумма оплаты, ₽', input('kyc.amount', k.amount, { ph: '10000', suffix: '₽' }))}
+      ${k.err ? `<p class="text-paragraph-xs text-error-base">${k.err}</p>` : ''}
+      <div>${btn('Создать ссылку на оплату СБП', 'data-act="kyc-pay"', 'primary', 'sm')}</div>
+      ${k.payLink ? banner('ok', 'check-line', `Ссылка на оплату: <span class="font-mono">${k.payLink}</span> ${copyBtn(k.payLink)}`) : ''}</div>`;
+  } else if (st === 'rej') {
+    body = banner('err', 'error-warning-line', 'Отказ. Причина: отказано службой безопасности');
+  } else {
+    body = '<p class="text-paragraph-sm text-text-soft-400">Введите ID клиента и нажмите «Проверить»</p>';
+  }
+  return profileCard('links-line', 'KYC и оплата СБП', 'Проверка клиента и ссылка на оплату для него', '', `<div class="flex max-w-[640px] flex-col gap-5 px-3 pt-2">${checkRow}${body}</div>`);
+}
+
+const MONTHS = [['2026-10', 'Октябрь 2026', 38, 31, 5, 2], ['2026-09', 'Сентябрь 2026', 64, 55, 6, 3], ['2026-08', 'Август 2026', 41, 36, 3, 2]];
+function pageKycChecks() {
+  const f = S.kc.from.slice(0, 7), t = S.kc.to.slice(0, 7);
+  const m = S.bridge === 'never' ? [] : MONTHS.filter(([k]) => k >= f && k <= t);
+  const sum = m.reduce((a, r) => [a[0] + r[2], a[1] + r[3], a[2] + r[4], a[3] + r[5]], [0, 0, 0, 0]);
+  const tile = (l, v) => `<div class="rounded-16 border border-stroke-soft-200 p-4"><p class="text-paragraph-xs text-text-soft-400">${l}</p><p class="mt-1 font-mono text-title-h6 tabular-nums text-text-strong-950">${v}</p></div>`;
+  if (S.bridge === 'never') {
+    return dashCard('', `<div class="flex flex-col items-center gap-3 px-6 py-16 text-center">
+      <div class="flex size-12 items-center justify-center rounded-full bg-bg-weak-50">${I('file-search-line', 'text-2xl text-text-sub-600')}</div>
+      <p class="text-label-md text-text-strong-950">Проверка клиентов через KYC-мост</p>
+      <p class="max-w-[460px] text-paragraph-sm text-text-sub-600">Услуга позволяет проверять клиентов партнера на стороне BitBanker. Подключение выполняет менеджер</p>
+      ${btn('Подключить через менеджера', 'data-act="toast" data-v="Запрос передан менеджеру"', 'primary', 'sm')}</div>`);
+  }
+  return dashCard('', `<div class="flex flex-col gap-5 p-5">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div class="flex items-end gap-2">
+        ${field('С', datePicker('kc.from', S.kc.from))}${field('По', datePicker('kc.to', S.kc.to))}
+        ${btn('Показать', 'data-act="rerender"', 'neutral-stroke', 'sm', 'h-[42px]')}
+      </div>
+      ${btn(I('download-2-line') + 'Выгрузить', 'data-act="toast" data-v="Файл за выбранный период сформирован"', 'neutral-stroke', 'sm')}
+    </div>
+    ${S.bridge === 'off' ? banner('warn', 'information-line', 'KYC-мост отключен. Показаны исторические данные за период, когда мост работал') : ''}
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">${tile('Всего проверок', sum[0])}${tile('Успешных', sum[1])}${tile('Неуспешных', sum[2])}${tile('С повторным запросом документов', sum[3])}</div>
+    <table class="w-full"><thead><tr class="bg-bg-weak-50">${['Месяц', 'Всего', 'Успешных', 'Неуспешных', 'С повторным запросом документов'].map((h, i) => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${i === 0 ? 'rounded-l-full' : ''} ${i === 4 ? 'rounded-r-full' : ''}">${h}</th>`).join('')}</tr></thead>
+    <tbody>${m.length ? m.map((r) => `<tr class="h-14 border-b border-stroke-soft-200/50 last:border-none"><td class="px-3 text-label-sm text-text-strong-950">${r[1]}</td>${r.slice(2).map((v) => `<td class="px-3 font-mono text-label-sm tabular-nums text-text-strong-950">${v}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="5" class="py-10 text-center text-paragraph-sm text-text-soft-400">За выбранный период проверок нет</td></tr>'}</tbody></table>
+    <p class="text-paragraph-xs text-text-soft-400">Считаются проверки, проведенные через мост, с итоговым результатом. Брошенные посередине не учитываются. Денежные суммы не выводятся: тариф и взаиморасчеты ведутся вне платформы</p>
+  </div>`);
+}
+
+function pageCommissions() {
+  const lock = '<span class="inline-flex items-center gap-1 text-paragraph-xs text-text-soft-400">' + I('lock-line', 'text-sm') + 'Только чтение</span>';
+  const bbSbp = S.admin
+    ? `<div class="flex items-center gap-2"><div class="w-24">${input('d.bbPct', S.d.bbPct, { suffix: '%' })}</div><div class="w-28">${input('d.bbAbs', S.d.bbAbs, { suffix: '₽' })}</div>${btn('Сохранить', 'data-act="save-bb"', 'neutral', 'xs')}</div>`
+    : `<span class="font-mono tabular-nums text-text-strong-950">${feeStr(S.c.bbPct, S.c.bbAbs)}</span>${lock}`;
+  const partnerSbp = `<div class="flex items-center gap-2"><div class="w-24">${input('d.feePct', S.d.feePct, { suffix: '%' })}</div><div class="w-28">${input('d.feeAbs', S.d.feeAbs, { suffix: '₽' })}</div>${btn('Сохранить', 'data-act="save-fee"', 'primary', 'xs')}</div>`;
+  const tiers = [['0+', '2,0%', '5'], ['10 000+', '1,5%', '5'], ['100 000+', '1,0%', '5'], ['500 000+', '0,7%', '5']];
+  const iban = S.iban ? `${sectionLabel('Выплата клиенту на IBAN')}
+    ${row('bank-line', 'Комиссия BitBanker', 'Уровни по сумме операции в USDT. Значения в прототипе - демо', lock)}
+    <div class="mx-3 mb-2 overflow-hidden rounded-12 border border-stroke-soft-200">
+      <table class="w-full"><thead><tr class="bg-bg-weak-50 text-left text-label-xs font-normal text-text-soft-400"><th class="h-8 px-3 font-normal">Сумма операции, USDT</th><th class="px-3 font-normal">Процент</th><th class="px-3 font-normal">Фиксированная часть, USDT</th></tr></thead>
+      <tbody>${tiers.map((t) => `<tr class="h-10 border-t border-stroke-soft-200/60 text-paragraph-sm text-text-strong-950"><td class="px-3 font-mono tabular-nums">${t[0]}</td><td class="px-3 font-mono tabular-nums">${t[1]}</td><td class="px-3 font-mono tabular-nums">${t[2]}</td></tr>`).join('')}</tbody></table>
+      <div class="border-t border-stroke-soft-200/60 px-3 py-2 text-paragraph-xs text-text-sub-600">Минимальная комиссия операции: <span class="font-mono text-text-strong-950">10 USDT</span></div>
+    </div>` : '';
+  return profileCard('percent-line', 'Комиссии', 'Ваша комиссия для клиентов и ставки BitBanker', '', `
+    ${sectionLabel('Пополнение по СБП')}
+    ${row('percent-line', 'Комиссия BitBanker', 'Применяется большее из процента и абсолютного значения', bbSbp)}
+    ${row('percent-line', 'Ваша комиссия для клиента', 'Процент и абсолютное значение в рублях', partnerSbp)}
+    ${iban}
+    <p class="px-4 pt-4 text-paragraph-xs text-text-soft-400">Новое значение применяется к предрасчету и к оплатам, выставленным после изменения. Ранее выставленные считаются по значению на момент выставления</p>`);
+}
+
+function pageRequisites() {
+  const lowOk = Number(S.d.awLow || 0) >= 10;
+  const swRow = (icon, title, sub, key, on) => row(icon, title, sub, sw(on, `data-act="tog" data-k="${key}"`));
+  const pauseBar = paused() ? `<div class="px-3 pb-2">${banner('warn', 'pause-circle-line', pauseText())}</div>` : '';
+  return profileCard('bank-line', 'Реквизиты', 'Банковские реквизиты, автоконвертация и автовывод', '', `
+    ${sectionLabel('Банковские реквизиты')}
+    ${row('bank-line', 'ООО «Нодекс»', 'Р/с ••••4412 · БИК 044525225', '<span class="text-paragraph-xs text-text-soft-400">Существующий блок, без изменений</span>')}
+    <div data-new class="mt-3 rounded-16 pb-2">
+    ${sectionLabel('Автоконвертация в USDT')}
+    ${swRow('exchange-line', 'Автоконвертация в USDT', 'Каждое рублевое поступление по СБП сразу конвертируется в USDT', 'conv', S.conv)}
+    ${sectionLabel('Автоконвертация накопленного остатка')}
+    ${swRow('exchange-funds-line', 'Автоконвертация накопленного остатка', S.conv ? 'При включенной автоконвертации в USDT рубли на счете не копятся, пороги не срабатывают' : 'Конвертируется разница между остатком и нижним порогом', 'convBal', S.convBal)}
+    <div class="grid max-w-[560px] grid-cols-2 gap-3 px-3 pb-2">
+      ${field('Нижний порог, RUBR', input('d.convLow', S.d.convLow, { suffix: 'RUBR' }), { hint: 'Сколько остается на счете' })}
+      ${field('Верхний порог, RUBR', input('d.convUp', S.d.convUp, { suffix: 'RUBR' }), { hint: 'При каком остатке срабатывает обмен' })}
+    </div>
+    <div class="px-3 pb-2">${btn('Сохранить пороги', 'data-act="save-conv"', 'neutral-stroke', 'xs')}</div>
+    ${sectionLabel('Автовывод')}
+    ${swRow('send-plane-line', 'Автовывод', 'USDT TRC-20 с основного счета на внешний кошелек. Счет выплат не затрагивается', 'aw', S.aw)}
+    ${pauseBar}
+    <div class="flex max-w-[560px] flex-col gap-3 px-3 pb-2">
+      ${field('Адрес кошелька', input('d.awAddr', S.d.awAddr, { mono: true }), { hint: 'Адрес проходит AML-проверку и не сохраняется, если проверку не прошел (демо: адрес, начинающийся с TBAD, не пройдет). Смена адреса ставит вывод на паузу ' + S.pauseHours + ' ч' })}
+      <div class="grid grid-cols-2 gap-3">
+        ${field('Нижний порог, USDT', input('d.awLow', S.d.awLow, { suffix: 'USDT', err: !lowOk }), { hint: 'Сколько остается на счете', err: lowOk ? '' : 'Нижний порог ниже минимальной суммы вывода (10 USDT, демо) - вывод не сработает' })}
+        ${field('Верхний порог, USDT', input('d.awUp', S.d.awUp, { suffix: 'USDT' }), { hint: 'При каком остатке срабатывает вывод' })}
+      </div>
+      <div>${btn('Сохранить автовывод', 'data-act="save-aw"', 'primary', 'xs')}</div>
+    </div></div>`);
+}
+
+function pageApi() {
+  return profileCard('code-s-slash-line', 'API', 'Подключение вашей системы к платформе', '', `
+    ${sectionLabel('Ключи')}
+    ${row('key-2-line', 'Ключ', 'Постоянный идентификатор партнера', `<span class="font-mono text-paragraph-xs text-text-strong-950">${S.apiKey}</span>${copyBtn(S.apiKey)}`)}
+    ${row('lock-2-line', 'Секрет', S.secretFresh ? 'Новый секрет показан один раз - сохраните его' : 'Приватный ключ для подписи запросов', `<span class="font-mono text-paragraph-xs text-text-strong-950">${S.secretFresh ? S.secret : 'bb_sk_••••••••••••••••••••'}</span>${S.secretFresh ? copyBtn(S.secret) : ''}${btn(I('refresh-line') + 'Перевыпустить', 'data-act="reissue"', 'neutral-stroke', 'xs')}`)}
+    ${sectionLabel('Вебхуки')}
+    <div class="flex max-w-[640px] flex-col gap-3 px-3 pb-2">
+      ${field('Адрес вебхука о статусе оплаты', input('d.hook1', S.d.hook1, { ph: 'https://' }), { hint: 'Необязательный' })}
+      ${field('Адрес вебхука о событиях', input('d.hook2', S.d.hook2, { ph: 'https://' }), { hint: 'Необязательный' })}
+      <div>${btn('Сохранить адреса', 'data-act="save-hooks"', 'neutral-stroke', 'xs')}</div>
+    </div>
+    <p class="px-4 pt-3 text-paragraph-xs text-text-soft-400">На аккаунт выдается одна пара ключей. Перевыпуск секрета не затрагивает идентификатор партнера, направления, допуски клиентов и операции в работе</p>`);
+}
+
+function pageJournal() {
+  const settings = [...new Set(S.J.map((j) => j.s))];
+  let rows = S.J.filter((j) => (S.JF.setting === 'all' || j.s === S.JF.setting) && (S.JF.who === 'all' || j.who === S.JF.who));
+  const th = (t, a) => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${a}">${t}</th>`;
+  return dashCard('pt-6 pb-[18px]', `
+<div class="mb-6 flex flex-wrap items-center gap-2 px-4">
+  ${pill('j-setting', 'Настройка', S.JF.setting, [['all', 'Все'], ...settings.map((s) => [s, s])])}
+  ${pill('j-who', 'Кто изменил', S.JF.who, [['all', 'Все'], ['Партнер', 'Партнер'], ['Оператор', 'Оператор']])}
+</div>
+<div class="px-4"><table class="w-full">
+  <thead><tr class="bg-bg-weak-50">${th('Дата и время', 'rounded-l-full')}${th('Настройка')}${th('Было')}${th('Стало')}${th('Кто изменил', 'rounded-r-full')}</tr></thead>
+  <tbody>${rows.length ? rows.map((j) => `<tr class="h-14 border-b border-stroke-soft-200/50 last:border-none">
+    <td class="px-3 font-mono text-paragraph-xs text-text-sub-600">${j.t}</td><td class="px-3 text-label-sm text-text-strong-950">${esc(j.s)}</td>
+    <td class="px-3 font-mono text-paragraph-xs text-text-sub-600">${esc(j.a)}</td><td class="px-3 font-mono text-paragraph-xs text-text-strong-950">${esc(j.b)}</td>
+    <td class="px-3">${chip(j.who, j.who === 'Оператор' ? 'bg-feature-lighter text-feature-base' : 'bg-bg-weak-50 text-text-sub-600')}</td></tr>`).join('')
+    : '<tr><td colspan="5"><div class="flex flex-col items-center gap-2 py-12 text-center"><p class="text-label-sm text-text-sub-600">Записей пока нет</p><p class="text-paragraph-xs text-text-soft-400">Здесь появятся изменения настроек</p></div></td></tr>'}</tbody>
+</table></div>`);
+}
+
+function pageDocs() {
+  const groups = ['Договоры', 'Приложения к договорам', 'Документы KYB'];
+  return profileCard('file-text-line', 'Документы', 'Договоры, приложения и документы KYB', btn(I('upload-2-line') + 'Загрузить документ', 'data-act="upload-doc"', 'neutral-stroke', 'sm'),
+    groups.map((g) => sectionLabel(g) + (S.docs.filter((d) => d.g === g).map((d) => {
+      const i = S.docs.indexOf(d);
+      return row('file-text-line', esc(d.n), d.d, btn(I('download-2-line'), 'data-act="toast" data-v="Файл скачан"', 'neutral-ghost', 'icon-xs') + (S.admin ? btn(I('delete-bin-line'), `data-act="del-doc" data-i="${i}"`, 'danger-lighter', 'icon-xs') : ''));
+    }).join('') || '<p class="px-4 py-3 text-paragraph-sm text-text-soft-400">Документов нет</p>')).join('') +
+    `<p class="px-4 pt-3 text-paragraph-xs text-text-soft-400">${S.admin ? 'Режим оператора: доступно удаление документа.' : 'Удалить документ из кабинета нельзя. Те же документы видны оператору в карточке партнера.'}</p>`);
+}
+
+function simpleProfile(icon, title, desc, rows) {
+  return profileCard(icon, title, desc, '', rows.map(([i, l, s, r]) => row(i, l, s, r)).join(''));
+}
+function pageProfile(r) {
+  if (r === 'p-commissions') return nwWrap(pageCommissions(), 'rounded-16');
+  if (r === 'p-requisites') return pageRequisites();
+  if (r === 'p-api') return pageApi();
+  if (r === 'p-journal') return nwWrap(pageJournal(), 'rounded-[24px]');
+  if (r === 'p-documents') return nwWrap(pageDocs(), 'rounded-16');
+  if (r === 'p-kyc') return simpleProfile('shield-check-line', 'KYC', 'Ваш уровень верификации', [
+    ['shield-check-line', 'Уровень верификации', 'Получен до выставления партнерского признака', chip('Уровень 3', 'bg-success-lighter text-success-dark')],
+    ['file-text-line', 'Статус', 'Раздел без изменений', chip('Пройден', 'bg-success-lighter text-success-dark')]]);
+  if (r === 'p-security') return simpleProfile('lock-line', 'Безопасность', 'Вход и двухфакторная аутентификация', [
+    ['lock-line', 'Пароль', 'Раздел без изменений', btn('Изменить', 'data-act="toast" data-v="Раздел без изменений"', 'neutral-stroke', 'xs')],
+    ['shield-check-line', 'Двухфакторная аутентификация', 'Опциональна, как у обычного пользователя', chip('Включена', 'bg-success-lighter text-success-dark')]]);
+  if (r === 'p-sessions') return simpleProfile('timer-line', 'Сессии', 'Активные сессии', [
+    ['computer-line', 'Chrome, Windows', 'Москва · текущая сессия', chip('Текущая')],
+    ['smartphone-line', 'Safari, iOS', 'Москва · 19.10.2026, 22:14', btn('Завершить', 'data-act="toast" data-v="Сессия завершена"', 'neutral-stroke', 'xs')]]);
+  return simpleProfile('notification-line', 'Уведомления', 'Настройка рассылок', [
+    ['mail-line', 'Письма на почту аккаунта', 'Раздел без изменений', sw(true, 'data-act="toast" data-v="Раздел без изменений"')],
+    ['telegram-line', 'Чат партнера в Telegram', 'Сообщения о выводах и проверках', sw(true, 'data-act="toast" data-v="Раздел без изменений"')]]);
+}
+
+function pageRegular(r) {
+  if (r === 'home') {
+    return dashCard('overflow-hidden', `<div style="background:var(--balance-card-gradient)" class="px-5 py-4"><p class="text-label-sm text-static-white">Общий баланс</p><p class="text-paragraph-xs text-neutral-400">Обычный кабинет BB 1.0</p></div>
+      <div class="m-1.5 rounded-[20px] bg-bg-white-0 p-5"><span class="text-title-h4 font-medium tracking-tight">4 280</span><span class="text-title-h4 font-light tracking-tight text-text-soft-400">,15 $</span></div>`);
+  }
+  return stubPage('layout-grid-line', 'Обычный кабинет BB 1.0', 'После снятия партнерского признака кабинет возвращается к обычному составу. В этом прототипе обычный кабинет не детализируется');
+}
+
+function pageBlocked() {
+  return dashCard('', `<div class="flex flex-col items-center gap-3 px-6 py-20 text-center">
+    <div class="flex size-12 items-center justify-center rounded-full bg-error-lighter">${I('lock-2-line', 'text-2xl text-error-base')}</div>
+    <p class="text-label-md text-text-strong-950">Раздел недоступен</p>
+    <p class="max-w-[460px] text-paragraph-sm text-text-sub-600">Backend отклонил запрос: раздел не входит в состав партнерского кабинета. Операции закрываются на сервере по партнерскому признаку, а не скрытием пунктов меню</p>
+    <p class="text-paragraph-xs text-text-soft-400">Текст ошибки в ТЗ не определен</p>
+    ${btn('На главную', 'data-act="nav" data-to="home"', 'neutral-stroke', 'sm')}</div>`);
+}
+
+function pageContent() {
+  const r = S.route;
+  if (!S.partner) return pageRegular(r);
+  if (r === 'home') return pageHome();
+  if (r === 'assets') return pageAssets();
+  if (r === 'history') return pageHistory();
+  if (r === 'kyc-sbp') return S.manual ? nwWrap(pageKycSbp(), 'rounded-16') : pageBlocked();
+  if (r === 'kyc-checks') return nwWrap(pageKycChecks(), 'rounded-[24px]');
+  if (r === 'exchange') return stubPage('exchange-line', 'Обмен', 'Раздел без изменений: обмен рублей на USDT через стакан, как у обычного пользователя');
+  if (r === 'otc') return stubPage('exchange-funds-line', 'OTC-сделки', 'Раздел без изменений: обмен вне стакана по договорной цене');
+  if (r === 'blocked') return pageBlocked();
+  return pageProfile(r);
+}
+
+/* ---------- модальные окна ---------- */
+function modalShell(title, body, footer = '', w = 'w-[480px]', isNew = false) {
+  return `<div class="absolute inset-0 z-40 flex items-center justify-center bg-black/40 p-4" data-act="close-modal-bg">
+  <div ${isNew ? 'data-new' : ''} class="${w} max-w-full rounded-24 bg-bg-white-0 shadow-modal" data-stop="1">
+    <div class="flex items-center justify-between px-6 pt-6"><p class="text-label-lg text-text-strong-950">${title}</p>
+      <button type="button" data-act="close-modal" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 transition hover:bg-bg-weak-50">${I('close-line', 'text-base')}</button></div>
+    <div class="max-h-[70vh] overflow-y-auto px-6 py-5 thin-scroll">${body}</div>
+    ${footer ? `<div class="flex justify-end gap-2 border-t border-stroke-soft-200 px-6 py-4">${footer}</div>` : ''}
+  </div></div>`;
+}
+const kv = (k, v) => `<div class="flex items-start justify-between gap-6 border-b border-stroke-soft-200/60 py-2.5 last:border-none"><span class="text-paragraph-sm text-text-sub-600">${k}</span><span class="text-right text-paragraph-sm text-text-strong-950">${v}</span></div>`;
+
+function txModal(id) {
+  const h = S.H.find((x) => x.id === id);
+  if (!h) return '';
+  const head = h.legs[h.legs.length - 1];
+  const f = [];
+  f.push(['Тип операции', OPNAME[h.k]]);
+  if (h.k === 'sbp') {
+    f.push(['Способ', 'СБП'], ['Клиент', h.cl], ['Номер счета', '№' + h.n],
+      ['Ссылка на оплату', `<span class="inline-flex items-center gap-1 font-mono text-paragraph-xs">${h.link}${copyBtn(h.link)}</span>`],
+      ['Срок оплаты', h.due ? 'До ' + h.tm.slice(0, 10) + ', ' + h.due : '—'],
+      ['Сумма QR', num(h.qr) + ' RUBR'], ['Комиссия BitBanker', num(h.bb) + ' RUBR'], ['Комиссия партнера', num(h.pf) + ' RUBR'],
+      ['Источник счета', h.src]);
+    if (h.conv) f.push(['Конвертация', h.conv]);
+  } else if (h.k === 'iban') {
+    f.push(['Способ', 'IBAN'], ['Клиент', h.cl], ['Номер заявки', '№' + h.n], ['Получатель', h.rcp], ['Тело платежа', num(h.body) + ' USDT'],
+      ['Комиссия BitBanker', num(h.bbfee) + ' USDT'], ['Сумма зачисления', h.credit], ['Курс провайдера', h.rate]);
+  } else if (h.k === 'topup') {
+    f.push(['Способ', 'Крипто'], ['Сеть', 'TRC-20'], ['Адрес отправителя', `<span class="inline-flex items-center gap-1 font-mono text-paragraph-xs">${mask(h.from)}${copyBtn(h.from)}</span>`],
+      ['Хэш', `<span class="inline-flex items-center gap-1 font-mono text-paragraph-xs">${mask(h.hash)}${copyBtn(h.hash)}</span>`], ['Счет зачисления', 'Счет выплат'], ['Результат AML-проверки', h.st === 'review' ? 'Выполняется' : 'Пройдена']);
+  } else if (h.k === 'exchange') {
+    f.push(['Способ', 'Стакан'], ['Списано', num(-h.legs[0].a) + ' RUBR'], ['Получено', num(h.legs[1].a) + ' USDT'], ['Средний курс', h.rate + ' RUBR/USDT'], ['Комиссия тейкера', h.fee], ['Ордер', h.ord], ['Сделки', 'Список сделок, из которых сложился средний курс']);
+  } else if (h.k === 'otc') {
+    f.push(['Способ', 'OTC'], ['Номер сделки', h.deal], ['Списано', num(-h.legs[0].a) + ' RUBR'], ['Получено', num(h.legs[1].a) + ' USDT'], ['Курс сделки', h.rate + ' RUBR/USDT'], ['Комиссия', '0'], ['Подтверждение сделки', 'Файл']);
+  } else if (h.k === 'transfer') {
+    f.push(['Способ', 'Внутренний'], ['Откуда', h.dir.split(' → ')[0]], ['Куда', h.dir.split(' → ')[1]], ['Комиссия', '0']);
+  } else if (h.k === 'withdraw') {
+    f.push(['Способ', 'Крипто'], ['Сеть', 'TRC-20'], ['Адрес', `<span class="inline-flex items-center gap-1 font-mono text-paragraph-xs">${mask(h.to)}${copyBtn(h.to)}</span>`],
+      ['Хэш', `<span class="inline-flex items-center gap-1 font-mono text-paragraph-xs">${mask(h.hash)}${copyBtn(h.hash)}</span>`], ['Комиссия сети', h.netfee + ' USDT'], ['Результат AML-проверки', 'Пройдена']);
+  }
+  f.push(['Дата и время', h.tm], ['ID операции', `<span class="inline-flex items-center gap-1 font-mono text-paragraph-xs">${h.id}${copyBtn(h.id)}</span>`]);
+  const dead = h.st === 'canceled' || h.st === 'error';
+  const top = `<div class="mb-4 flex flex-col items-center gap-2 py-2">
+    ${coin(head.c, 'size-12')}
+    <p class="font-mono text-title-h6 tabular-nums ${dead ? 'line-through text-text-soft-400' : head.a > 0 ? 'text-state-success' : 'text-text-strong-950'}">${signed(head.a)} ${head.c}</p>${tag(h.st)}</div>`;
+  const why = h.why ? `<div class="mb-3">${banner(h.st === 'error' ? 'err' : 'warn', 'information-line', h.why)}</div>` : '';
+  return modalShell('Детали операции', top + why + f.map(([k, v]) => kv(k, v)).join(''),
+    btn(I('download-2-line') + 'Скачать квитанцию', 'data-act="toast" data-v="Квитанция скачана"', 'neutral-stroke', 'sm'));
+}
+
+function ownModal() {
+  const fromMain = (S.f.own || 'main') === 'main';
+  const max = fromMain ? S.bal.usdt : S.bal.free;
+  return modalShell('Перевод между своими счетами',
+    `<div class="flex flex-col gap-4">
+      ${field('Направление', select('f.own', S.f.own || 'main', [['main', 'Основной счет → Счет выплат'], ['payout', 'Счет выплат → Основной счет']]))}
+      ${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT' }), { hint: `Доступно: ${num(max)} USDT${fromMain ? '' : ' (свободный остаток, сумма под выплаты не переводится)'}`, err: S.f.err || '' })}
+      <p class="text-paragraph-xs text-text-soft-400">Комиссия: 0. Работает во время паузы вывода</p>
+    </div>`, btn('Отмена', 'data-act="close-modal"', 'neutral-stroke', 'sm') + btn('Перевести', 'data-act="do-own"', 'primary', 'sm'), 'w-[480px]', true);
+}
+function otherModal() {
+  const e = (S.f.email || '').trim().toLowerCase();
+  let err = '';
+  if (S.f.checked && e) err = e.includes('partner') || e.endsWith('@nodex.io') ? '' : 'Перевод этому получателю недоступен. С партнёрского аккаунта средства можно переводить только на другие партнёрские аккаунты — проверьте адрес получателя';
+  return modalShell('Перевод другому аккаунту',
+    `<div class="flex flex-col gap-4">
+      ${field('С какого счета', select('f.src', S.f.src || 'main', [['main', 'Основной счет'], ...(S.iban ? [['payout', 'Счет выплат']] : [])]))}
+      ${field('Кому (email)', input('f.email', S.f.email || '', { ph: 'partner@example.com', err: !!err, type: 'email' }), { hint: 'Проверка получателя выполняется сразу после ввода email. Демо: email с «partner» - партнерский аккаунт, любой другой - без признака', err })}
+      ${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT' }))}
+      ${field('Комментарий', input('f.note', S.f.note || '', { ph: 'Необязательно' }))}
+      <p class="text-paragraph-xs text-text-soft-400">Перевод незарегистрированному получателю недоступен, кешбэк 1% за такие переводы не начисляется</p>
+    </div>`, btn('Проверить получателя', 'data-act="check-email"', 'neutral-stroke', 'sm') + btn('Перевести', 'data-act="do-other"', 'primary', 'sm'), 'w-[480px]', true);
+}
+function topupModal() {
+  const a = 'TWd3Lp8vRk2Qm5Nz7Yc1Hx4Bj9Ue6Ak2Lp';
+  return modalShell('Пополнение счета выплат',
+    `<div class="flex flex-col gap-4">
+      <p class="text-paragraph-sm text-text-sub-600">Переведите USDT на депозитный адрес счета выплат с внешнего кошелька. С основного счета - через «Перевод между своими счетами»</p>
+      <div class="flex flex-col items-center gap-3 rounded-16 border border-stroke-soft-200 p-4">
+        <div class="flex size-32 items-center justify-center rounded-12 bg-bg-weak-50">${I('qr-code-line', 'text-7xl text-text-sub-600')}</div>
+        <span class="rounded-full bg-bg-weak-50 px-2 py-0.5 text-subheading-2xs text-text-sub-600">USDT · TRC-20</span>
+        <span class="flex items-center gap-1 break-all text-center font-mono text-paragraph-xs text-text-strong-950">${a}${copyBtn(a)}</span>
+      </div>
+      ${banner('info', 'information-line', 'Адрес отправителя проверяется AML: до проверки операция «На проверке», не прошел - «Ошибка»')}
+    </div>`, btn('Готово', 'data-act="close-modal"', 'primary', 'sm'), 'w-[480px]', true);
+}
+function withdrawModal() {
+  const p = paused();
+  return modalShell('Вывод USDT на внешний кошелек',
+    `<div class="flex flex-col gap-4">
+      ${p ? banner('warn', 'pause-circle-line', pauseText(), 'data-new') : ''}
+      ${field('Адрес кошелька', input('f.addr', S.f.addr ?? S.c.awAddr, { mono: true, dis: p }))}
+      ${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT', dis: p }), { hint: `Доступно на основном счете: ${num(S.bal.usdt)} USDT` })}
+      <p class="text-paragraph-xs text-text-soft-400">Сеть TRC-20. Адрес проверяется перед каждым выводом</p>
+    </div>`, btn('Отмена', 'data-act="close-modal"', 'neutral-stroke', 'sm') + `<button type="button" data-act="do-withdraw" ${p ? 'disabled' : ''} class="${cx(BTN_BASE, BTN_V.primary, BTN_S.sm)}">Вывести</button>`);
+}
+function modalHtml() {
+  const m = S.modal;
+  if (!m) return '';
+  if (m.t === 'tx') return txModal(m.id);
+  if (m.t === 'own') return ownModal();
+  if (m.t === 'other') return otherModal();
+  if (m.t === 'topup') return topupModal();
+  if (m.t === 'withdraw') return withdrawModal();
+  return '';
+}
+
+/* ---------- правая панель управления прототипом ---------- */
+function panel() {
+  if (!S.panelOpen) return `<button type="button" data-act="panel-toggle" class="fixed right-3 top-3 z-50 flex h-10 items-center gap-2 rounded-full border border-stroke-soft-200 bg-bg-white-0 px-4 text-label-xs text-text-strong-950 shadow-regular-md">${I('settings-3-line', 'text-base')}Настройки прототипа</button>`;
+  const trow = (label, ctl, ref = '') => `<tr class="border-b border-stroke-soft-200/60 align-middle"><td class="py-2.5 pr-3"><div class="text-paragraph-sm text-text-strong-950">${label}</div>${ref ? `<div class="mt-0.5 text-[11px] leading-[14px] text-text-soft-400">${ref}</div>` : ''}</td><td class="py-2.5 text-right"><div class="flex justify-end">${ctl}</div></td></tr>`;
+  const group = (t) => `<tr><td colspan="2" class="pt-5 pb-1"><span class="font-mono text-subheading-2xs uppercase tracking-widest text-text-soft-400">${t}</span></td></tr>`;
+  const pauseOn = paused();
+  return `
+<aside class="flex h-full w-[420px] shrink-0 flex-col border-l border-stroke-soft-200 bg-bg-white-0">
+  <div class="flex items-center justify-between px-5 pt-5 pb-3">
+    <div><p class="text-label-md text-text-strong-950">Настройки прототипа</p><p class="text-paragraph-xs text-text-soft-400">Состояния кабинета и сценарии</p></div>
+    <button type="button" data-act="panel-toggle" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 hover:bg-bg-weak-50">${I('close-line', 'text-base')}</button>
+  </div>
+  <div class="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+    <table class="w-full table-fixed">
+      <colgroup><col style="width:58%"><col style="width:42%"></colgroup>
+      <thead><tr><th class="pb-1 text-left text-label-xs font-normal text-text-soft-400">Параметр</th><th class="pb-1 text-right text-label-xs font-normal text-text-soft-400">Значение</th></tr></thead>
+      <tbody>
+      ${group('Режим')}
+      ${trow('Режим оператора', sw(S.admin, 'data-act="tog" data-k="admin"'), 'Правки пишутся как «Оператор», доступны ставки BitBanker и удаление документов')}
+      ${group('Аккаунт')}
+      ${trow('Партнерский признак', sw(S.partner, 'data-act="tog" data-k="partner"'), 'UC 1.1 · UC 1.3')}
+      ${trow('Ручная генерация ссылок', sw(S.manual, 'data-act="tog" data-k="manual"', !S.partner), 'раздел «KYC и оплата СБП»')}
+      ${trow('Направление выплат на IBAN', sw(S.iban, 'data-act="tog" data-k="iban"', !S.partner), 'счет выплат, комиссии IBAN')}
+      ${trow('KYC-мост', `<div class="w-[150px] max-w-full">${select('bridge', S.bridge, [['on', 'Подключен'], ['off', 'Отключен'], ['never', 'Не был подключен']])}</div>`, 'раздел «KYC-проверки»')}
+      ${group('Настройки партнера (общие значения)')}
+      ${trow('Автоконвертация в USDT', sw(S.conv, 'data-act="tog" data-k="conv"', !S.partner), 'Реквизиты')}
+      ${trow('Автоконвертация остатка', sw(S.convBal, 'data-act="tog" data-k="convBal"', !S.partner), 'Реквизиты')}
+      ${trow('Автовывод', sw(S.aw, 'data-act="tog" data-k="aw"', !S.partner), 'Реквизиты')}
+      ${group('Платформа')}
+      ${trow('Пауза после смены адреса, ч', `<div class="w-[90px]">${input('pauseHours', S.pauseHours, { suffix: 'ч' })}</div>`, 'пусто или 0 - паузы нет')}
+      ${trow('Пауза вывода', pauseOn ? btn('Снять паузу', 'data-act="pause-off"', 'neutral-stroke', 'xs') : btn('Сменить адрес', 'data-act="pause-on"', 'neutral-stroke', 'xs'), pauseOn ? 'до ' + fmtDT(new Date(S.pauseUntil)) : 'симуляция смены адреса')}
+      ${group('Сценарии')}
+      ${trow('Оплата клиента по СБП', btn('Выставить', 'data-act="scn-new"', 'neutral-stroke', 'xs'), 'появляется в истории со статусом «Ожидает»')}
+      ${trow('Последняя ожидающая оплата', `<div class="flex gap-1.5">${btn('Оплачена', 'data-act="scn-paid"', 'neutral-stroke', 'xs')}${btn('Срок вышел', 'data-act="scn-exp"', 'neutral-stroke', 'xs')}</div>`, 'Завершено / Отменено')}
+      ${trow('Запрос закрытого раздела', btn('Отправить', 'data-act="scn-blocked"', 'neutral-stroke', 'xs'), 'UC 1.0 · ответ сервера')}
+      ${group('Вид')}
+      ${trow('Масштаб кабинета', `<div class="w-[110px]">${select('zoom', S.zoom, [['100', '100%'], ['90', '90%'], ['80', '80%'], ['75', '75%'], ['67', '67%']])}</div>`, 'уменьшает кабинет целиком')}
+      ${trow('Подсветка нового для партнера', sw(S.hl, 'data-act="tog" data-k="hl"'), 'пунктир и бейдж «Новое для партнера»')}
+      ${trow('Темная тема', sw(S.theme === 'dark', 'data-act="theme"'), '')}
+      ${trow('Состояние прототипа', btn(I('refresh-line') + 'Сбросить', 'data-act="reset"', 'neutral-stroke', 'xs'), '')}
+      </tbody>
+    </table>
+  </div>
+</aside>`;
+}
+
+/* ---------- сборка ---------- */
+function title() {
+  if (!S.partner) return S.route === 'home' ? 'Главная' : 'Обычный кабинет';
+  return PARTNER_PAGES[S.route] || '';
+}
+function render() {
+  document.documentElement.classList.toggle('dark', S.theme === 'dark');
+  document.body.classList.toggle('hl-on', S.hl);
+  const y = document.getElementById('scroll')?.scrollTop || 0;
+  const z = (Number(S.zoom) || 100) / 100;
+  document.getElementById('app').innerHTML = `
+<div class="relative min-w-0 flex-1 overflow-hidden bg-[#0e0e10]">
+<div id="client" class="absolute left-0 top-0 flex gap-[6px] bg-[#0e0e10] p-[6px]" style="width:${100 / z}%;height:${100 / z}%;transform:scale(${z});transform-origin:0 0">
+  ${sidebar()}
+  <div class="min-w-0 flex-1 overflow-hidden rounded-24">
+    <div id="scroll" class="h-full w-full min-w-0 overflow-y-auto overscroll-contain thin-scroll">
+      <div class="flex min-h-full w-full min-w-0 flex-col bg-bg-weak-50 px-8 py-5 lg:rounded-24">
+        ${pageHeader(title())}
+        ${S.admin ? `<div class="mb-4">${banner('info', 'shield-user-line', 'Режим оператора: изменения настроек записываются в журнал как «Оператор»')}</div>` : ''}
+        <div class="relative w-full min-w-0 text-text-strong-950">${pageContent()}</div>
+      </div>
+    </div>
+  </div>
+  ${modalHtml()}
+  ${S.toast ? `<div class="absolute right-6 top-6 z-50 flex max-w-[380px] items-start gap-2 rounded-12 bg-bg-strong-950 px-4 py-3 text-paragraph-sm text-text-white-0 shadow-modal">${I('information-line', 'mt-0.5 text-base')}<span>${S.toast.msg}</span></div>` : ''}
+</div>
+</div>
+${panel()}`;
+  const sc = document.getElementById('scroll');
+  if (sc) sc.scrollTop = y;
+}
+
+/* ---------- действия ---------- */
+function setPath(path, value) {
+  const parts = path.split('.');
+  let o = S;
+  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+  o[parts[parts.length - 1]] = value;
+}
+function getPath(path) {
+  return path.split('.').reduce((o, k) => o[k], S);
+}
+function go(to) {
+  if (to === 'home' && !S.partner) { S.route = 'home'; return; }
+  S.route = to;
+  S.modal = null;
+  S.pill = null;
+}
+function setFlag(k, v) {
+  if (k === 'admin') S.admin = v;
+  else if (k === 'hl') S.hl = v;
+  else if (k === 'partner') {
+    S.partner = v;
+    S.route = 'home';
+  } else if (k === 'manual') { S.manual = v; if (!v && S.route === 'kyc-sbp') S.route = 'home'; }
+  else if (k === 'iban') { log('Открытие и закрытие направлений', v ? 'Закрыто' : 'Открыто', v ? 'Открыто' : 'Закрыто', 'Оператор'); S.iban = v; }
+  else if (k === 'conv') { log('Автоконвертация в USDT', v ? 'Выключена' : 'Включена', v ? 'Включена' : 'Выключена'); S.conv = v; }
+  else if (k === 'convBal') { log('Автоконвертация накопленного остатка', v ? 'Выключена' : 'Включена', v ? 'Включена' : 'Выключена'); S.convBal = v; }
+  else if (k === 'aw') { log('Автовывод', v ? 'Выключен' : 'Включен', v ? 'Включен' : 'Выключен'); S.aw = v; }
+}
+function applyAddress(addr) {
+  if (/^TBAD/i.test(addr)) { toast('Адрес не прошел AML-проверку и не сохранен'); return false; }
+  if (addr !== S.c.awAddr) {
+    log('Адрес кошелька автовывода', mask(S.c.awAddr), mask(addr));
+    S.c.awAddr = addr; S.d.awAddr = addr;
+    startPause();
+    if (paused()) toast(pauseText());
+  }
+  return true;
+}
+const ACTIONS = {
+  nav: (e) => go(e.dataset.to),
+  expand: (e) => { const id = e.dataset.to; S.expanded[id] = !S.expanded[id]; },
+  'sb-toggle': () => { if (S.route.startsWith('p-') || ['r-profile', 'r-kyc', 'r-security', 'r-sessions', 'r-req', 'r-docs', 'r-notif', 'r-api'].includes(S.route)) S.sbBig = !S.sbBig; else S.sbOpen = !S.sbOpen; },
+  theme: () => { S.theme = S.theme === 'dark' ? 'light' : 'dark'; },
+  lang: () => toast('В прототипе доступен только русский язык'),
+  'panel-toggle': () => { S.panelOpen = !S.panelOpen; },
+  tog: (e) => { const k = e.dataset.k; const cur = k === 'admin' ? S.admin : S[k]; setFlag(k, !cur); },
+  pill: (e) => { S.pill = S.pill === e.dataset.id ? null : e.dataset.id; },
+  'pill-set': (e) => {
+    const m = { 'f-circuit': 'circuit', 'f-source': 'source', 'f-op': 'op', 'f-type': 'type', 'f-status': 'status', 'f-period': 'period' };
+    if (m[e.dataset.id]) S.F[m[e.dataset.id]] = e.dataset.v;
+    if (e.dataset.id === 'j-setting') S.JF.setting = e.dataset.v;
+    if (e.dataset.id === 'j-who') S.JF.who = e.dataset.v;
+    S.pill = null;
+  },
+  'reset-filters': () => { S.F = { circuit: 'all', source: 'all', op: 'all', type: 'all', status: 'all', period: 'all', q: '', cid: '' }; },
+  export: () => toast('Выгрузка сформирована, в файл добавлена колонка Client ID'),
+  'open-tx': (e) => { S.modal = { t: 'tx', id: e.dataset.id }; },
+  'close-modal': () => { S.modal = null; S.f = {}; },
+  'close-modal-bg': (e, ev) => { if (ev.target === e) { S.modal = null; S.f = {}; } },
+  'm-topup': () => { S.modal = { t: 'topup' }; S.f = {}; },
+  'm-own': (e) => { S.modal = { t: 'own' }; S.f = { own: e.dataset.v }; },
+  'm-other': () => { S.modal = { t: 'other' }; S.f = {}; },
+  'm-withdraw': () => { S.modal = { t: 'withdraw' }; S.f = {}; },
+  'check-email': () => { S.f.checked = true; },
+  'do-own': () => {
+    const fromMain = (S.f.own || 'main') === 'main';
+    const a = parseFloat(String(S.f.amount || '').replace(',', '.'));
+    const max = fromMain ? S.bal.usdt : S.bal.free;
+    if (!(a > 0)) { S.f.err = 'Укажите сумму'; return; }
+    if (a > max) { S.f.err = 'Сумма больше доступного остатка'; return; }
+    if (fromMain) { S.bal.usdt -= a; S.bal.free += a; } else { S.bal.free -= a; S.bal.usdt += a; }
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'transfer', st: 'done', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], dir: fromMain ? 'Основной → Счет выплат' : 'Счет выплат → Основной' });
+    S.modal = null; S.f = {}; toast('Перевод выполнен');
+  },
+  'do-other': () => {
+    S.f.checked = true;
+    const e = (S.f.email || '').trim().toLowerCase();
+    const a = parseFloat(String(S.f.amount || '').replace(',', '.'));
+    if (!e) return;
+    if (!(e.includes('partner') || e.endsWith('@nodex.io'))) return;
+    if (!(a > 0)) { toast('Укажите сумму'); return; }
+    S.bal.usdt -= a;
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'transfer', st: 'done', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], dir: 'Основной → ' + e });
+    S.modal = null; S.f = {}; toast('Перевод выполнен');
+  },
+  'do-withdraw': () => {
+    if (paused()) return;
+    const a = parseFloat(String(S.f.amount || '').replace(',', '.'));
+    if (!(a > 0)) { toast('Укажите сумму'); return; }
+    S.bal.usdt -= a;
+    const to = S.f.addr ?? S.c.awAddr;
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'withdraw', st: 'processing', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], to, hash: 'f0e1d2c3b4a5968778695a4b3c2d1e0f1a2b3c4d5e6f708192a3b4c5d6e7f809', netfee: '1,00' });
+    S.modal = null; S.f = {}; toast('Вывод отправлен в сеть');
+  },
+  'save-fee': () => {
+    log('Комиссия партнера для клиента, СБП', feeStr(S.c.feePct, S.c.feeAbs), feeStr(S.d.feePct, S.d.feeAbs));
+    S.c.feePct = S.d.feePct; S.c.feeAbs = S.d.feeAbs; toast('Комиссия сохранена. Применяется к оплатам, выставленным после изменения');
+  },
+  'save-bb': () => {
+    log('Комиссия BitBanker, пополнение по СБП', feeStr(S.c.bbPct, S.c.bbAbs), feeStr(S.d.bbPct, S.d.bbAbs), 'Оператор');
+    S.c.bbPct = S.d.bbPct; S.c.bbAbs = S.d.bbAbs; toast('Ставка BitBanker сохранена');
+  },
+  'save-conv': () => {
+    log('Нижний порог автоконвертации', S.c.convLow + ' RUBR', S.d.convLow + ' RUBR');
+    log('Верхний порог автоконвертации', S.c.convUp + ' RUBR', S.d.convUp + ' RUBR');
+    S.c.convLow = S.d.convLow; S.c.convUp = S.d.convUp; toast('Пороги сохранены');
+  },
+  'save-aw': () => {
+    if (!applyAddress(S.d.awAddr.trim())) { S.d.awAddr = S.c.awAddr; return; }
+    log('Нижний порог автовывода', S.c.awLow + ' USDT', S.d.awLow + ' USDT');
+    log('Верхний порог автовывода', S.c.awUp + ' USDT', S.d.awUp + ' USDT');
+    S.c.awLow = S.d.awLow; S.c.awUp = S.d.awUp;
+    if (!paused()) toast('Автовывод сохранен');
+  },
+  reissue: () => {
+    S.secret = 'bb_sk_' + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
+    S.secretFresh = true; log('Перевыпуск секрета', '—', 'Секрет перевыпущен'); toast('Секрет перевыпущен');
+  },
+  'save-hooks': () => {
+    log('Адрес вебхука о статусе оплаты', S.c.hook1 || 'не задан', S.d.hook1 || 'не задан');
+    log('Адрес вебхука о событиях', S.c.hook2 || 'не задан', S.d.hook2 || 'не задан');
+    S.c.hook1 = S.d.hook1; S.c.hook2 = S.d.hook2; toast('Адреса сохранены');
+  },
+  'upload-doc': () => { S.docs.push({ g: 'Документы KYB', n: 'Новый документ.pdf', d: fmtDT(new Date()).slice(0, 10) }); toast('Документ загружен'); },
+  'del-doc': (e) => { S.docs.splice(Number(e.dataset.i), 1); toast('Документ удален оператором'); },
+  copy: (e) => { try { navigator.clipboard.writeText(e.dataset.v); } catch (x) { /* без буфера */ } toast('Скопировано'); },
+  toast: (e) => toast(e.dataset.v),
+  rerender: () => {},
+  'dd-open': (e) => { const id = e.dataset.id; S.dd = S.dd === id ? null : id; S.pill = null; S.cal = null; },
+  'dd-set': (e) => { setPath(e.dataset.f, e.dataset.v); S.dd = null; },
+  'cal-open': (e) => {
+    const id = e.dataset.id;
+    if (S.cal && S.cal.id === id) { S.cal = null; return; }
+    const [y, m] = getPath(e.dataset.f).split('-').map(Number);
+    S.cal = { id, y, m: m - 1 }; S.dd = null; S.pill = null;
+  },
+  'cal-nav': (e) => { const d = Number(e.dataset.d); let m = S.cal.m + d, y = S.cal.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } S.cal = { ...S.cal, y, m }; },
+  'cal-set': (e) => { setPath(e.dataset.f, e.dataset.v); S.cal = null; },
+  chk: (e) => { setPath(e.dataset.f, !getPath(e.dataset.f)); },
+  'kyc-check': () => {
+    const id = S.kyc.id.trim();
+    S.kyc.link = ''; S.kyc.payLink = ''; S.kyc.err = '';
+    if (!id) { S.kyc.err = 'Введите ID клиента'; S.kyc.state = null; return; }
+    S.kyc.state = id.endsWith('200') ? 'check' : id.endsWith('300') ? 'ok' : id.endsWith('400') ? 'rej' : 'new';
+  },
+  'kyc-create': () => {
+    const k = S.kyc; k.err = '';
+    if (k.state === 'new') {
+      if (!k.email.trim()) { k.err = 'Email клиента обязателен при первом обращении'; return; }
+      if (k.create && !(parseFloat(k.amount) > 0)) { k.err = 'Укажите сумму оплаты'; return; }
+    }
+    k.link = 'https://kyc.bitbanker.org/s/' + Math.random().toString(36).slice(2, 10);
+    k.state = 'check';
+  },
+  'kyc-pay': () => {
+    const k = S.kyc;
+    if (!(parseFloat(k.amount) > 0)) { k.err = 'Укажите сумму оплаты'; return; }
+    k.err = ''; k.payLink = 'https://pay.bitbanker.org/q/' + Math.random().toString(36).slice(2, 8);
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'sbp', st: 'pending', age: 0, tm: fmtDT(new Date()), due: pad(new Date().getHours()) + ':' + pad((new Date().getMinutes() + 15) % 60), legs: [{ c: 'RUBR', a: parseFloat(k.amount) }], qr: parseFloat(k.amount) * 1.0173, cl: 'R' + k.id.replace(/\D/g, '').slice(0, 6), src: 'Ручная ссылка', bb: parseFloat(k.amount) * 0.0173, pf: parseFloat(k.amount) * 0.015, link: k.payLink, n: String(4913 + S.H.length) });
+    toast('Оплата выставлена и появилась в истории');
+  },
+  'pause-on': () => { startPause(); if (paused()) toast(pauseText()); else toast('Пауза не задана (0 часов)'); },
+  'pause-off': () => { S.pauseUntil = null; },
+  'scn-new': () => {
+    const n = new Date(); const amt = [3000, 7500, 12000, 25000][Math.floor(Math.random() * 4)];
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'sbp', st: 'pending', age: 0, tm: fmtDT(n), due: pad(n.getHours()) + ':' + pad((n.getMinutes() + 15) % 60), legs: [{ c: 'RUBR', a: amt }], qr: amt * 1.0173, cl: 'R' + (100000 + Math.floor(Math.random() * 899999)), src: ['API', 'Виджет', 'Ручная ссылка'][Math.floor(Math.random() * 3)], bb: amt * 0.0173, pf: amt * 0.015, link: 'https://pay.bitbanker.org/q/' + Math.random().toString(36).slice(2, 8), n: String(4913 + S.H.length) });
+    toast('Оплата клиента выставлена: статус «Ожидает»');
+  },
+  'scn-paid': () => {
+    const h = S.H.find((x) => x.k === 'sbp' && x.st === 'pending');
+    if (!h) { toast('Нет ожидающих оплат'); return; }
+    h.st = 'done'; delete h.due; S.bal.rub += h.legs[0].a; toast('Оплата прошла: статус «Завершено»');
+  },
+  'scn-exp': () => {
+    const h = S.H.find((x) => x.k === 'sbp' && x.st === 'pending');
+    if (!h) { toast('Нет ожидающих оплат'); return; }
+    h.st = 'canceled'; h.why = 'Срок оплаты вышел, оплаты не было (статус провайдера expired)'; toast('Срок вышел: статус «Отменено»');
+  },
+  'scn-blocked': () => { S.partner ? (S.route = 'blocked') : toast('Партнерский признак выключен'); },
+  reset: () => { location.reload(); },
+};
+
+document.addEventListener('click', (ev) => {
+  let t = ev.target.closest('[data-act]');
+  if (!t) { if (S.pill || S.dd || S.cal) { S.pill = null; S.dd = null; S.cal = null; render(); } return; }
+  if (!['dd-open', 'dd-set', 'pill', 'pill-set', 'cal-open', 'cal-nav', 'cal-set'].includes(t.dataset.act)) { S.pill = null; S.dd = null; S.cal = null; }
+  if (t.dataset.act === 'close-modal-bg') { if (ev.target !== t) return; }
+  else if (ev.target.closest('[data-stop]') && t.dataset.act === 'close-modal-bg') return;
+  const fn = ACTIONS[t.dataset.act];
+  if (!fn) return;
+  if (t.dataset.act === 'copy' || t.dataset.act === 'open-tx') ev.stopPropagation();
+  fn(t, ev);
+  render();
+});
+const readVal = (t) => (t.dataset.f === 'pauseHours' ? (Number(String(t.value).replace(',', '.')) || 0) : t.value);
+document.addEventListener('input', (ev) => {
+  const t = ev.target.closest('[data-f]');
+  if (!t) return;
+  setPath(t.dataset.f, readVal(t));
+  if (t.dataset.rerender && t.tagName === 'INPUT' && t.type === 'text') {
+    const pos = t.selectionStart; const f = t.dataset.f;
+    render();
+    const again = document.querySelector(`[data-f="${f}"]`);
+    if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (x) { /* ignore */ } }
+  }
+});
+document.addEventListener('change', (ev) => {
+  const t = ev.target.closest('[data-f]');
+  if (!t) return;
+  setPath(t.dataset.f, readVal(t));
+  if (t.dataset.rerender) render();
+});
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && S.modal) { S.modal = null; S.f = {}; render(); } });
+S.f = {};
+(function initFromHash() {
+  const h = decodeURIComponent((location.hash || '').slice(1));
+  if (!h) return;
+  h.split(',').forEach((p) => {
+    if (p === 'dark') S.theme = 'dark';
+    else if (p === 'admin') S.admin = true;
+    else if (p === 'hl') S.hl = true;
+    else if (p.indexOf('zoom=') === 0) S.zoom = p.slice(5);
+    else if (p === 'nopartner') S.partner = false;
+    else if (p === 'noiban') S.iban = false;
+    else if (p === 'nomanual') S.manual = false;
+    else if (p === 'nopanel') S.panelOpen = false;
+    else if (p === 'paused') { S.pauseUntil = Date.now() + 3 * 3600 * 1000; }
+    else if (p.indexOf('bridge=') === 0) S.bridge = p.slice(7);
+    else if (p.indexOf('modal=') === 0) { const m = p.slice(6); S.f = {}; S.modal = m === 'tx' ? { t: 'tx', id: S.H[0].id } : { t: m }; }
+    else if (PARTNER_PAGES[p] || p.indexOf('r-') === 0) S.route = p;
+  });
+})();
+render();
+</script>
+</body>
+</html>
