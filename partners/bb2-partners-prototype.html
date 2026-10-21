@@ -1514,7 +1514,7 @@ function mockClientOperations(clientId){
   if(!c || c.sbpTopUp) types.push('SBP');
   if(c && c.qrTopUp) types.push('QR');
   if(!types.length) types.push('SBP');
-  const autoConvert = h % 3 === 0; // пример: у части клиентов площадка сама конвертирует пополнение в другую валюту
+  const autoConvert = h % 2 === 0; // пример: у части клиентов площадка сама конвертирует каждое подтверждённое пополнение в USDT отдельной операцией-ордером
   const ops = [];
   for(let i=0;i<count;i++){
     const seed = (h + i*97) >>> 0;
@@ -1580,16 +1580,34 @@ function mockClientOperations(clientId){
     mainOp.refundState = !confirmedRun ? null : (Math.abs(refundableTotal - confirmedRun) < 0.01 ? 'REFUNDED' : 'PARTIALLY_REFUNDED');
     // пример: если у клиента включена автоконвертация, следом за подтверждённым пополнением
     // площадка сама создаёт операцию обмена в валюту автовывода — показываем отдельной строкой
-    if(autoConvert && status==='CONFIRMED' && i===0){
+    if(autoConvert && status==='CONFIRMED' && (type==='SBP' || type==='QR' || isInvoiceMethod)){
       const rate = 92.5 + (seed % 300)/100;
-      ops.push({
+      // конвертируется сумма после комиссий (нетто зачисления). Рыночный ордер исполняется, сколько позволяет стакан:
+      // в части случаев - частично, остаток рублей остаётся на счёте партнёра (это не ошибка)
+      const aConv = agentById(c?.agentId);
+      const netRub = Math.floor(opFeeInfo({amount, type: isInvoiceMethod?'INVOICE':type}, aConv).netAmount);
+      const partial = seed % 3 === 0;
+      const fromAmount = partial ? Math.floor(netRub*0.7) : netRub;
+      const remainder = netRub - fromAmount;
+      // Связка «зачисление -> конвертация». Заявка (ORD-...) и сделка (TRD-...) уже есть на странице обмена
+      // как референсы, а исходное зачисление хранится в служебной таблице agent_conversions
+      // (source_operation_id <-> last_order_id). Поэтому на странице обмена исходный платёж показывается
+      // отдельным полем «Исходное зачисление» (по коду заявки), а payment.note остаётся свободной заметкой.
+      const orderPublicId = 'ORD-' + pseudoUuid('ord'+seed).replace(/-/g,'').slice(0,8).toUpperCase();
+      const tradePublicId = 'TRD-' + pseudoUuid('trd'+seed).replace(/-/g,'').slice(0,8).toUpperCase();
+      const exchangeOp = {
         sbpOperationId: 'exc_' + (2000000 + seed%799999),
         status:'CONFIRMED', type:'EXCHANGE', bankName:null,
-        amount, createdAt, paidAt: createdAt,
-        linkedOpId: 'sbp_' + (1000000 + seed%899999),
+        amount: fromAmount, createdAt, paidAt: createdAt,
+        linkedOpId: mainOp.sbpOperationId,
         rate, fromCurrency:'RUB', toCurrency:'USDT',
-        fromAmount: amount, toAmount: +(amount/rate).toFixed(2),
-      });
+        fromAmount, toAmount: +(fromAmount/rate).toFixed(2),
+        remainder,
+        orderPublicId, tradePublicId, symbol:'TUSDT/RUBR',
+      };
+      ops.push(exchangeOp);
+      // у зачисления - статус автоконвертации и код заявки (adminPartnerClientOperation.conversionStatus / conversionOrderPublicId)
+      mainOp.conversion = { status: partial?'PARTIAL':'DONE', orderPublicId, exchangeOpId: exchangeOp.sbpOperationId };
     }
   }
   const resolved = ops.map(op=>{
@@ -1627,6 +1645,14 @@ function opStatusBadgeFor(op){
   if(op.refundState==='REFUNDED') return `<span class="badge b-faded"><span class="d"></span>Возвращена полностью</span>`;
   return opStatusBadge(op.status);
 }
+/** Текущее время в формате дат операций прототипа (YYYY-MM-DD HH:MM) - чтобы новые записи не отличались от остальных. */
+function opNowStamp(){
+  const d = new Date();
+  const p2 = (n)=> String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+/** Статусы автоконвертации зачисления - как в AgentConversionStatusEnum (PENDING, DONE, PARTIAL, FAILED). */
+const CONV_STATUS_LABEL = { PENDING:'Ожидает', DONE:'Выполнена', PARTIAL:'Выполнена частично', FAILED:'Не выполнена' };
 /** Детерминированный псевдо-uuid для idempotency_key возврата - для мока. */
 function pseudoUuid(seedStr){
   let h1=0,h2=0;
@@ -3527,17 +3553,11 @@ function renderClientOperationsTab(c, a){
     <div class="panel">
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Возврат</th><th>Действие</th></tr></thead>
+          <thead><tr><th>ID операции</th><th>Тип операции</th><th>Дата оплаты</th><th>Сумма, RUB</th><th>Комиссия, RUB</th><th>Статус</th><th>Действие</th></tr></thead>
           <tbody>${rows.length ? rows.map(op=>{
             const fee = opFeeInfo(op, a);
             const isHung = op.status==='PENDING';
             const inv = op.invoice;
-            const refundBadge = (!inv || !inv.refunds.length) ? '<span class="muted">—</span>'
-              : inv.refunds.map(r=>{
-                  const map = { PENDING:['b-warning','Возврат в ожидании'], CONFIRMED:['b-success','Возврат подтверждён'], FAILED:['b-error','Возврат отклонён'] };
-                  const [cls,label] = map[r.status]||['b-faded', r.status];
-                  return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
-                }).join(' ');
             const isRefund = op.type==='REFUND';
             // своей комиссии у REFUND нет - показываем удержанную банком комиссию с исходного платежа,
             // а не оставляем колонку пустой (см. bt6-runa-vozvrat-refund.md)
@@ -3556,13 +3576,12 @@ function renderClientOperationsTab(c, a){
               <td class="cell-strong" style="${isRefund?'color:var(--error-dark)':''}">${isRefund?'-':''}${op.amount.toLocaleString('ru-RU')}</td>
               <td class="muted">${isRefund?refundBankFee.toLocaleString('ru-RU',{maximumFractionDigits:2}):fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
               <td>${opStatusBadgeFor(op)}</td>
-              <td>${refundBadge}</td>
               <td>${isHung ? `
                 <div style="display:flex;gap:6px">
                   <button class="btn btn-sm btn-primary" data-op-approve="${esc(op.sbpOperationId)}">Подтвердить</button>
                   <button class="btn btn-sm btn-danger" data-op-decline="${esc(op.sbpOperationId)}">Отклонить</button>
                 </div>` : `<span class="muted">—</span>`}</td>
-            </tr>`;}).join('') : `<tr><td colspan="8"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
+            </tr>`;}).join('') : `<tr><td colspan="7"><div class="empty-state" style="padding:20px">${allOps.length ? 'Нет операций по выбранным фильтрам' : 'У этого клиента ещё нет операций'}</div></td></tr>`}</tbody>
         </table>
       </div>
       <div class="pagfoot"><span>Total: ${rows.length} lines</span><select class="select"><option>10</option><option>20</option><option>50</option></select></div>
@@ -3613,28 +3632,39 @@ function opLedgerRows(op, c, a){
   if(op.status==='PENDING') return [];
   const accClient = pseudoAccountId('acc-'+c.id);
   const accPartner = pseudoAccountId('acc-'+(a?a.id:'no-partner'));
-  const st = (i)=> op.status==='FAILED' ? (i>=2?'DECLINED':'CONFIRMED') : 'CONFIRMED'; // зачисление партнёру и списание с клиента откатились, комиссия/приход от банка остались
+  const st = ()=> op.status==='FAILED' ? 'DECLINED' : 'CONFIRMED'; // у отклонённой операции все проводки откатились (видны в статусе «Отклонена»)
+  const fmt = (n,cur)=> `${n.toLocaleString('ru-RU',{maximumFractionDigits:2})} ${cur}`;
+  const at = op.paidAt || op.createdAt;
+  // val/cur - число и валюта для итогов «Дт = Кт по каждой валюте»; amount - строка для отображения
+  const row = (account, type, val, cur, status, label)=>({account, type, val, cur, amount:fmt(val,cur), status, label, at});
   if(op.type==='EXCHANGE'){
+    // обмен идёт внутри счёта партнёра против стакана: по каждой валюте дебет равен кредиту
     return [
-      {account:accClient, type:'DEBIT', amount:`${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency}`, status:st(0)},
-      {account:accClient, type:'CREDIT', amount:`${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}`, status:st(1)},
+      row(accPartner, 'DEBIT', op.fromAmount, op.fromCurrency, st(0), 'Счёт партнёра, RUBR'),
+      row('MARKET-TUSDT-RUBR', 'CREDIT', op.fromAmount, op.fromCurrency, st(1), 'Контрагент сделки в стакане, RUBR'),
+      row('MARKET-TUSDT-RUBR', 'DEBIT', op.toAmount, op.toCurrency, st(2), 'Контрагент сделки в стакане, USDT'),
+      row(accPartner, 'CREDIT', op.toAmount, op.toCurrency, st(3), 'Счёт партнёра, USDT'),
     ];
   }
   if(op.type==='REFUND'){
     // реверс в обратную сторону от исходного пополнения — счёт партнёра дебетуется,
     // служебный счёт провайдера кредитуется на сумму возврата
     return [
-      {account:accPartner, type:'DEBIT', amount:`${op.amount.toLocaleString('ru-RU')} RUB`, status:st(0)},
-      {account:'SERVICE-BT6-RUNA', type:'CREDIT', amount:`${op.amount.toLocaleString('ru-RU')} RUB`, status:st(1)},
+      row(accPartner, 'DEBIT', op.amount, 'RUB', st(0), 'Счёт партнёра'),
+      row('SERVICE-BT6-RUNA', 'CREDIT', op.amount, 'RUB', st(1), 'Сервисный счёт провайдера'),
     ];
   }
+  // пополнение: пул обязательств учёта платежей дебетуется на всю сумму, кредитуются партнёр (нетто) и комиссии,
+  // итог по валюте Дт = Кт
   const fee = opFeeInfo(op, a);
-  return [
-    {account:accClient, type:'DEBIT', amount:`${fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(0)},
-    {account:accClient, type:'CREDIT', amount:`${op.amount.toLocaleString('ru-RU')} RUB`, status:st(1)},
-    {account:accClient, type:'DEBIT', amount:`${fee.netAmount.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(2)},
-    {account:accPartner, type:'CREDIT', amount:`${fee.netAmount.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB`, status:st(3)},
+  const rows = [
+    row('POOL-PAYMENTS-LIABILITY', 'DEBIT', op.amount, 'RUB', st(0), 'Пул обязательств учёта платежей'),
+    row(accPartner, 'CREDIT', fee.netAmount, 'RUB', st(1), 'Счёт партнёра'),
   ];
+  if(fee.bankFee>0) rows.push(row('PAYMENTS-ACCOUNTING-COMMISSION', 'CREDIT', fee.bankFee, 'RUB', st(2), 'Комиссия учёта платежей (банк)'));
+  if(fee.providerFee>0) rows.push(row('WL-OWNER-REVENUE', 'CREDIT', fee.providerFee, 'RUB', st(3), 'Доход площадки (комиссия BitBanker)'));
+  if(fee.partnerFee>0) rows.push(row(accPartner, 'CREDIT', fee.partnerFee, 'RUB', st(3), 'Счёт партнёра (комиссия партнёра)'));
+  return rows;
 }
 
 // Платёжная система - реальная рельса движения денег, а не наш внутренний тип операции:
@@ -3642,12 +3672,275 @@ function opLedgerRows(op, c, a){
 // для типа операции в ядре, см. dorabotki-partnyorskij-api-01-10-2026.md, раздел "Решение").
 const PAYMENT_SYSTEM_CODE = { SBP:'SBP', QR:'QR', INVOICE:'SBP', EXCHANGE:'EXCHANGE', REFUND:'SBP' };
 
+/** Страница операции обмена (автоконвертация зачисления) - в виде страницы платежа «Биржевая сделка» бэк-офиса:
+ *  заявка партнёра - маркет-ордер тейкера против стакана TUSDT/RUBR, расчёт сделки идёт шестью проводками
+ *  (комиссии мейкера и тейкера - отдельными проводками на счёт комиссий). Связь с исходным зачислением -
+ *  поле «Исходное зачисление» в метаданных (по коду заявки в agent_conversions), payment.note остаётся свободной заметкой. */
+function renderExchangeDetail(clientId, op, c, a){
+  const opId = op.sbpOperationId;
+  if(state.opTabFor!==opId){ state.opTab='info'; state.opTabFor=opId; }
+  const opTab = state.opTab || 'info';
+  const n6 = (v)=> Number(v).toLocaleString('ru-RU',{maximumFractionDigits:6});
+  const n2 = (v)=> Number(v).toLocaleString('ru-RU',{maximumFractionDigits:2});
+  const ref = (seed, len)=> pseudoUuid(seed).replace(/-/g,'').slice(0,len).toUpperCase();
+
+  // параметры сделки: партнёр - тейкер (BUY TUSDT за RUBR), контрагент в стакане - мейкер (SELL)
+  const price = op.rate, base = op.toAmount, quote = op.fromAmount;
+  const MAKER_BPS = 5, TAKER_BPS = 10;
+  const takerFee = Math.ceil(base*TAKER_BPS/10000*1e6)/1e6;     // USDT, удерживается из зачисляемого тейкеру
+  const makerFee = Math.ceil(quote*MAKER_BPS/10000*100)/100;    // RUBR, удерживается из зачисляемого мейкеру
+  const makerGets = +(quote - makerFee).toFixed(2);
+  const takerGets = +(base - takerFee).toFixed(6);
+  const BASE = 'USDT (TRC-20)', QUOTE = 'RUBR';
+
+  const tradeRef = op.tradePublicId, takerOrd = op.orderPublicId, makerOrd = 'ORD-' + ref('mk'+opId, 8);
+  const marketRef = 'MKT-' + ref('mkt', 8);
+  const makerCl = 'CL-' + ref('mcl'+opId, 8), takerCl = 'CL-' + ref('tcl'+(a?a.id:'p'), 8);
+  const makerName = ['Иванов Пётр Сергеевич','Смирнова Анна Олеговна','Орлов Денис Игоревич','Кузнецова Мария Павловна'][parseInt(ref(opId,4),16)%4];
+  const takerName = a ? a.name : 'Партнёр';
+  const vaMakerCrypto = 'VA-' + ref('vmc'+opId, 8), vaMakerFiat = 'VA-' + ref('vmf'+opId, 8);
+  const vaTakerCrypto = 'VA-' + ref('vtc'+(a?a.id:'p'), 8), vaTakerFiat = 'VA-' + ref('vtf'+(a?a.id:'p'), 8);
+  const vaCommission = 'VA-' + ref('commission', 8);
+  const settleId = pseudoUuid('settle'+opId);
+  const at = op.paidAt || op.createdAt;
+  const purpose = `[TRADE.EXCHANGE] trade=${tradeRef} · maker=${makerCl} → taker=${takerCl} · TUSDT/RUBR @ ${price} · ${n6(base)} TUSDT ↔ ${n2(quote)} RUBR · биржевой обмен в стакане`;
+
+  const party = (role, name, initials, cl, accSpend, accGet, spendCur, getCur)=>({
+    roleLabel: role, name, initials, badges:['Физическое лицо'],
+    rows:[
+      {k:'ID клиента', v:cl, mono:true},
+      {k:'Счёт списания', v:`${accSpend} (${spendCur})`, mono:true},
+      {k:'Счёт зачисления', v:`${accGet} (${getCur})`, mono:true},
+    ],
+  });
+  const maker = party('Мейкер', makerName, makerName.split(' ').slice(0,2).map(w=>w[0]).join(''), makerCl, vaMakerCrypto, vaMakerFiat, BASE, QUOTE);
+  const taker = party('Тейкер (партнёр)', takerName, (takerName.match(/\S/)?takerName.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase():'—'), takerCl, vaTakerFiat, vaTakerCrypto, QUOTE, BASE);
+  taker.rows.unshift({k:'ID партнёра', v: a?a.userId:null, link: a?{gotoId:a.id}:null});
+
+  // проводки расчёта: по каждой валюте Дт = Кт
+  const T = (acc, label, type, val, cur)=>({account:acc, label, type, val, cur, amount:`${n6(val)} ${cur}`, status:'CONFIRMED', at});
+  const ledger = [
+    T(vaMakerCrypto, `Кредиторская задолженность перед клиентом · ${makerName}`, 'DEBIT', base, BASE),
+    T(vaTakerFiat, `Счёт партнёра, RUBR · ${takerName}`, 'DEBIT', quote, QUOTE),
+    T(vaMakerFiat, `Счёт мейкера, RUBR · ${makerName}`, 'CREDIT', makerGets, QUOTE),
+    T(vaTakerCrypto, `Кредиторская задолженность перед клиентом · ${takerName}`, 'CREDIT', takerGets, BASE),
+    T(vaCommission, 'Комиссия учёта платежей · комиссия мейкера', 'CREDIT', makerFee, QUOTE),
+    T(vaCommission, 'Комиссия учёта платежей · комиссия тейкера', 'CREDIT', takerFee, BASE),
+  ];
+  const curs = [BASE, QUOTE];
+  const totals = curs.map(cur=>{
+    const d = ledger.filter(r=>r.cur===cur && r.type==='DEBIT').reduce((x,r)=>x+r.val,0);
+    const k = ledger.filter(r=>r.cur===cur && r.type==='CREDIT').reduce((x,r)=>x+r.val,0);
+    return `<tr style="background:var(--bg-weak)"><td></td><td class="cell-strong">Итого, ${esc(cur)} <span class="muted" style="font-weight:400;margin-left:6px">${Math.abs(d-k)<0.00001?'Дт = Кт':'Дт ≠ Кт'}</span></td><td class="cell-strong">${n6(d)} ${esc(cur)}</td><td class="cell-strong">${n6(k)} ${esc(cur)}</td><td></td><td></td></tr>`;
+  }).join('');
+
+  const mainPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Основное</h3></div>
+      <div class="panel-b">
+        <dl class="deflist" style="grid-template-columns:1fr;margin-bottom:14px">
+          <div><dt>Сумма · объём сделки в базовой и котируемой валюте</dt><dd class="cell-strong" style="font-size:17px">${n6(base)} ${BASE} → ${n2(quote)} ${QUOTE}</dd></div>
+        </dl>
+        <dl class="deflist cols3">
+          <div><dt>Направление</dt><dd>Внутренний</dd></div>
+          <div><dt>Платёжная система</dt><dd class="mono" style="font-size:12.5px">TRADING</dd></div>
+          <div><dt>Поставщик</dt><dd class="muted">—</dd></div>
+          <div><dt>Дата</dt><dd>${esc(op.createdAt)}</dd></div>
+          <div><dt>Исполнено в</dt><dd>${esc(at)}</dd></div>
+          <div><dt>Статус операции</dt><dd>Завершён</dd></div>
+          <div><dt>Решение AML</dt><dd class="muted">—</dd></div>
+          <div><dt>Обновлено в</dt><dd>${esc(at)}</dd></div>
+          <div><dt>Списано у мейкера</dt><dd class="cell-strong">${n6(base)} ${BASE}</dd></div>
+          <div><dt>Зачислено мейкеру</dt><dd class="cell-strong">${n2(makerGets)} ${QUOTE}</dd></div>
+          <div><dt>Курс конвертации</dt><dd>${esc(String(price))}</dd></div>
+        </dl>
+      </div>
+    </div>`;
+
+  const feesPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Комиссии</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Комиссия <span class="muted">· [TRADE.EXCHANGE] CREDIT commission (role=taker) · ${n6(takerFee)} · trade=${esc(tradeRef)}: комиссия, удержанная из зачисляемого</span></dt><dd>${n6(takerFee)} ${BASE}</dd></div>
+          <div><dt>Комиссия <span class="muted">· [TRADE.EXCHANGE] CREDIT commission (role=maker) · ${n2(makerFee)} · trade=${esc(tradeRef)}: комиссия, удержанная из зачисляемого</span></dt><dd>${n2(makerFee)} ${QUOTE}</dd></div>
+          <div><dt>Итого удержано <span class="muted">· сумма по каждой валюте комиссии отдельно</span></dt><dd class="cell-strong">${n6(takerFee)} ${BASE}<br>${n2(makerFee)} ${QUOTE}</dd></div>
+        </dl>
+      </div>
+    </div>`;
+
+  const partiesPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Участники операции</h3></div>
+      <div class="panel-b">
+        <div class="parties">
+          ${opPartyHtml(maker)}
+          <div class="mid-divider"><div class="line"></div><div class="arrow-ic">→</div><div class="line"></div></div>
+          ${opPartyHtml(taker)}
+        </div>
+      </div>
+    </div>`;
+
+  const dealPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Сделка</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Сделка</dt><dd>Рассчитана</dd></div>
+          <div><dt>Символ</dt><dd class="mono" style="font-size:12.5px">TUSDT/RUBR</dd></div>
+          <div><dt>Цена сделки</dt><dd>${esc(String(price))}</dd></div>
+          <div><dt>Объём (базовая валюта)</dt><dd>${n6(base)} TRON</dd></div>
+          <div><dt>Объём (котируемая валюта)</dt><dd>${n2(quote)}</dd></div>
+          <div><dt>Сторона мейкера</dt><dd>SELL</dd></div>
+          <div><dt>Сторона тейкера</dt><dd>BUY</dd></div>
+          <div><dt>Комиссия мейкера, б.п.</dt><dd>${MAKER_BPS}</dd></div>
+          <div><dt>Комиссия тейкера, б.п.</dt><dd>${TAKER_BPS}</dd></div>
+          <div><dt>Дата исполнения</dt><dd>${esc(at)}</dd></div>
+          <div><dt>Дата расчёта</dt><dd>${esc(at)}</dd></div>
+        </dl>
+      </div>
+    </div>`;
+
+  const techPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Технические детали</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Референс сделки</dt><dd class="mono" style="font-size:12.5px">${esc(tradeRef)}</dd></div>
+          <div><dt>Референс рынка</dt><dd class="mono" style="font-size:12.5px">${esc(marketRef)}</dd></div>
+          <div><dt>Референс ордера мейкера</dt><dd class="mono" style="font-size:12.5px">${esc(makerOrd)}</dd></div>
+          <div><dt>Референс ордера тейкера</dt><dd class="mono" style="font-size:12.5px">${esc(takerOrd)}</dd></div>
+          <div><dt>ID проводки расчёта</dt><dd class="mono" style="font-size:11.5px">${esc(settleId)}</dd></div>
+          <div><dt>Мейкер</dt><dd class="mono" style="font-size:12px">${esc(makerCl)} · ${esc(makerName)}</dd></div>
+          <div><dt>Тейкер</dt><dd class="mono" style="font-size:12px">${esc(takerCl)} · ${esc(takerName)}</dd></div>
+        </dl>
+      </div>
+    </div>`;
+
+  const metaPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Метаданные</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Источник средств</dt><dd class="muted">—</dd></div>
+          <div style="grid-column:span 2"><dt>Назначение платежа</dt><dd>${esc(purpose)}</dd></div>
+          <div><dt>Заметка (payment.note)</dt><dd class="muted">—</dd></div>
+          <div><dt>Исходное зачисление</dt><dd><a href="#" class="namelink mono" style="font-size:12.5px" data-goto-operation="${esc(op.linkedOpId)}">${esc(op.linkedOpId)}</a></dd></div>
+          ${op.remainder>0 ? `<div><dt>Не обменянный остаток</dt><dd>${n2(op.remainder)} RUB — остаётся рублями на счёте партнёра</dd></div>` : ''}
+        </dl>
+        <div class="empty-state" style="padding:10px 0 0;text-align:left">Сырых метаданных нет</div>
+      </div>
+    </div>`;
+
+  const attachmentsPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Вложения</h3></div>
+      <div class="panel-b"><div class="empty-state" style="padding:6px 0;text-align:left">Вложений нет</div></div>
+    </div>`;
+  const actionsPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Действия по операции</h3><span class="muted" style="font-size:12px">ручные действия клиента и администратора: кто, когда, что сделал и почему</span></div>
+      <div class="panel-b"><div class="op-timeline">${opTimelineHtml(op)}</div></div>
+    </div>`;
+  const commentsPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Комментарии оператора</h3></div>
+      <div class="panel-b">${renderOpComments(opId)}</div>
+    </div>`;
+
+  const feeRows = [
+    {to:'Комиссия учёта платежей', acc:vaCommission, amount:`${n6(takerFee)} ${BASE}`, src:vaTakerCrypto, descr:`[TRADE.EXCHANGE] CREDIT commission (role=taker) · ${n6(takerFee)} · trade=${tradeRef}: комиссия, удержанная из зачисляемого`},
+    {to:'Комиссия учёта платежей', acc:vaCommission, amount:`${n2(makerFee)} ${QUOTE}`, src:vaMakerFiat, descr:`[TRADE.EXCHANGE] CREDIT commission (role=maker) · ${n2(makerFee)} · trade=${tradeRef}: комиссия, удержанная из зачисляемого`},
+  ];
+  const ledgerTab = `
+    <div class="panel">
+      <div class="panel-h"><h3>Проводки операции</h3><span class="muted" style="font-size:12px">дебет и кредит по каждому счёту, итог Дт = Кт по каждой валюте</span></div>
+      <div class="twrap">
+        <table class="grid">
+          <thead><tr><th>№</th><th>Счёт</th><th>Дебет</th><th>Кредит</th><th>Статус</th><th>Дата</th></tr></thead>
+          <tbody>${ledger.map((r,i)=>`
+            <tr>
+              <td class="muted">${i+1}</td>
+              <td><div style="font-size:13px">${esc(r.label)}</div><div class="mono" style="font-size:11.5px;color:var(--primary)">${esc(r.account)}</div></td>
+              <td class="cell-strong">${r.type==='DEBIT'?esc(r.amount):''}</td>
+              <td class="cell-strong">${r.type==='CREDIT'?esc(r.amount):''}</td>
+              <td>Подтверждена</td>
+              <td class="muted">${esc(r.at)}</td>
+            </tr>`).join('')}${totals}</tbody>
+        </table>
+      </div>
+      <div class="empty-state" style="padding:10px 16px 16px;text-align:left">Строки идут в порядке проводок внутри операции. Клик по счёту открывает раздел «Счета» на карточке этого счёта.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Комиссии платежа</h3><span class="muted" style="font-size:12px">кому и сколько начислено по этому платежу</span></div>
+      <div class="twrap">
+        <table class="grid">
+          <thead><tr><th>Получатель</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Создано</th><th>Счёт-источник</th><th>Описание</th></tr></thead>
+          <tbody>${feeRows.map(r=>`
+            <tr>
+              <td><div style="font-size:13px">${esc(r.to)}</div><div class="mono" style="font-size:11.5px;color:var(--primary)">${esc(r.acc)}</div></td>
+              <td class="cell-strong">${esc(r.amount)}</td>
+              <td>Кредит</td>
+              <td>Подтверждена</td>
+              <td class="muted">${esc(at)}</td>
+              <td class="mono" style="font-size:11.5px;color:var(--primary)">${esc(r.src)}</td>
+              <td style="font-size:12px">${esc(r.descr)}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  const infoTab = `
+    ${mainPanel}
+    ${feesPanel}
+    ${partiesPanel}
+    ${dealPanel}
+    ${techPanel}
+    ${metaPanel}
+    ${attachmentsPanel}
+    ${actionsPanel}
+    ${commentsPanel}`;
+
+  return `
+    <div class="rec-card">
+      <div class="rec-top">
+        <a href="#" class="rec-back" id="backToOps">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div style="flex:1">
+          <div class="rec-headrow" style="justify-content:space-between">
+            <div class="rec-headrow" style="gap:12px"><h1>Платёж #${esc(opId)}</h1></div>
+          </div>
+          <div class="rec-headrow" style="gap:8px;margin-top:6px">
+            <span class="badge b-info"><span class="d"></span>Биржевая сделка</span>
+            <span class="badge b-faded"><span class="d"></span>Внутренний</span>
+            <span class="badge b-success"><span class="d"></span>Успешен</span>
+          </div>
+          <div class="rec-meta">
+            <span class="idcopy" title="ID операции">ID: ${esc(opId)}</span>
+            <span>Клиент: <a href="#" class="namelink" id="opGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
+            <span>Исходное зачисление: <a href="#" class="namelink" id="opGotoOriginal" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedOpId)}</a></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="seg-tabs" style="margin:14px 0">
+      <button class="seg-tab ${opTab==='info'?'active':''}" data-op-tab="info">Информация</button>
+      <button class="seg-tab ${opTab==='ledger'?'active':''}" data-op-tab="ledger">Проводки <span class="muted" style="margin-left:4px">${ledger.length}</span></button>
+    </div>
+
+    ${opTab==='ledger' ? ledgerTab : infoTab}
+  `;
+}
+
 function renderOperationDetail(clientId, opId){
   const c = clientById(clientId);
   if(!c) return `<div class="empty-state">Клиент не найден</div>`;
   const a = agentById(c.agentId);
   const op = mockClientOperations(clientId).find(o=>o.sbpOperationId===opId);
   if(!op) return `<div class="empty-state">Операция не найдена</div>`;
+  if(op.type==='EXCHANGE') return renderExchangeDetail(clientId, op, c, a);
 
   const fee = opFeeInfo(op, a);
   const fmtMoney = (n,cur)=> n.toLocaleString('ru-RU',{maximumFractionDigits:2}) + ' ' + (cur||'RUB');
@@ -3655,9 +3948,9 @@ function renderOperationDetail(clientId, opId){
   const isRefund = op.type==='REFUND';
   const isInvoice = op.type==='INVOICE';
   // Мультивозвраты: по одной попытке счёта можно оформить несколько возвратов, пока остаток к возврату больше нуля.
-  // Одновременно допускается не более одного возврата в ожидании банка (PENDING, у провайдера requested) -
-  // следующий оформляется после ответа банка по предыдущему.
-  const hasPendingRefund = isInvoice && op.invoice.refunds.some(r=>r.status==='PENDING');
+  // Провайдер подтвердил: следующий возврат можно оформлять и пока предыдущий не подтверждён банком
+  // (в ожидании, у провайдера requested). Возврат в ожидании резервирует сумму в остатке, ограничения на
+  // одновременность на нашей стороне нет - остаток всегда считается с учётом всех возвратов кроме отклонённых.
   // возвращено = подтверждено банком (accepted); в ожидании - зарезервировано в остатке; отклонённые остаток не расходуют
   const confirmedRefundTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status==='CONFIRMED').reduce((s,r)=>s+r.amount,0) : 0;
   const pendingRefundTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status==='PENDING').reduce((s,r)=>s+r.amount,0) : 0;
@@ -3666,7 +3959,7 @@ function renderOperationDetail(clientId, opId){
   const refundableBase = isInvoice ? Math.max(op.amount - fee.bankFee, 0) : 0;
   // остаток к возврату = refundable_total - возвраты в CONFIRMED - возвраты в PENDING
   const remainingToRefund = isInvoice ? Math.max(+(refundableBase - refundedTotal).toFixed(2), 0) : 0;
-  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0 && !hasPendingRefund;
+  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0;
   // Комиссии своей у REFUND нет - банковская комиссия была удержана ещё на исходном платеже
   // и повторно не взимается (bt6-runa-vozvrat-refund.md); показываем её с исходной операции,
   // а не оставляем панель совсем пустой.
@@ -3689,11 +3982,13 @@ function renderOperationDetail(clientId, opId){
       ],
       link: a ? {label:'Открыть виртуальный счёт', enabled:true, gotoId:a.id} : null,
     };
+    // плательщик по СБП Bitbanker не идентифицирован: им может оказаться не клиент партнёра, а любой человек,
+    // оплативший QR, поэтому в карточке получателя клиент не показывается, а стоит пояснение
     receiver = {
       roleLabel:'Получатель возврата', name:'Плательщик по исходной операции', initials:'🏦',
       badges:['НСПК'],
       rows:[
-        {k:'Реквизиты', v:'Неизвестны Bitbanker — возврат через НСПК по ссылке на исходный платёж'},
+        {k:'Данные плательщика', v:'Неизвестны Bitbanker — возврат через НСПК по ссылке на исходный платёж'},
         {k:'Причина возврата', v: op.refundReason},
       ],
     };
@@ -3740,94 +4035,77 @@ function renderOperationDetail(clientId, opId){
 
   const ledgerRows = opLedgerRows(op, c, a);
 
+  // ответ провайдера по возврату (элемент refunds[]) лежит в сырых метаданных, а не на карточке
   const metaJson = isRefund
-    ? {source:'bb', bb_type:'reversal', original_operation_id:op.linkedOpId, invoice_id:op.linkedInvoiceId}
+    ? {source:'bb', bb_type:'reversal', original_operation_id:op.linkedOpId, invoice_id:op.linkedInvoiceId,
+       provider_refund:{ idempotency_key:op.idempotencyKey, status:op.providerStatus, amount:op.amount.toFixed(2) }}
     : isExchange
       ? {source:'bb', bb_type:'exchange', rate:op.rate}
       : {source:'bb', bb_type: op.type==='SBP'?'sbp':op.type==='QR'?'qr':'invoice'};
 
-  return `
-    <div class="rec-card">
-      <div class="rec-top">
-        <a href="#" class="rec-back" id="backToOps">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-        <div style="flex:1">
-          <div class="rec-headrow" style="justify-content:space-between">
-            <div class="rec-headrow" style="gap:12px">
-              <h1>Операция ${esc(op.sbpOperationId)}</h1>
-              ${opTypeBadge(op.type)}
-              ${opStatusBadgeFor(op)}
-            </div>
-            ${op.status==='PENDING' ? `
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-primary" id="opApprove">${isRefund?'Банк вернул (accepted)':'Подтвердить'}</button>
-              <button class="btn btn-danger" id="opDecline">${isRefund?'Банк отклонил':'Отклонить'}</button>
-            </div>` : canRefund ? `<button class="btn btn-primary" id="opCreateRefund">Оформить возврат</button>`
-              : (isInvoice && hasPendingRefund && remainingToRefund > 0) ? `<span class="muted" style="font-size:12.5px;max-width:280px;text-align:right">Следующий возврат можно оформить после ответа банка по предыдущему</span>` : ''}
-          </div>
-          <div class="rec-meta">
-            <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
-            <span>Клиент: <a href="#" class="namelink" id="opGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
-            ${isRefund ? `<span>Исходная операция: <a href="#" class="namelink" id="opGotoOriginal" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedOpId)}</a></span>` : `<span>Дата создания: ${esc(op.createdAt)}</span>`}
-          </div>
-        </div>
-      </div>
-    </div>
+  // вкладка карточки: «Информация» и «Проводки» (как на странице платежа бэк-офиса)
+  if(state.opTabFor!==opId){ state.opTab='info'; state.opTabFor=opId; }
+  const opTab = state.opTab || 'info';
+  const directionLabel = isRefund ? 'Исходящий' : isExchange ? 'Внутренний' : 'Входящий';
+  const opStateLabel = op.status==='FAILED' ? 'Отклонён' : op.status==='PENDING' ? 'В обработке' : 'Завершён';
+  const conversionLabels = { PENDING:'Ожидает', DONE:'Выполнена', PARTIAL:'Выполнена частично', FAILED:'Не выполнена' };
+  const conv = op.conversion || null;
+  const takerFee = isExchange ? +(op.toAmount * 0.001).toFixed(4) : 0;
+  const providerCode = (isExchange || isRefund) ? null : 'bt6';
 
+  const mainPanel = `
     <div class="panel">
       <div class="panel-h"><h3>Основное</h3></div>
       <div class="panel-b">
         <dl class="deflist" style="grid-template-columns:1fr;margin-bottom:14px">
-          <div><dt>Сумма${isExchange?'':', RUB'}</dt><dd class="cell-strong" style="font-size:17px">${isExchange ? `${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency} → ${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}` : (isRefund?'-':'')+op.amount.toLocaleString('ru-RU')}</dd></div>
+          <div><dt>Сумма${isExchange?' · объём сделки в обеих валютах':''}</dt><dd class="cell-strong" style="font-size:17px">${isExchange ? `${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency} → ${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}` : (isRefund?'-':'')+op.amount.toLocaleString('ru-RU')+' RUB'}</dd></div>
         </dl>
         <dl class="deflist cols3">
-          <div><dt>Направление</dt><dd>${isRefund?'Исходящая (возврат)':'Входящая'}</dd></div>
+          <div><dt>Направление</dt><dd>${directionLabel}</dd></div>
           <div><dt>Платёжная система</dt><dd class="mono" style="font-size:12.5px">${esc(PAYMENT_SYSTEM_CODE[op.type]||op.type)}</dd></div>
           <div><dt>Поставщик</dt><dd class="${op.bankName?'':'muted'}">${op.bankName?esc(op.bankName):'—'}</dd></div>
           <div><dt>Дата</dt><dd>${esc(op.createdAt)}</dd></div>
           <div><dt>Исполнено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>
-          ${isRefund ? `<div><dt>Тип возврата</dt><dd>${op.isFullRefund?'Полный':'Частичный'}</dd></div>` : `<div><dt>Обновлено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>`}
+          <div><dt>Статус операции</dt><dd>${opStateLabel}</dd></div>
+          <div><dt>Решение AML</dt><dd class="muted">—</dd></div>
+          <div><dt>Обновлено в</dt><dd class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</dd></div>
+          ${isRefund ? `<div><dt>Тип возврата</dt><dd>${op.isFullRefund?'Полный':'Частичный'}</dd></div>` : ''}
+          <div><dt>Списано</dt><dd class="cell-strong">${isExchange?fmtMoney(op.fromAmount,op.fromCurrency):isRefund?fmtMoney(op.amount):'—'}</dd></div>
+          <div><dt>Зачислено</dt><dd class="cell-strong">${isExchange?fmtMoney(op.toAmount,op.toCurrency):isRefund?'—':fmtMoney(fee.netAmount)}</dd></div>
+          <div><dt>Курс конвертации</dt><dd>${isExchange?op.rate.toLocaleString('ru-RU',{maximumFractionDigits:2}):'1'}</dd></div>
         </dl>
       </div>
-    </div>
+    </div>`;
 
-    ${isRefund ? `
+  const refundPanel = isRefund ? `
     <div class="panel">
-      <div class="panel-h"><h3>Расчёт</h3></div>
+      <div class="panel-h"><h3>Расчёт возврата</h3></div>
       <div class="panel-b">
         <dl class="deflist cols3">
           <div><dt>Сумма возврата</dt><dd class="cell-strong">${fmtMoney(op.amount)}</dd></div>
           <div><dt>Сумма исходного платежа</dt><dd>${linkedOp?fmtMoney(linkedOp.amount):'—'}</dd></div>
           <div><dt>Остаток к возврату после этого возврата</dt><dd>${op.status==='FAILED' ? 'Не расходовался (возврат отклонён банком)' : (op.remainingAfter>0 ? fmtMoney(op.remainingAfter)+' - можно оформить следующий возврат' : '0 RUB (операция полностью возвращена)')}</dd></div>
-          <div><dt>Статус у провайдера</dt><dd><span class="mono" style="font-size:12.5px">${esc(op.providerStatus||'—')}</span></dd></div>
-          <div><dt>idempotency_key</dt><dd><span class="mono" style="font-size:12px">${esc(op.idempotencyKey||'—')}</span></dd></div>
-        </dl>
-        <div class="hairline" style="margin:14px 0"></div>
-        <div class="section-num" style="margin-bottom:10px">Комиссии</div>
-        <dl class="deflist cols3">
           <div><dt>Удержанная банком комиссия (с исходного платежа)</dt><dd>${linkedFee?fmtMoney(linkedFee.bankFee):'—'}</dd></div>
         </dl>
       </div>
-    </div>` : `
+    </div>` : '';
+
+  const feesPanel = isRefund ? '' : `
     <div class="panel">
-      <div class="panel-h"><h3>Расчёт</h3></div>
+      <div class="panel-h"><h3>Комиссии</h3></div>
       <div class="panel-b">
         <dl class="deflist cols3">
-          <div><dt>Списано</dt><dd class="cell-strong">${isExchange?fmtMoney(op.fromAmount,op.fromCurrency):fmtMoney(op.amount)}</dd></div>
-          <div><dt>Зачислено</dt><dd class="cell-strong">${isExchange?fmtMoney(op.toAmount,op.toCurrency):fmtMoney(fee.netAmount)}</dd></div>
-          <div><dt>Курс конвертации</dt><dd>${isExchange?op.rate.toLocaleString('ru-RU',{maximumFractionDigits:2}):'1'}</dd></div>
-        </dl>
-        <div class="hairline" style="margin:14px 0"></div>
-        <div class="section-num" style="margin-bottom:10px">Комиссии</div>
-        <dl class="deflist cols3">
-          <div><dt>Банковская комиссия отправителя</dt><dd>${fmtMoney(fee.bankFee)}</dd></div>
-          <div><dt>Комиссия провайдера</dt><dd>${fmtMoney(fee.providerFee)}</dd></div>
-          <div><dt>Итого удержано</dt><dd class="cell-strong">${fmtMoney(fee.totalFee)}</dd></div>
+          ${isExchange
+            ? `<div><dt>Комиссия тейкера <span class="muted">· Taker fee</span></dt><dd>${takerFee.toLocaleString('ru-RU',{maximumFractionDigits:4})} ${op.toCurrency}</dd></div>`
+            : `<div><dt>Комиссия провайдера <span class="muted">· Provider fee</span></dt><dd>${fmtMoney(fee.providerFee)}</dd></div>
+          <div><dt>Комиссия банка <span class="muted">· Bank fee</span></dt><dd>${fmtMoney(fee.bankFee)}</dd></div>
+          ${fee.partnerFee>0 ? `<div><dt>Комиссия партнёра <span class="muted">· Partner fee</span></dt><dd>${fmtMoney(fee.partnerFee)}</dd></div>` : ''}`}
+          <div><dt>Итого удержано</dt><dd class="cell-strong">${isExchange ? takerFee.toLocaleString('ru-RU',{maximumFractionDigits:4})+' '+op.toCurrency : fmtMoney(fee.totalFee)}</dd></div>
         </dl>
       </div>
-    </div>`}
+    </div>`;
 
+  const partiesPanel = `
     <div class="panel">
       <div class="panel-h"><h3>Участники операции</h3></div>
       <div class="panel-b">
@@ -3837,54 +4115,170 @@ function renderOperationDetail(clientId, opId){
           ${opPartyHtml(receiver)}
         </div>
       </div>
-    </div>
+    </div>`;
 
+  // «Детали перевода»: у пополнения - поля автоконвертации зачисления; у обмена - исходное зачисление (по какому платежу
+  // выполнена конвертация); у возврата - исходная операция и причина
+  const detailsPanel = isExchange ? `
     <div class="panel">
-      <div class="panel-h"><h3>Детали операции</h3></div>
+      <div class="panel-h"><h3>Детали обмена</h3></div>
       <div class="panel-b">
         <dl class="deflist cols3">
-          <div><dt>ID операции</dt><dd class="mono" style="font-size:11.5px">${esc(op.sbpOperationId)}</dd></div>
-          <div><dt>Назначение платежа</dt><dd>${isRefund?'Возврат по ранее оплаченной операции':isExchange?'Автоконвертация суммы пополнения':isInvoice?'Пополнение по инвойсу':'Пополнение баланса клиента партнёра'}</dd></div>
-          ${isRefund ? `<div><dt>Причина возврата</dt><dd>${esc(op.refundReason)}</dd></div>` : ''}
+          <div><dt>Исходное зачисление</dt><dd><a href="#" class="namelink mono" style="font-size:12.5px" data-goto-operation="${esc(op.linkedOpId)}">${esc(op.linkedOpId)}</a></dd></div>
+          <div><dt>Код заявки на конвертацию</dt><dd class="mono" style="font-size:12.5px">${esc(op.orderPublicId)}</dd></div>
+          <div><dt>Символ</dt><dd class="mono" style="font-size:12.5px">${esc(op.symbol)}</dd></div>
+          <div><dt>Цена сделки</dt><dd>${op.rate.toLocaleString('ru-RU',{maximumFractionDigits:2})}</dd></div>
+          <div><dt>Объём (базовая валюта)</dt><dd>${op.toAmount.toLocaleString('ru-RU')} ${op.toCurrency}</dd></div>
+          <div><dt>Объём (котируемая валюта)</dt><dd>${op.fromAmount.toLocaleString('ru-RU')} ${op.fromCurrency}</dd></div>
+          ${op.remainder>0 ? `<div><dt>Не обменянный остаток</dt><dd>${op.remainder.toLocaleString('ru-RU')} RUB — остаётся рублями на счёте партнёра</dd></div>` : ''}
         </dl>
       </div>
-    </div>
+    </div>` : isRefund ? `
+    <div class="panel">
+      <div class="panel-h"><h3>Детали возврата</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>Исходная операция</dt><dd><a href="#" class="namelink mono" style="font-size:12.5px" data-goto-operation="${esc(op.linkedOpId)}">${esc(op.linkedOpId)}</a></dd></div>
+          <div><dt>Назначение платежа</dt><dd>Возврат по ранее оплаченной операции</dd></div>
+          <div><dt>Причина возврата</dt><dd>${esc(op.refundReason)}</dd></div>
+        </dl>
+      </div>
+    </div>` : `
+    <div class="panel">
+      <div class="panel-h"><h3>Детали перевода</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          <div><dt>ID банка</dt><dd class="muted">—</dd></div>
+          <div><dt>Банк-обработчик</dt><dd class="${op.bankName?'':'muted'}">${op.bankName?esc(op.bankName):'—'}</dd></div>
+          <div><dt>Конвертация зачисления</dt><dd class="${conv?'':'muted'}">${conv ? esc(conversionLabels[conv.status]||conv.status) : '—'}</dd></div>
+          <div><dt>Код заявки на конвертацию</dt><dd class="${conv?'':'muted'}">${conv ? `<a href="#" class="namelink mono" style="font-size:12.5px" data-goto-operation="${esc(conv.exchangeOpId)}">${esc(conv.orderPublicId)}</a>` : '—'}</dd></div>
+        </dl>
+      </div>
+    </div>`;
 
+  const techPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Технические детали</h3></div>
+      <div class="panel-b">
+        <dl class="deflist cols3">
+          ${isExchange
+            ? `<div><dt>Референс сделки</dt><dd class="mono" style="font-size:12.5px">${esc(op.tradePublicId)}</dd></div>
+          <div><dt>Референс заявки</dt><dd class="mono" style="font-size:12.5px">${esc(op.orderPublicId)}</dd></div>`
+            : `<div><dt>Провайдер СБП</dt><dd class="mono" style="font-size:12.5px">${providerCode?esc(providerCode):'—'}</dd></div>`}
+          <div><dt>ID операции</dt><dd class="mono" style="font-size:11.5px">${esc(op.sbpOperationId)}</dd></div>
+        </dl>
+      </div>
+    </div>`;
+
+  const metaPanel = `
     <div class="panel">
       <div class="panel-h"><h3>Метаданные</h3></div>
       <div class="panel-b">
         <dl class="deflist cols3">
           <div><dt>Источник средств</dt><dd class="muted">—</dd></div>
-          <div><dt>Назначение платежа</dt><dd>${isRefund?`Возврат ${op.amount} RUB`:isExchange?`Автоконвертация ${op.fromAmount} ${op.fromCurrency}`:`Поступление ${op.amount} RUB`}</dd></div>
-          <div><dt>Примечание</dt><dd class="muted">—</dd></div>
+          <div><dt>Назначение платежа</dt><dd>${isRefund?`Возврат ${op.amount} RUB`:isExchange?`Автоконвертация ${op.fromAmount} ${op.fromCurrency}`:isInvoice?'Пополнение по инвойсу':'Пополнение баланса клиента партнёра'}</dd></div>
+          <div><dt>Заметка (payment.note)</dt><dd class="muted">—</dd></div>
+          ${(isExchange || isRefund) ? '' : `
+          <div><dt>Партнёрская операция</dt><dd>Да</dd></div>
+          <div><dt>Клиент партнёра</dt><dd class="mono" style="font-size:12.5px">${esc(c.id)}</dd></div>
+          <div><dt>ID клиента у партнёра</dt><dd class="mono" style="font-size:12.5px">${esc(c.externalId||'—')}</dd></div>`}
         </dl>
         <details open style="margin-top:14px">
-          <summary class="section-num" style="cursor:pointer;display:inline-flex">Сырые метаданные</summary>
+          <summary class="section-num" style="cursor:pointer;display:inline-flex">Сырые метаданные (payment.metadata)</summary>
           <div class="jsonbox" style="margin-top:8px">${esc(JSON.stringify(metaJson,null,2))}</div>
         </details>
       </div>
-    </div>
+    </div>`;
 
+  const attachmentsPanel = `
     <div class="panel">
-      <div class="panel-h"><h3>История и расчёт</h3></div>
+      <div class="panel-h"><h3>Вложения</h3></div>
+      <div class="panel-b"><div class="empty-state" style="padding:6px 0;text-align:left">Вложений нет</div></div>
+    </div>`;
+
+  const actionsPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Действия по операции</h3><span class="muted" style="font-size:12px">ручные действия клиента и администратора: кто, когда, что сделал и почему</span></div>
       <div class="panel-b">
         <div class="op-timeline">${opTimelineHtml(op)}</div>
       </div>
+    </div>`;
+
+  const commentsPanel = `
+    <div class="panel">
+      <div class="panel-h"><h3>Комментарии оператора</h3></div>
+      <div class="panel-b">
+        ${renderOpComments(op.sbpOperationId)}
+      </div>
+    </div>`;
+
+  // вкладка «Проводки»: дебет и кредит по каждому счёту, итог Дт = Кт по каждой валюте; ниже - комиссии платежа
+  const liveLedger = ledgerRows.filter(r=>r.status!=='DECLINED');
+  const curList = [...new Set(liveLedger.map(r=>r.cur))];
+  const num4 = (n)=> n.toLocaleString('ru-RU',{maximumFractionDigits:4});
+  const ledgerTotals = curList.map(cur=>{
+    const d = liveLedger.filter(r=>r.cur===cur && r.type==='DEBIT').reduce((x,r)=>x+r.val,0);
+    const k = liveLedger.filter(r=>r.cur===cur && r.type==='CREDIT').reduce((x,r)=>x+r.val,0);
+    const ok = Math.abs(d-k) < 0.01;
+    return `<tr style="background:var(--bg-weak)"><td></td><td class="cell-strong">Итого, ${esc(cur)} <span class="muted" style="font-weight:400;margin-left:6px">${ok?'Дт = Кт':'Дт ≠ Кт'}</span></td><td class="cell-strong">${num4(d)} ${esc(cur)}</td><td class="cell-strong">${num4(k)} ${esc(cur)}</td><td></td><td></td></tr>`;
+  }).join('');
+  const feeRows = [];
+  if(!isRefund && !isExchange){
+    if(fee.providerFee>0) feeRows.push({to:'Площадка BitBanker', amount:fmtMoney(fee.providerFee), descr:'Provider fee'});
+    if(fee.bankFee>0) feeRows.push({to:'Банк-эквайер', amount:fmtMoney(fee.bankFee), descr:'Bank fee'});
+    if(fee.partnerFee>0) feeRows.push({to:'Партнёр', amount:fmtMoney(fee.partnerFee), descr:'Partner fee'});
+  } else if(isExchange){
+    feeRows.push({to:'Счёт комиссий платформы', amount:num4(takerFee)+' '+op.toCurrency, descr:'Taker fee, комиссия удержана из зачисляемого USDT'});
+  }
+  const ledgerTab = `
+    <div class="panel">
+      <div class="panel-h"><h3>Проводки операции</h3><span class="muted" style="font-size:12px">дебет и кредит по каждому счёту, итог Дт = Кт по каждой валюте</span></div>
       ${ledgerRows.length ? `
       <div class="twrap">
         <table class="grid">
-          <thead><tr><th>Счёт</th><th>Тип</th><th>Сумма</th><th>Статус</th></tr></thead>
-          <tbody>${ledgerRows.map(r=>`
+          <thead><tr><th>№</th><th>Счёт</th><th>Дебет</th><th>Кредит</th><th>Статус</th><th>Дата</th></tr></thead>
+          <tbody>${ledgerRows.map((r,i)=>`
             <tr>
-              <td class="mono" style="font-size:12px;color:var(--primary)">${esc(r.account)}</td>
-              <td>${esc(r.type)}</td>
+              <td class="muted">${i+1}</td>
+              <td><div style="font-size:13px">${esc(r.label||'')}</div><div class="mono" style="font-size:11.5px;color:var(--primary)">${esc(r.account)}</div></td>
+              <td class="cell-strong">${r.type==='DEBIT'?esc(r.amount):''}</td>
+              <td class="cell-strong">${r.type==='CREDIT'?esc(r.amount):''}</td>
+              <td style="${r.status==='DECLINED'?'color:#e34a4a;font-weight:600':''}">${r.status==='DECLINED'?'Отклонена':'Подтверждена'}</td>
+              <td class="muted">${esc(r.at||'')}</td>
+            </tr>`).join('')}${ledgerTotals}</tbody>
+        </table>
+      </div>
+      <div class="empty-state" style="padding:10px 16px 16px;text-align:left">Строки идут в порядке проводок внутри операции. Клик по счёту открывает раздел «Счета» на карточке этого счёта.</div>` : `<div class="empty-state" style="padding:0 16px 16px">Заявка ещё не дошла до леджера — проводок пока нет</div>`}
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Комиссии платежа</h3><span class="muted" style="font-size:12px">кому и сколько начислено по этому платежу</span></div>
+      ${feeRows.length ? `
+      <div class="twrap">
+        <table class="grid">
+          <thead><tr><th>Получатель</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Создано</th><th>Описание</th></tr></thead>
+          <tbody>${feeRows.map(r=>`
+            <tr>
+              <td>${esc(r.to)}</td>
               <td class="cell-strong">${esc(r.amount)}</td>
-              <td style="${r.status==='DECLINED'?'color:#e34a4a;font-weight:600':''}">${esc(r.status)}</td>
+              <td>Кредит</td>
+              <td>Подтверждена</td>
+              <td class="muted">${esc(op.paidAt||op.createdAt)}</td>
+              <td>${esc(r.descr)}</td>
             </tr>`).join('')}</tbody>
         </table>
-      </div>` : `<div class="empty-state" style="padding:0 16px 16px">Заявка ещё не дошла до леджера — проводок пока нет</div>`}
-    </div>
+      </div>` : `<div class="empty-state" style="padding:0 16px 16px">Комиссий по этому платежу нет</div>`}
+    </div>`;
 
+  const infoTab = `
+    ${mainPanel}
+    ${refundPanel}
+    ${feesPanel}
+    ${partiesPanel}
+    ${detailsPanel}
+    ${techPanel}
+    ${metaPanel}
+    ${attachmentsPanel}
+    ${actionsPanel}
     ${isInvoice ? `
     <div class="panel">
       <div class="panel-h"><h3>Информация о заказе</h3></div>
@@ -3973,18 +4367,49 @@ function renderOperationDetail(clientId, opId){
           <div><dt>Возвращено (подтверждено банком)</dt><dd>${fmtMoney(confirmedRefundTotal)}</dd></div>
           <div><dt>В ожидании банка (зарезервировано)</dt><dd>${fmtMoney(pendingRefundTotal)}</dd></div>
           <div><dt>Остаток к возврату</dt><dd class="cell-strong">${fmtMoney(remainingToRefund)}</dd></div>
-        </div>
-        <div class="empty-state" style="padding:10px 0 0;margin:0;text-align:left">Возвратов по одной операции может быть несколько: каждый - отдельная операция REFUND со своим idempotency_key. Одновременно не более одного возврата в ожидании банка. Банковская комиссия ${fmtMoney(fee.bankFee)} удержана при зачислении один раз и не возвращается.</div>`;
+        </div>`;
         })() : `<div class="empty-state" style="padding:10px 0">По этой операции возвратов не было</div>`}
       </div>
     </div>` : ''}
+    ${commentsPanel}`;
 
-    <div class="panel">
-      <div class="panel-h"><h3>Комментарии оператора</h3></div>
-      <div class="panel-b">
-        ${renderOpComments(op.sbpOperationId)}
+  return `
+    <div class="rec-card">
+      <div class="rec-top">
+        <a href="#" class="rec-back" id="backToOps">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div style="flex:1">
+          <div class="rec-headrow" style="justify-content:space-between">
+            <div class="rec-headrow" style="gap:12px">
+              <h1>Платёж #${esc(op.sbpOperationId)}</h1>
+            </div>
+            ${op.status==='PENDING' ? `
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" id="opApprove">${isRefund?'Банк вернул (accepted)':'Подтвердить'}</button>
+              <button class="btn btn-danger" id="opDecline">${isRefund?'Банк отклонил':'Отклонить'}</button>
+            </div>` : canRefund ? `<button class="btn btn-primary" id="opCreateRefund">Оформить возврат</button>` : ''}
+          </div>
+          <div class="rec-headrow" style="gap:8px;margin-top:6px">
+            ${opTypeBadge(op.type)}
+            <span class="badge b-faded"><span class="d"></span>${directionLabel}</span>
+            ${opStatusBadgeFor(op)}
+          </div>
+          <div class="rec-meta">
+            <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
+            <span>Клиент: <a href="#" class="namelink" id="opGotoClient" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(fullName(c))}</a></span>
+            ${isRefund ? `<span>Исходная операция: <a href="#" class="namelink" id="opGotoOriginal" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedOpId)}</a></span>` : isExchange ? `<span>Исходное зачисление: <a href="#" class="namelink" id="opGotoOriginal" style="color:var(--primary);font-weight:500;text-decoration:none">${esc(op.linkedOpId)}</a></span>` : `<span>Дата создания: ${esc(op.createdAt)}</span>`}
+          </div>
+        </div>
       </div>
     </div>
+
+    <div class="seg-tabs" style="margin:14px 0">
+      <button class="seg-tab ${opTab==='info'?'active':''}" data-op-tab="info">Информация</button>
+      <button class="seg-tab ${opTab==='ledger'?'active':''}" data-op-tab="ledger">Проводки <span class="muted" style="margin-left:4px">${ledgerRows.length}</span></button>
+    </div>
+
+    ${opTab==='ledger' ? ledgerTab : infoTab}
   `;
 }
 
@@ -4046,6 +4471,7 @@ function openDeleteCommentModal(opId, cm){
 }
 
 function bindOperationDetail(){
+  $all('[data-op-tab]').forEach(b=>b.addEventListener('click', ()=>{ state.opTab=b.dataset.opTab; render(); }));
   $('#backToOps')?.addEventListener('click', ()=>{ state.view='external-detail'; state.clientDetailTab='ops'; render(); });
   $('#opGotoClient')?.addEventListener('click', (e)=>{ e.preventDefault(); state.view='external-detail'; state.clientDetailTab='main'; render(); });
   $('#opGotoOriginal')?.addEventListener('click', (e)=>{
@@ -4128,12 +4554,8 @@ function openCreateRefundModal(clientId, opId){
   const op = mockClientOperations(clientId).find(o=>o.sbpOperationId===opId);
   if(!op || !op.invoice) return;
   const inv = op.invoice;
-  // Мультивозвраты: несколько возвратов по одной попытке счёта допустимы, но одновременно - не более одного
-  // возврата в ожидании банка (PENDING, у провайдера requested): следующий оформляется после ответа банка.
-  if(inv.refunds.some(r=>r.status==='PENDING')){
-    toast('По этой операции есть возврат в ожидании банка - следующий можно оформить после ответа банка');
-    return;
-  }
+  // Мультивозвраты: несколько возвратов по одной попытке счёта допустимы, в том числе пока предыдущий
+  // не подтверждён банком (PENDING, у провайдера requested) - его сумма уже зарезервирована в остатке.
   const a = agentById(clientById(clientId)?.agentId);
   const bankFee = opFeeInfo(op, a).bankFee;
   // возвраты в CONFIRMED и PENDING расходуют остаток; FAILED (отклонён банком) - нет
@@ -4164,7 +4586,7 @@ function openCreateRefundModal(clientId, opId){
     invoiceRefundExtras[opId].push({
       refundId: 'ref_' + Math.floor(10000 + Math.random()*89999),
       amount, status:'PENDING', reason,
-      createdAt: new Date().toLocaleString('ru-RU').slice(0,17),
+      createdAt: opNowStamp(),
     });
     closeModal(); render();
     toast('Возврат создан (idempotency_key сформирован), у провайдера requested - ожидает ответа банка. Остаток уменьшен на сумму возврата');
