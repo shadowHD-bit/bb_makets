@@ -475,6 +475,15 @@ details[open] > .raw-toggle .chevd{transform:rotate(90deg)}
 .overlay.show{display:flex}
 .modal{background:var(--bg-white);border-radius:var(--radius-16);box-shadow:var(--shadow-pop);width:100%;max-width:480px;overflow:hidden}
 .modal.wide{max-width:640px}
+.modal.xwide{max-width:980px}
+.dropzone{border:1.5px dashed var(--stroke-med);border-radius:var(--radius-12);background:var(--bg-weak);padding:22px 16px;text-align:center;transition:all .15s}
+.dropzone.over{border-color:var(--primary);background:var(--primary-a10)}
+.dropzone svg{display:block;margin:0 auto}
+.dropzone .dz-t{font-size:13px;font-weight:500;margin:8px 0 2px}
+.dropzone .dz-s{font-size:11.5px;color:var(--text-soft);margin-bottom:12px}
+.dz-file{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding:9px 12px;border:1px solid var(--stroke-soft);border-radius:var(--radius-10);background:var(--bg-white);font-size:12.5px}
+.dz-file .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dz-file .sz{color:var(--text-soft);white-space:nowrap}
 .modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--stroke-soft)}
 .modal-h h3{margin:0;font-size:14.5px;font-weight:600}
 .modal-x{width:26px;height:26px;border-radius:var(--radius-8);border:0;background:none;color:var(--text-soft);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -1410,18 +1419,27 @@ function mockInvoiceForOp(op, clientId){
   }
   const orderSeed = String(h % 900000).padStart(6,'0');
   const refunds = [];
-  if(op.status==='CONFIRMED' && h % 3 === 0){
-    const full = h % 2 === 0;
+  if(op.status==='CONFIRMED' && h % 2 === 0){
+    const full = h % 3 === 0;
     // Полный возврат - это весь возвратный остаток, а не вся сумма платежа:
-    // refundable = cost - bank_fee_withheld, банковская комиссия не возвращается.
+    // refundable_total = cost - bank_fee_withheld, банковская комиссия не возвращается.
     const bankFeeWithheld = +(op.amount * BT6_BANK_FEE_PCT/100).toFixed(2);
     const refundableAmount = Math.max(op.amount - bankFeeWithheld, 0);
-    refunds.push({
-      refundId: 'ref_' + (h % 89999 + 10000),
-      amount: full ? refundableAmount : Math.round(refundableAmount*0.4),
-      status: h % 7 === 0 ? 'FAILED' : (h % 4 === 0 ? 'PENDING' : 'CONFIRMED'),
-      reason: full ? 'Полный возврат по заявке покупателя' : 'Частичный возврат за один товар из заказа',
-      createdAt: op.paidAt || op.createdAt,
+    // Мультивозвраты: по одной попытке счёта можно несколько частичных возвратов, пока не исчерпан остаток.
+    // Каждый возврат - отдельная операция REFUND со своим idempotency_key. Часть счетов - два частичных
+    // возврата подряд, второй (последний) может быть ещё в ожидании ответа банка (requested).
+    const parts = full ? [1] : ((h >>> 1) % 2 === 0 ? [0.4, 0.3] : [0.4]);
+    parts.forEach((p, i)=>{
+      const last = i === parts.length - 1;
+      refunds.push({
+        refundId: 'ref_' + (h % 89999 + 10000 + i),
+        amount: full ? refundableAmount : Math.round(refundableAmount*p),
+        // все возвраты, кроме последнего, уже подтверждены банком (accepted); у последнего - разные исходы
+        status: !last ? 'CONFIRMED' : (h % 7 === 0 ? 'FAILED' : (h % 4 === 0 ? 'PENDING' : 'CONFIRMED')),
+        reason: full ? 'Полный возврат по заявке покупателя'
+          : (parts.length > 1 ? (i === 0 ? 'Частичный возврат за один товар из заказа' : 'Повторный частичный возврат по заказу') : 'Частичный возврат за один товар из заказа'),
+        createdAt: op.paidAt || op.createdAt,
+      });
     });
   }
   const c = clientById(clientId);
@@ -1444,7 +1462,11 @@ function mockInvoiceForOp(op, clientId){
     items,
     customer,
     delivery,
-    refunds: [...refunds, ...extras],
+    // статус возврата можно изменить решением по операции REFUND (банк вернул / отклонил) - домешиваем решение
+    refunds: [...refunds, ...extras].map(r=>{
+      const ov = operationStatusOverrides[r.refundId];
+      return ov ? { ...r, status: ov.status } : r;
+    }),
     // то, что по легенде реально прислал партнёр — своя полная вложенность, со множеством полей,
     // которые мы не разбираем и не используем (created_at, currency, payment_methods, success_url,
     // receipt и т.д.) — конфигурация партнёра (ap-invoiceschema) берёт из этого только нужные пути,
@@ -1523,7 +1545,15 @@ function mockClientOperations(clientId){
     // возврат — отдельная операция своего типа (REFUND), по аналогии с OperationTypeEnum.REVERSAL
     // в ядре bb2 (см. раздел 3 доработок партнёрского API) — не проводка внутри исходной операции,
     // а новая строка со ссылкой на исходную операцию, по которой он оформлен.
+    // Мультивозвраты: остаток к возврату считается накопительно. Возврат в PENDING (у провайдера requested)
+    // резервирует сумму, FAILED (отклонён банком) остаток не расходует.
+    const refundableTotal = +(mainOp.amount - +(mainOp.amount * BT6_BANK_FEE_PCT/100).toFixed(2)).toFixed(2);
+    let reservedRun = 0;
+    let confirmedRun = 0;
     (isInvoiceMethod ? invoice.refunds : []).forEach(r=>{
+      if(r.status!=='FAILED') reservedRun += r.amount;
+      if(r.status==='CONFIRMED') confirmedRun += r.amount;
+      const remainingAfter = Math.max(+(refundableTotal - reservedRun).toFixed(2), 0);
       ops.push({
         sbpOperationId: r.refundId,
         status: r.status,
@@ -1535,11 +1565,19 @@ function mockClientOperations(clientId){
         linkedOpId: mainOp.sbpOperationId,
         linkedInvoiceId: mainOp.invoice.invoiceId,
         refundReason: r.reason,
-        // "Полный" - это весь возвратный остаток (сумма за вычетом банковской комиссии),
-        // а не вся сумма платежа - см. правку амаунта в buildInvoice выше.
-        isFullRefund: r.amount >= +(mainOp.amount * (1 - BT6_BANK_FEE_PCT/100)).toFixed(2),
+        // idempotency_key возврата - по нему провайдер идентифицирует возврат (своего uuid возврата у него нет)
+        idempotencyKey: pseudoUuid(r.refundId),
+        // статус возврата у провайдера (refunds[].status): requested - банк ещё не вернул, accepted - принят банком;
+        // отказ банка приходит ошибкой invoice_refund_rejected_by_bank
+        providerStatus: r.status==='CONFIRMED' ? 'accepted' : r.status==='PENDING' ? 'requested' : 'rejected_by_bank',
+        remainingAfter,
+        // "Полный" - возврат, после которого остаток к возврату равен 0 (сумма за вычетом банковской комиссии),
+        // а не вся сумма платежа
+        isFullRefund: remainingAfter === 0 && r.status!=='FAILED',
       });
     });
+    // статус исходной операции по остатку: CONFIRMED -> PARTIALLY_REFUNDED -> REFUNDED (только после подтверждения банком)
+    mainOp.refundState = !confirmedRun ? null : (Math.abs(refundableTotal - confirmedRun) < 0.01 ? 'REFUNDED' : 'PARTIALLY_REFUNDED');
     // пример: если у клиента включена автоконвертация, следом за подтверждённым пополнением
     // площадка сама создаёт операцию обмена в валюту автовывода — показываем отдельной строкой
     if(autoConvert && status==='CONFIRMED' && i===0){
@@ -1581,6 +1619,22 @@ function opStatusBadge(s){
   const map = { PENDING:['b-warning','В ожидании'], CONFIRMED:['b-success','Подтверждена'], FAILED:['b-error','Отклонена'] };
   const [cls,label] = map[s] || ['b-faded', s];
   return `<span class="badge ${cls}"><span class="d"></span>${label}</span>`;
+}
+/** Статус исходной операции с учётом возвратов: после подтверждённых возвратов - PARTIALLY_REFUNDED (остаток > 0)
+ *  или REFUNDED (остаток = 0). Статус пересчитывается только после подтверждения банком. */
+function opStatusBadgeFor(op){
+  if(op.refundState==='PARTIALLY_REFUNDED') return `<span class="badge b-warning"><span class="d"></span>Частично возвращена</span>`;
+  if(op.refundState==='REFUNDED') return `<span class="badge b-faded"><span class="d"></span>Возвращена полностью</span>`;
+  return opStatusBadge(op.status);
+}
+/** Детерминированный псевдо-uuid для idempotency_key возврата - для мока. */
+function pseudoUuid(seedStr){
+  let h1=0,h2=0;
+  const s = String(seedStr);
+  for(let i=0;i<s.length;i++){ h1=(h1*31+s.charCodeAt(i))>>>0; h2=(h2*17+s.charCodeAt(i)+i)>>>0; }
+  const hex = (n,len)=> n.toString(16).padStart(len,'0').slice(0,len);
+  const a = hex(h1,8), b = hex(h2,8), c = hex((h1^h2)>>>0,8), d = hex((h1+h2)>>>0,8);
+  return `${a}-${b.slice(0,4)}-4${b.slice(4,7)}-8${c.slice(0,3)}-${d}${c.slice(4)}`;
 }
 function opTypeBadge(t){
   const cls = t==='REFUND' ? 'b-faded' : 'b-info';
@@ -2101,6 +2155,19 @@ function renderAccountPartnerTab(a){
               <div><div class="tt">Активный</div><div class="ts">Отключение закрывает доступ к партнёрскому API, настройки и данные сохраняются</div></div>
               <button class="switch ${isActive?'on':''}" id="btnToggleActive"><span class="knob"></span></button>
             </div>
+            <div class="toggle-row">
+              <div><div class="tt">Ручная генерация ссылок</div><div class="ts">Показывает партнеру в личном кабинете раздел «KYC и оплата СБП»: ссылки на проверку и на оплату для его клиентов</div></div>
+              <button class="switch ${a.manualLinksEnabled?'on':''}" data-toggle="manualLinksEnabled"><span class="knob"></span></button>
+            </div>
+            ${a.manualLinksEnabled ? `
+            <div class="field" style="margin-top:4px">
+              <label>Ссылка на оферту для клиентов партнеров</label>
+              <div style="display:flex;gap:8px">
+                <input id="offerUrl" value="${esc(a.offerUrl||'')}" placeholder="https://" style="flex:1">
+                <button class="btn btn-sm" id="btnSaveOffer" type="button">Сохранить</button>
+              </div>
+              <div class="ts" style="margin-top:6px">Партнер видит ее под созданной ссылкой на оплату: слова «с договором оферты» ведут на эту страницу</div>
+            </div>` : ''}
             <dl class="deflist" style="grid-template-columns:1fr 1fr">
               <div><dt>Название партнёра</dt><dd>${esc(a.name)}</dd></div>
               <div><dt>Банк СБП</dt><dd>${esc(a.sbpBankName||'—')}</dd></div>
@@ -2188,8 +2255,8 @@ function renderAccountPartnerTab(a){
           ${collapsibleHead('ap-autowithdraw', '<h3>Автовыводы баланса</h3>')}
           <div class="panel-b">
             <div class="toggle-row">
-              <div><div class="tt">Автовывод включен</div></div>
-              <button class="switch ${a.autoConvertToUsdt?'on':''}" data-toggle="autoConvertToUsdt"><span class="knob"></span></button>
+              <div><div class="tt">${a.autoWithdrawEnabled?'Автовывод включен':'Автовывод выключен'}</div><div class="ts">Когда остаток основного счета достигает верхнего порога, разница между остатком и нижним порогом выводится партнеру. Смена адреса ставит вывод на паузу</div></div>
+              <button class="switch ${a.autoWithdrawEnabled?'on':''}" data-toggle="autoWithdrawEnabled"><span class="knob"></span></button>
             </div>
 
             <div class="ts" style="margin:12px 0 8px;font-weight:600;color:var(--text-strong)">Назначение вывода</div>
@@ -2357,6 +2424,35 @@ function renderAccountPartnerTab(a){
             <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditInvoiceSchema">Редактировать</button></div>
           </div>
         </div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-autoconvert')}">
+          ${collapsibleHead('ap-autoconvert', '<h3>Автоконвертация</h3>')}
+          <div class="panel-b">
+            <div class="toggle-row">
+              <div><div class="tt">${a.autoConvertToUsdt?'Автоконвертация включена':'Автоконвертация выключена'}</div><div class="ts">Зачисленные рубли автоматически обмениваются на USDT по паре USDT/RUBR сразу после оплаты QR клиентом</div></div>
+              <button class="switch ${a.autoConvertToUsdt?'on':''}" data-toggle="autoConvertToUsdt"><span class="knob"></span></button>
+            </div>
+            <div class="toggle-row">
+              <div><div class="tt">${a.autoConvertBalance?'Автоконвертация накопленного остатка включена':'Автоконвертация накопленного остатка выключена'}</div><div class="ts">Когда остаток рублевого счета достигает верхнего порога, в USDT обменивается разница между остатком и нижним порогом</div></div>
+              <button class="switch ${a.autoConvertBalance?'on':''}" data-toggle="autoConvertBalance"><span class="knob"></span></button>
+            </div>
+            ${a.autoConvertBalance ? `
+            ${a.autoConvertToUsdt ? `<div class="helper-note" style="margin-top:10px"><span>При включенной автоконвертации зачислений рубли на счете не копятся, поэтому пороги накопленного остатка не срабатывают</span></div>` : ''}
+            <div class="field-grid" style="margin-top:12px">
+              <div class="field"><label>Нижний порог (RUBR) — столько останется на счете</label><input id="acLower" value="${esc(a.autoConvertLowerRubr||'')}" placeholder="0"></div>
+              <div class="field"><label>Верхний порог (RUBR) — при каком остатке срабатывает обмен</label><input id="acUpper" value="${esc(a.autoConvertUpperRubr||'')}" placeholder="500000"></div>
+            </div>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveAutoConvert">Сохранить пороги</button></div>` : ''}
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-documents')}">
+          ${collapsibleHead('ap-documents', '<h3>Документы партнёра</h3>')}
+          <div class="panel-b">
+            ${renderPartnerDocs(a)}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnUploadDoc">Загрузить документ</button></div>
+          </div>
+        </div>
+
         <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
           ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
           <div class="panel-b">
@@ -2364,6 +2460,8 @@ function renderAccountPartnerTab(a){
             <div class="hairline"></div>
             <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
             <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
+            <label class="checkfilter" style="display:flex;margin-bottom:${a.manualLinksEnabled?'8':'4'}px;${a.manualLinksEnabled?'':'opacity:.55'}"><input type="checkbox" id="tgNotifyManual" ${a.manualNotifyEnabled?'checked':''} ${a.manualLinksEnabled?'':'disabled'}> Уведомления по ручной генерации ссылок</label>
+            ${a.manualLinksEnabled?'':'<div class="ts" style="margin-bottom:8px">Доступно при включенной ручной генерации ссылок</div>'}
             <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
           </div>
         </div>
@@ -2486,8 +2584,37 @@ function bindAccountDetailPage(){
     sw.classList.toggle('on', a[key]);
     if(key==='canSbp' && !a[key]) toast('СБП выключен — допуск к пополнению по СБП снят у всех клиентов партнёра');
     else if(key==='canQr' && !a[key]) toast('QR выключен — допуск к пополнению по QR снят у всех клиентов партнёра');
+    else if(key==='manualLinksEnabled' && !a[key]){ a.manualNotifyEnabled = false; toast('Ручная генерация ссылок выключена: раздел «KYC и оплата СБП» скрыт у партнера'); }
+    else if(key==='manualLinksEnabled') toast('Ручная генерация ссылок включена');
     else toast('Изменение сохранено');
+    if(['autoConvertToUsdt','autoConvertBalance','autoWithdrawEnabled','manualLinksEnabled'].includes(key)) render();
   }));
+  $('#btnSaveAutoConvert')?.addEventListener('click', ()=>{
+    const lo = parseFloat(String($('#acLower').value).replace(',','.'));
+    const up = parseFloat(String($('#acUpper').value).replace(',','.'));
+    if(!(lo>=0) || !(up>0)){ toast('Укажите оба порога'); return; }
+    if(!(lo<up)){ toast('Нижний порог должен быть меньше верхнего'); return; }
+    a.autoConvertLowerRubr = String(lo); a.autoConvertUpperRubr = String(up);
+    toast('Пороги автоконвертации сохранены');
+  });
+  $('#btnUploadDoc')?.addEventListener('click', ()=>openUploadDocModal(a));
+  $all('[data-doc-dl]').forEach(b=>b.addEventListener('click', ()=>toast('Файл скачан: '+b.dataset.docDl)));
+  $all('[data-doc-del]').forEach(b=>b.addEventListener('click', ()=>{
+    const d = partnerDocs(a).find(x=>x.id===b.dataset.docDel);
+    if(!d) return;
+    openConfirmModal({
+      title:'Удалить документ?',
+      body:'Документ «'+d.name+'» будет удалён из карточки партнёра и из его личного кабинета. Действие нельзя отменить.',
+      confirmLabel:'Удалить', danger:true,
+      onConfirm:()=>{ a.documents = partnerDocs(a).filter(x=>x.id!==d.id); render(); toast('Документ удалён'); },
+    });
+  }));
+  $('#btnSaveOffer')?.addEventListener('click', ()=>{
+    const v = ($('#offerUrl').value||'').trim();
+    if(v && !/^https?:\/\//i.test(v)){ toast('Ссылка должна начинаться с http:// или https://'); return; }
+    a.offerUrl = v;
+    toast(v ? 'Ссылка на оферту сохранена' : 'Ссылка на оферту очищена');
+  });
   $('#btnEditLimits')?.addEventListener('click', ()=>openLimitsModal(a));
   $('#btnShowSecret')?.addEventListener('click', (e)=>{
     const val = $('#secretVal');
@@ -2500,7 +2627,7 @@ function bindAccountDetailPage(){
         $('#secretVal').textContent = '••••••••••••••••••••••••••••••••'; $('#btnShowSecret').textContent='Показать'; toast('Секрет перевыпущен'); }});
   });
   $('#btnEditCommission')?.addEventListener('click', ()=>openCommissionModal(a));
-  $('#marketFeesLink')?.addEventListener('click', (e)=>{ e.preventDefault(); toast('Раздел «Настройки → Маркеты → Комиссии» — вне рамок текущего прототипа'); });
+  $('#marketFeesLink')?.addEventListener('click', (e)=>{ e.preventDefault(); openMarketFeesModal(a); });
   $('#btnEditPartnerInfo')?.addEventListener('click', ()=>openEditPartnerInfoModal(a));
   $('#btnExportBillable')?.addEventListener('click', ()=>{
     const rows = (BILLABLE_SUMMARY[a.id]||[]).filter(s=>periodInRange(s.period, state.filters.billableFrom, state.filters.billableTo));
@@ -2574,6 +2701,7 @@ function bindAccountDetailPage(){
   $('#btnSaveTelegram')?.addEventListener('click', ()=>{
     a.partnerChatId = $('#tgChatId').value;
     a.sendChatNotifications = $('#tgNotifyErrors').checked;
+    if($('#tgNotifyManual') && !$('#tgNotifyManual').disabled) a.manualNotifyEnabled = $('#tgNotifyManual').checked;
     render();
     toast('Настройки Telegram-чата сохранены');
   });
@@ -3427,7 +3555,7 @@ function renderClientOperationsTab(c, a){
               <td class="${op.paidAt?'':'muted'}">${esc(op.paidAt||'—')}</td>
               <td class="cell-strong" style="${isRefund?'color:var(--error-dark)':''}">${isRefund?'-':''}${op.amount.toLocaleString('ru-RU')}</td>
               <td class="muted">${isRefund?refundBankFee.toLocaleString('ru-RU',{maximumFractionDigits:2}):fee.totalFee.toLocaleString('ru-RU',{maximumFractionDigits:2})}</td>
-              <td>${opStatusBadge(op.status)}</td>
+              <td>${opStatusBadgeFor(op)}</td>
               <td>${refundBadge}</td>
               <td>${isHung ? `
                 <div style="display:flex;gap:6px">
@@ -3526,14 +3654,19 @@ function renderOperationDetail(clientId, opId){
   const isExchange = op.type==='EXCHANGE';
   const isRefund = op.type==='REFUND';
   const isInvoice = op.type==='INVOICE';
-  // Провайдер принимает один запрос возврата на попытку счёта (409 invoice_attempt_refund_already_requested) -
-  // если возврат уже есть в PENDING/CONFIRMED, второй нельзя оформить даже при ненулевом остатке.
-  const hasOpenRefund = isInvoice && op.invoice.refunds.some(r=>r.status==='PENDING' || r.status==='CONFIRMED');
-  const refundedTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0) : 0;
-  // refundable = cost - bank_fee_withheld (комиссия банка удержана при зачислении и не возвращается)
+  // Мультивозвраты: по одной попытке счёта можно оформить несколько возвратов, пока остаток к возврату больше нуля.
+  // Одновременно допускается не более одного возврата в ожидании банка (PENDING, у провайдера requested) -
+  // следующий оформляется после ответа банка по предыдущему.
+  const hasPendingRefund = isInvoice && op.invoice.refunds.some(r=>r.status==='PENDING');
+  // возвращено = подтверждено банком (accepted); в ожидании - зарезервировано в остатке; отклонённые остаток не расходуют
+  const confirmedRefundTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status==='CONFIRMED').reduce((s,r)=>s+r.amount,0) : 0;
+  const pendingRefundTotal = isInvoice ? op.invoice.refunds.filter(r=>r.status==='PENDING').reduce((s,r)=>s+r.amount,0) : 0;
+  const refundedTotal = confirmedRefundTotal + pendingRefundTotal;
+  // refundable_total = cost - bank_fee_withheld (комиссия банка удержана при зачислении один раз и не возвращается)
   const refundableBase = isInvoice ? Math.max(op.amount - fee.bankFee, 0) : 0;
-  const remainingToRefund = isInvoice ? Math.max(refundableBase - refundedTotal, 0) : 0;
-  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0 && !hasOpenRefund;
+  // остаток к возврату = refundable_total - возвраты в CONFIRMED - возвраты в PENDING
+  const remainingToRefund = isInvoice ? Math.max(+(refundableBase - refundedTotal).toFixed(2), 0) : 0;
+  const canRefund = isInvoice && op.status==='CONFIRMED' && remainingToRefund > 0 && !hasPendingRefund;
   // Комиссии своей у REFUND нет - банковская комиссия была удержана ещё на исходном платеже
   // и повторно не взимается (bt6-runa-vozvrat-refund.md); показываем её с исходной операции,
   // а не оставляем панель совсем пустой.
@@ -3624,13 +3757,14 @@ function renderOperationDetail(clientId, opId){
             <div class="rec-headrow" style="gap:12px">
               <h1>Операция ${esc(op.sbpOperationId)}</h1>
               ${opTypeBadge(op.type)}
-              ${opStatusBadge(op.status)}
+              ${opStatusBadgeFor(op)}
             </div>
             ${op.status==='PENDING' ? `
             <div style="display:flex;gap:8px">
-              <button class="btn btn-primary" id="opApprove">Подтвердить</button>
-              <button class="btn btn-danger" id="opDecline">Отклонить</button>
-            </div>` : canRefund ? `<button class="btn btn-primary" id="opCreateRefund">Оформить возврат</button>` : ''}
+              <button class="btn btn-primary" id="opApprove">${isRefund?'Банк вернул (accepted)':'Подтвердить'}</button>
+              <button class="btn btn-danger" id="opDecline">${isRefund?'Банк отклонил':'Отклонить'}</button>
+            </div>` : canRefund ? `<button class="btn btn-primary" id="opCreateRefund">Оформить возврат</button>`
+              : (isInvoice && hasPendingRefund && remainingToRefund > 0) ? `<span class="muted" style="font-size:12.5px;max-width:280px;text-align:right">Следующий возврат можно оформить после ответа банка по предыдущему</span>` : ''}
           </div>
           <div class="rec-meta">
             <span class="idcopy" title="ID операции">ID: ${esc(op.sbpOperationId)}</span>
@@ -3665,7 +3799,9 @@ function renderOperationDetail(clientId, opId){
         <dl class="deflist cols3">
           <div><dt>Сумма возврата</dt><dd class="cell-strong">${fmtMoney(op.amount)}</dd></div>
           <div><dt>Сумма исходного платежа</dt><dd>${linkedOp?fmtMoney(linkedOp.amount):'—'}</dd></div>
-          <div><dt>Возвратный остаток после этого возврата</dt><dd>${op.isFullRefund?'0 RUB (закрыт)':'0 RUB (закрыт после первого возврата)'}</dd></div>
+          <div><dt>Остаток к возврату после этого возврата</dt><dd>${op.status==='FAILED' ? 'Не расходовался (возврат отклонён банком)' : (op.remainingAfter>0 ? fmtMoney(op.remainingAfter)+' - можно оформить следующий возврат' : '0 RUB (операция полностью возвращена)')}</dd></div>
+          <div><dt>Статус у провайдера</dt><dd><span class="mono" style="font-size:12.5px">${esc(op.providerStatus||'—')}</span></dd></div>
+          <div><dt>idempotency_key</dt><dd><span class="mono" style="font-size:12px">${esc(op.idempotencyKey||'—')}</span></dd></div>
         </dl>
         <div class="hairline" style="margin:14px 0"></div>
         <div class="section-num" style="margin-bottom:10px">Комиссии</div>
@@ -3809,25 +3945,37 @@ function renderOperationDetail(clientId, opId){
     <div class="panel">
       <div class="panel-h"><h3>Возвраты</h3></div>
       <div class="panel-b">
-        ${op.invoice.refunds.length ? `
-        <div class="twrap">
-          <table class="grid">
-            <thead><tr><th>ID возврата</th><th>Сумма</th><th>Тип</th><th>Статус</th><th>Причина</th><th>Дата</th></tr></thead>
-            <tbody>${op.invoice.refunds.map(r=>`
+        ${op.invoice.refunds.length ? (()=>{
+          // накопительный остаток по возвратам: "Полный" - возврат, после которого остаток равен 0
+          let run = 0;
+          const rowsHtml = op.invoice.refunds.map(r=>{
+            if(r.status!=='FAILED') run += r.amount;
+            const left = Math.max(+(refundableBase - run).toFixed(2), 0);
+            const prov = r.status==='CONFIRMED' ? 'accepted' : r.status==='PENDING' ? 'requested' : 'rejected_by_bank';
+            return `
               <tr>
                 <td><a href="#" class="namelink mono" style="font-size:12px" data-goto-operation="${esc(r.refundId)}">${esc(r.refundId)}</a></td>
                 <td class="cell-strong">${fmtMoney(r.amount)}</td>
-                <td>${r.amount>=op.amount?'Полный':'Частичный'}</td>
-                <td>${invoiceRefundStatusBadge(r.status)}</td>
+                <td>${r.status!=='FAILED' && left===0 ? 'Полный остаток' : 'Частичный'}</td>
+                <td>${invoiceRefundStatusBadge(r.status)}<div class="cell-sub mono">${prov}</div></td>
                 <td>${esc(r.reason)}</td>
                 <td class="muted">${esc(r.createdAt)}</td>
-              </tr>`).join('')}</tbody>
+              </tr>`;
+          }).join('');
+          return `
+        <div class="twrap">
+          <table class="grid">
+            <thead><tr><th>ID возврата</th><th>Сумма</th><th>Тип</th><th>Статус (у провайдера)</th><th>Причина</th><th>Дата</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
           </table>
         </div>
         <div class="deflist cols3" style="margin-top:12px">
-          <div><dt>Возвращено</dt><dd>${fmtMoney(refundedTotal)}</dd></div>
+          <div><dt>Возвращено (подтверждено банком)</dt><dd>${fmtMoney(confirmedRefundTotal)}</dd></div>
+          <div><dt>В ожидании банка (зарезервировано)</dt><dd>${fmtMoney(pendingRefundTotal)}</dd></div>
           <div><dt>Остаток к возврату</dt><dd class="cell-strong">${fmtMoney(remainingToRefund)}</dd></div>
-        </div>` : `<div class="empty-state" style="padding:10px 0">По этой операции возвратов не было</div>`}
+        </div>
+        <div class="empty-state" style="padding:10px 0 0;margin:0;text-align:left">Возвратов по одной операции может быть несколько: каждый - отдельная операция REFUND со своим idempotency_key. Одновременно не более одного возврата в ожидании банка. Банковская комиссия ${fmtMoney(fee.bankFee)} удержана при зачислении один раз и не возвращается.</div>`;
+        })() : `<div class="empty-state" style="padding:10px 0">По этой операции возвратов не было</div>`}
       </div>
     </div>` : ''}
 
@@ -3980,20 +4128,26 @@ function openCreateRefundModal(clientId, opId){
   const op = mockClientOperations(clientId).find(o=>o.sbpOperationId===opId);
   if(!op || !op.invoice) return;
   const inv = op.invoice;
-  // Провайдер принимает один запрос возврата на попытку счёта - если возврат уже в PENDING/CONFIRMED, второй не оформляем.
-  if(inv.refunds.some(r=>r.status==='PENDING' || r.status==='CONFIRMED')){
-    toast('По этой операции возврат уже оформлен - провайдер принимает один запрос возврата на попытку счёта');
+  // Мультивозвраты: несколько возвратов по одной попытке счёта допустимы, но одновременно - не более одного
+  // возврата в ожидании банка (PENDING, у провайдера requested): следующий оформляется после ответа банка.
+  if(inv.refunds.some(r=>r.status==='PENDING')){
+    toast('По этой операции есть возврат в ожидании банка - следующий можно оформить после ответа банка');
     return;
   }
   const a = agentById(clientById(clientId)?.agentId);
   const bankFee = opFeeInfo(op, a).bankFee;
+  // возвраты в CONFIRMED и PENDING расходуют остаток; FAILED (отклонён банком) - нет
   const refundedTotal = inv.refunds.filter(r=>r.status!=='FAILED').reduce((s,r)=>s+r.amount,0);
-  // refundable = cost - bank_fee_withheld, см. bt6-runa-vozvrat-refund.md
-  const remaining = Math.max(op.amount - bankFee - refundedTotal, 0);
+  // refundable_remaining = refundable_total - возвраты в CONFIRMED - возвраты в PENDING
+  const remaining = Math.max(+(op.amount - bankFee - refundedTotal).toFixed(2), 0);
+  if(remaining <= 0){
+    toast('Операция уже полностью возвращена - остаток к возврату равен 0');
+    return;
+  }
   openModal(`
     <div class="modal-h"><h3>Оформить возврат</h3><button class="modal-x" data-close-modal>✕</button></div>
     <div class="modal-b">
-      <div class="empty-state" style="padding:0 0 12px;margin:0">Остаток к возврату по операции: <b>${remaining.toLocaleString('ru-RU')} RUB</b> (сумма платежа ${op.amount.toLocaleString('ru-RU')} RUB за вычетом удержанной банком комиссии ${bankFee.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB — она не возвращается). Пустое поле суммы — полный возврат остатка.</div>
+      <div class="empty-state" style="padding:0 0 12px;margin:0">Остаток к возврату по операции: <b>${remaining.toLocaleString('ru-RU')} RUB</b> (сумма платежа ${op.amount.toLocaleString('ru-RU')} RUB за вычетом удержанной банком комиссии ${bankFee.toLocaleString('ru-RU',{maximumFractionDigits:2})} RUB - она удерживается один раз и не возвращается${refundedTotal>0?`; уже возвращено или в ожидании банка ${refundedTotal.toLocaleString('ru-RU')} RUB`:''}). Пустое поле суммы - возврат всего остатка. Возвратов по операции может быть несколько.</div>
       <div class="field"><label>Сумма возврата (опционально)</label><input id="refAmount" type="number" max="${remaining}" min="0" placeholder="${remaining}"></div>
       <div class="field"><label>Причина (обязательно)</label><textarea rows="3" id="refReason" placeholder="Например: возврат по заявке покупателя, товар получен и проверен"></textarea></div>
     </div>
@@ -4013,7 +4167,7 @@ function openCreateRefundModal(clientId, opId){
       createdAt: new Date().toLocaleString('ru-RU').slice(0,17),
     });
     closeModal(); render();
-    toast('Возврат создан, статус - в ожидании ответа провайдера');
+    toast('Возврат создан (idempotency_key сформирован), у провайдера requested - ожидает ответа банка. Остаток уменьшен на сумму возврата');
   });
 }
 
@@ -4552,7 +4706,7 @@ function bindClientDetail(){
    MODALS
    ========================================================================= */
 function openModal(html, wide){
-  $('#modalBox').className = 'modal' + (wide?' wide':'');
+  $('#modalBox').className = 'modal' + (wide==='x'?' xwide':(wide?' wide':''));
   $('#modalBox').innerHTML = html;
   $('#overlay').classList.add('show');
   $all('[data-close-modal]').forEach(b=>b.addEventListener('click', closeModal));
@@ -4586,6 +4740,152 @@ function openDocPreviewModal(name){
     <div class="modal-f"><button class="btn" data-close-modal>Закрыть</button><button class="btn btn-primary" data-doc-download="${esc(name)}" id="previewDownload">Скачать</button></div>
   `);
   $('#previewDownload').addEventListener('click', ()=>toast('Скачивание: '+name));
+}
+
+
+/* Документы партнёра: три группы по ТЗ (договоры, приложения к договорам, документы KYB). Партнёр удалить документ не может, у оператора удаления в прототипе нет (в ТЗ не описано) */
+const DOC_CATEGORIES = [
+  {id:'CONTRACT', label:'Договоры'},
+  {id:'ANNEX', label:'Приложения и дополнительные соглашения'},
+  {id:'KYB', label:'Документы KYB'},
+];
+function partnerDocs(a){
+  if(!a.documents){
+    a.documents = a.id==='a1' ? [
+      {id:'d1', cat:'CONTRACT', name:'Договор BitBanker - FinPay KG.pdf', size:'412 КБ', at:'12.08.2026', by:'Оператор'},
+      {id:'d2', cat:'ANNEX', name:'Приложение 1. Тарифы.pdf', size:'96 КБ', at:'12.08.2026', by:'Оператор'},
+      {id:'d3', cat:'ANNEX', name:'Допсоглашение 1. IBAN-выплаты.pdf', size:'128 КБ', at:'02.09.2026', by:'Оператор'},
+      {id:'d4', cat:'KYB', name:'Устав.pdf', size:'1,2 МБ', at:'05.08.2026', by:'Партнёр'},
+      {id:'d5', cat:'KYB', name:'Выписка из реестра компаний.pdf', size:'640 КБ', at:'05.08.2026', by:'Партнёр'},
+    ] : [];
+  }
+  return a.documents;
+}
+function renderPartnerDocs(a){
+  const docs = partnerDocs(a);
+  const groups = DOC_CATEGORIES.map(c=>{
+    const items = docs.filter(d=>d.cat===c.id);
+    return `
+      <div class="ts" style="margin:10px 0 6px;font-weight:600;color:var(--text-strong)">${c.label}</div>
+      ${items.length ? items.map(d=>`
+        <div class="toggle-row" style="padding:8px 0">
+          <div><div class="tt" style="font-weight:500">${esc(d.name)}</div><div class="ts">${esc(d.at)} · ${esc(d.size)} · загрузил: ${esc(d.by)}</div></div>
+          <div style="display:flex;gap:6px;flex:0 0 auto"><button class="btn btn-sm" data-doc-dl="${esc(d.name)}">Скачать</button><button class="btn btn-sm btn-danger" data-doc-del="${esc(d.id)}">Удалить</button></div>
+        </div>`).join('') : `<div class="ts" style="padding:6px 0 4px">Документов нет</div>`}`;
+  }).join('');
+  return groups;
+}
+function openUploadDocModal(a){
+  let picked = null;
+  openModal(`
+    <div class="modal-h"><h3>Загрузить документ — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="field">
+        <label>Категория</label>
+        <select id="docCat">${DOC_CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Файл</label>
+        <div class="dropzone" id="docDrop">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="color:var(--text-soft)"><path d="M12 16V4m0 0L8 8m4-4l4 4M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="dz-t">Перетащите файл сюда</div>
+          <div class="dz-s">или выберите на компьютере</div>
+          <button class="btn btn-sm" type="button" id="docPick">Выбрать файл</button>
+          <input type="file" id="docFile" style="display:none">
+        </div>
+        <div id="docPicked"></div>
+        <div id="docErr" style="color:var(--error);font-size:11.5px;margin-top:5px"></div>
+      </div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="docSave">Загрузить</button></div>
+  `);
+  const fmtSize = (b)=>{ const kb=b/1024; return kb>=1024 ? (kb/1024).toFixed(1).replace('.',',')+' МБ' : Math.max(1,Math.round(kb))+' КБ'; };
+  const showPicked = ()=>{
+    $('#docPicked').innerHTML = picked ? `<div class="dz-file"><span class="nm">${esc(picked.name)}</span><span style="display:flex;align-items:center;gap:10px"><span class="sz">${fmtSize(picked.size)}</span><button class="btn btn-sm btn-ghost" type="button" id="docClear">Убрать</button></span></div>` : '';
+    $('#docClear')?.addEventListener('click', ()=>{ picked = null; $('#docFile').value=''; showPicked(); });
+    if(picked) $('#docErr').textContent = '';
+  };
+  $('#docPick').addEventListener('click', ()=>$('#docFile').click());
+  $('#docFile').addEventListener('change', (e)=>{ picked = e.target.files[0] || null; showPicked(); });
+  const dz = $('#docDrop');
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev, (e)=>{ e.preventDefault(); dz.classList.remove('over'); }));
+  dz.addEventListener('drop', (e)=>{ picked = e.dataTransfer.files[0] || null; showPicked(); });
+  $('#docSave').addEventListener('click', ()=>{
+    if(!picked){ $('#docErr').textContent = 'Выберите файл'; return; }
+    partnerDocs(a).push({id:'d'+Date.now(), cat:$('#docCat').value, name:picked.name, size:fmtSize(picked.size),
+      at: new Date().toLocaleDateString('ru-RU'), by:'Оператор'});
+    closeModal(); render(); toast('Документ загружен');
+  });
+}
+
+/* Индивидуальные комиссии мейкера/тейкера по парам: как у пользователя в админке BB 1.0 (таблица всех пар, у каждой своя строка) */
+const MARKET_PAIRS = [
+  {name:'BTC/USDT', maker:'0.10', taker:'0.20'},
+  {name:'ETH/USDT', maker:'0.10', taker:'0.20'},
+  {name:'TRX/USDT', maker:'0.15', taker:'0.25'},
+  {name:'USDT/RUBR', maker:'0.20', taker:'0.30'},
+  {name:'BTC/RUBR', maker:'0.15', taker:'0.25'},
+  {name:'ETH/RUBR', maker:'0.15', taker:'0.25'},
+];
+function mfParseDate(s){
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(s.trim());
+  if(!m) return null;
+  const d = new Date(+m[3], +m[2]-1, +m[1]);
+  return (d.getFullYear()===+m[3] && d.getMonth()===+m[2]-1 && d.getDate()===+m[1]) ? d : null;
+}
+function openMarketFeesModal(a){
+  a.marketFees = a.marketFees || {};
+  const rows = MARKET_PAIRS.map(m=>{
+    const f = a.marketFees[m.name];
+    const own = !!f;
+    return `<tr data-mf-row="${m.name}">
+      <td><div class="cell-strong">${m.name}</div><div class="ts">${own ? (f.exp ? 'Персональная, до '+esc(f.exp) : 'Персональная, без срока') : 'Из настроек маркета'}</div></td>
+      <td><div class="field" style="width:130px"><input data-mf-exp value="${esc(own?f.exp:'')}" placeholder="ДД.ММ.ГГГГ"></div></td>
+      <td><div class="field" style="width:96px"><input data-mf-maker value="${esc(own?f.maker:'')}" placeholder="${m.maker}"></div></td>
+      <td><div class="field" style="width:96px"><input data-mf-taker value="${esc(own?f.taker:'')}" placeholder="${m.taker}"></div></td>
+      <td><div style="display:flex;gap:6px;white-space:nowrap">
+        <button class="btn btn-sm btn-primary" data-mf-save="${m.name}">Сохранить</button>
+        <button class="btn btn-sm" data-mf-reset="${m.name}" ${own?'':'disabled'} title="Настройка будет браться из глобальных значений настройки маркетов">Сбросить настройку</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  openModal(`
+    <div class="modal-h"><h3>Комиссии мейкера и тейкера по парам — ${esc(a.name)}</h3><button class="modal-x" data-close-modal>✕</button></div>
+    <div class="modal-b">
+      <div class="helper-note" style="margin-bottom:12px"><span>Персональные значения перекрывают комиссии, заданные на паре в «Настройки → Маркеты». Пустые поля - используется настройка маркета (в полях показана текущая). Без даты окончания комиссия действует постоянно, с датой - до этого дня</span></div>
+      <div class="twrap"><table class="grid">
+        <thead><tr><th>Пара</th><th>Дата окончания</th><th>Комиссия мейкера, %</th><th>Комиссия тейкера, %</th><th>Действия</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>
+    <div class="modal-f"><button class="btn" data-close-modal>Закрыть</button></div>
+  `, 'x');
+  $all('[data-mf-save]').forEach(b=>b.addEventListener('click', ()=>{
+    const pair = b.dataset.mfSave;
+    const tr = b.closest('tr');
+    const maker = tr.querySelector('[data-mf-maker]').value.trim().replace(',','.');
+    const taker = tr.querySelector('[data-mf-taker]').value.trim().replace(',','.');
+    const exp = tr.querySelector('[data-mf-exp]').value.trim();
+    if(!maker && !taker){ toast('Укажите комиссии мейкера и тейкера или нажмите «Сбросить настройку»'); return; }
+    if(!maker || !taker){ toast('Укажите обе комиссии: мейкера и тейкера'); return; }
+    const mk = parseFloat(maker), tk = parseFloat(taker);
+    if(!(mk>=0 && mk<=100) || !(tk>=0 && tk<=100)){ toast('Комиссия - число от 0 до 100'); return; }
+    if(exp){
+      const d = mfParseDate(exp);
+      if(!d){ toast('Дата окончания - в формате ДД.ММ.ГГГГ'); return; }
+      if(d < new Date(new Date().setHours(0,0,0,0))){ toast('Дата окончания не может быть в прошлом'); return; }
+    }
+    a.marketFees[pair] = {maker:String(mk), taker:String(tk), exp};
+    openMarketFeesModal(a);
+    toast('Комиссии по маркету '+pair+' были успешно обновлены');
+  }));
+  $all('[data-mf-reset]').forEach(b=>b.addEventListener('click', ()=>{
+    const pair = b.dataset.mfReset;
+    delete a.marketFees[pair];
+    openMarketFeesModal(a);
+    toast('Персональные комиссии по маркету '+pair+' удалены. Теперь используются глобальные настройки комиссий для этой пары');
+  }));
 }
 
 function openCommissionModal(a){
