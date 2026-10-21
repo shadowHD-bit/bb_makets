@@ -209,6 +209,10 @@ const S = {
   JF: { period: 'all', setting: 'all', who: 'all' },
   kyc: { id: '', email: '', create: true, amount: '', state: null, link: '', payLink: '', err: '' },
   kc: { from: '2026-08-01', to: '2026-10-20' },
+  sessions: [
+    { dev: 'Windows PC · Windows 10/11 · Chrome', ip: '10.20.141.35', t: '20.10.2026 16:35', cur: true, icon: 'computer-line' },
+    { dev: 'iPhone · iOS 18 · Safari', ip: '10.20.88.14', t: '19.10.2026 22:14', icon: 'smartphone-line' },
+  ],
   docs: [
     { g: 'Договоры', n: 'Договор BitBanker - Nodex.pdf', d: '12.08.2026' },
     { g: 'Приложения к договорам', n: 'Приложение 1. Тарифы.pdf', d: '12.08.2026' },
@@ -274,6 +278,7 @@ const BTN_V = {
   'neutral-ghost': 'bg-transparent text-text-sub-600 hover:bg-bg-weak-50 hover:text-text-strong-950',
   'primary-lighter': 'bg-primary-alpha-10 text-primary-base hover:bg-bg-white-0 hover:border-primary-base',
   'danger-lighter': 'bg-red-alpha-10 text-red-500 hover:bg-bg-white-0 hover:border-red-500',
+  'danger-stroke': 'bg-bg-white-0 text-red-500 ring-1 ring-inset ring-red-500 hover:bg-red-alpha-10',
 };
 const BTN_S = { default: 'h-12 px-5 rounded-8', sm: 'h-10 px-4 rounded-8', xs: 'h-9 px-3 rounded-8', 'icon-xs': 'h-9 w-9 p-0 rounded-8' };
 const btn = (label, attrs = '', v = 'primary', s = 'sm', extra = '') =>
@@ -445,7 +450,6 @@ const PARTNER_PAGES = {
   'kyc-checks': 'KYC-проверки', exchange: 'Обмен', otc: 'OTC-сделки',
   'p-commissions': 'Комиссии', 'p-requisites': 'Реквизиты', 'p-api': 'API', 'p-journal': 'Журнал изменений', 'p-kyc': 'KYC',
   'p-documents': 'Документы', 'p-security': 'Безопасность', 'p-sessions': 'Сессии', 'p-notifications': 'Уведомления',
-  blocked: 'Раздел недоступен',
 };
 const partnerMain = () => [
   { id: 'home', icon: 'home-4-line', label: 'Главная' },
@@ -576,13 +580,15 @@ function sidebar() {
 }
 
 /* ---------- шапка страницы ---------- */
-function pageHeader(title) {
+function pageHeader(title, sub = '') {
+  const ib = 'flex size-10 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 transition-colors hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95';
   return `
 <div class="flex w-full items-center justify-between gap-6 pb-6">
-  <div class="min-w-0 flex-1"><p class="text-title-h5 font-medium leading-9 tracking-tight text-text-strong-950">${title}</p></div>
+  <div class="min-w-0 flex-1"><p class="text-title-h5 font-medium leading-9 tracking-tight text-text-strong-950">${title}</p>${sub ? `<p class="mt-1 text-paragraph-sm text-text-soft-400">${sub}</p>` : ''}</div>
   <div class="flex shrink-0 items-center gap-1.5">
     <button type="button" data-act="lang" class="flex h-10 items-center gap-1.5 rounded-full border border-stroke-soft-200 px-3 text-text-soft-400 transition hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95">${I('global-line', 'text-lg')}<span class="text-label-xs">RU</span></button>
-    <button type="button" data-act="theme" class="relative flex size-10 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 transition-colors hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95">${I(S.theme === 'dark' ? 'sun-line' : 'moon-line', 'text-lg')}</button>
+    <button type="button" data-act="theme" class="${ib}">${I(S.theme === 'dark' ? 'sun-line' : 'moon-line', 'text-lg')}</button>
+    <button type="button" data-act="support" class="${ib}">${I('customer-service-2-line', 'text-lg')}</button>
   </div>
 </div>`;
 }
@@ -709,14 +715,14 @@ function pageHome() {
     const [a, b] = num(val).split(',');
     return `<div ${isNew ? 'data-new="s"' : ''} class="min-w-0 rounded-16 border border-stroke-soft-200 p-4">
       <div class="mb-3 flex items-center gap-2">${coin(cur, 'size-7')}<span class="text-label-sm text-text-strong-950">${label}</span></div>
-      <div class="flex items-baseline"><span class="text-title-h5 font-medium tracking-tight text-text-strong-950">${a}</span><span class="text-title-h5 font-light tracking-tight text-text-soft-400">,${b}</span><span class="ml-1.5 text-label-sm text-text-soft-400">${cur}</span></div>
+      <div class="flex items-baseline whitespace-nowrap"><span class="text-title-h5 font-medium tracking-tight text-text-strong-950">${a}</span><span class="text-title-h5 font-light tracking-tight text-text-soft-400">,${b}</span><span class="ml-1.5 text-label-sm text-text-soft-400">${cur}</span></div>
       ${sub || ''}</div>`;
   };
   const payoutSub = `<div class="mt-2 flex flex-col gap-0.5 text-paragraph-xs"><span class="flex justify-between"><span class="text-text-soft-400">Свободно</span><span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.free)}</span></span><span class="flex justify-between"><span class="text-text-soft-400">Под выплаты</span><span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.frozen)}</span></span></div>`;
   const hero = `
 <div class="overflow-hidden rounded-[24px] border border-transparent dark:border-neutral-700/50" style="background:var(--balance-card-gradient)">
   <div class="flex items-center justify-between px-5 py-4"><div><p class="text-label-sm text-static-white">Остатки по счетам</p><p class="text-paragraph-xs text-neutral-400">Рублевый, основной USDT${S.iban ? ' и счет выплат (IBAN)' : ''}</p></div></div>
-  <div class="mx-1.5 mb-1.5 rounded-[20px] bg-bg-white-0 p-5"><div class="grid gap-3 ${S.iban ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}">
+  <div class="mx-1.5 mb-1.5 rounded-[20px] bg-bg-white-0 p-5"><div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
     ${acc('Рублевый счет', S.bal.rub, 'RUBR')}
     ${acc('Основной счет', S.bal.usdt, 'USDT')}
     ${S.iban ? acc('Счет выплат (IBAN)', S.bal.free + S.bal.frozen, 'USDT', payoutSub, true) : ''}
@@ -759,7 +765,7 @@ function accData() {
 }
 const balBig = (acc, cls = 'text-title-h4') => {
   const [w, fr] = num(acc.val).split(',');
-  return `<div class="flex items-baseline"><span class="${cls} font-medium tracking-tight text-text-strong-950">${w}</span><span class="${cls} font-light tracking-tight text-text-soft-400">,${fr}</span><span class="ml-2 text-label-md text-text-soft-400">${acc.cur}</span></div>`;
+  return `<div class="flex items-baseline whitespace-nowrap"><span class="${cls} font-medium tracking-tight text-text-strong-950">${w}</span><span class="${cls} font-light tracking-tight text-text-soft-400">,${fr}</span><span class="ml-2 text-label-md text-text-soft-400">${acc.cur}</span></div>`;
 };
 const freeTiles = (acc) => acc.free === undefined ? '' : `<div class="grid grid-cols-2 gap-3">
   ${[['Свободный остаток', acc.free], ['Под выплаты', acc.frozen]].map(([l, v]) => `<div class="rounded-16 border border-stroke-soft-200 px-4 py-3"><p class="text-paragraph-xs text-text-soft-400">${l}</p><p class="mt-0.5 font-mono text-label-md tabular-nums text-text-strong-950">${num(v)} <span class="text-text-soft-400">USDT</span></p></div>`).join('')}</div>`;
@@ -780,16 +786,16 @@ function vTiles(d) {
   /* одинаковая сетка из трех колонок: первая кнопка у всех плиток стоит на одной вертикали */
   const tb = (a, v) => btn(I(a.icon) + a.label, `${a.attrs} ${a.isNew ? 'data-new="s"' : ''}`, v, 'sm', 'w-full');
   /* кнопки с текстом: основное действие на всю ширину, остальные в ряд под ним */
-  const actions = (acc) => `<div class="flex flex-col gap-2 border-t border-stroke-soft-200 pt-4">${tb(acc.actions[0], 'primary')}${acc.actions.length > 1 ? `<div class="grid gap-2 ${acc.actions.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}">${acc.actions.slice(1).map((a) => tb(a, 'neutral-stroke')).join('')}</div>` : ''}</div>`;
+  const actions = (acc) => `<div class="flex flex-col gap-2 border-t border-stroke-soft-200 pt-4">${tb(acc.actions[0], 'primary')}${acc.actions.length > 1 ? `<div class="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">${acc.actions.slice(1).map((a) => tb(a, 'neutral-stroke')).join('')}</div>` : ''}</div>`;
   const tile = (acc) => `<div ${acc.isNew ? 'data-new="s"' : ''} class="flex min-w-0 flex-col gap-4 rounded-16 border border-stroke-soft-200 p-4">
     <div class="flex items-center gap-2">${coin(acc.cur, 'size-7')}<span class="text-label-sm text-text-strong-950">${acc.name}</span></div>
-    <div class="flex items-end justify-between gap-4">${balBig(acc, 'text-title-h5')}${split(acc)}</div>
+    <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">${balBig(acc, 'text-title-h5')}${split(acc)}</div>
     ${actions(acc)}
     ${acc.notice || ''}
   </div>`;
   return `<div class="${HERO_BG}" style="background:var(--balance-card-gradient)">
     <div class="flex items-center justify-between px-5 py-4"><div><p class="text-label-sm text-static-white">Остатки по счетам</p><p class="text-paragraph-xs text-neutral-400">Рублевый, основной USDT${d.payout ? ' и счет выплат (IBAN)' : ''}</p></div></div>
-    <div class="mx-1.5 mb-1.5 rounded-[20px] bg-bg-white-0 p-5"><div class="grid items-stretch gap-3 ${accs.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}">${accs.map(tile).join('')}</div></div>
+    <div class="mx-1.5 mb-1.5 rounded-[20px] bg-bg-white-0 p-5"><div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-stretch gap-3">${accs.map(tile).join('')}</div></div>
   </div>`;
 }
 
@@ -985,14 +991,14 @@ function pageApi() {
 
 function pageJournal() {
   const settings = [...new Set(S.J.map((j) => j.s))];
-  let rows = S.J.filter((j) => (S.JF.setting === 'all' || j.s === S.JF.setting) && (S.JF.who === 'all' || j.who === S.JF.who));
-  const th = (t, a) => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${a}">${t}</th>`;
-  return dashCard('pt-6 pb-[18px]', `
-<div class="mb-6 flex flex-wrap items-center gap-2 px-4">
+  const rows = S.J.filter((j) => (S.JF.setting === 'all' || j.s === S.JF.setting) && (S.JF.who === 'all' || j.who === S.JF.who));
+  const th = (x, a) => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${a}">${x}</th>`;
+  return profileCard('file-list-3-line', 'Журнал изменений', 'История изменений настроек партнера и условий обслуживания', '', `
+<div class="mb-4 mt-1 flex flex-wrap items-center gap-2 px-3">
   ${pill('j-setting', 'Настройка', S.JF.setting, [['all', 'Все'], ...settings.map((s) => [s, s])])}
   ${pill('j-who', 'Кто изменил', S.JF.who, [['all', 'Все'], ['Партнер', 'Партнер'], ['Оператор', 'Оператор']])}
 </div>
-<div class="px-4"><table class="w-full">
+<div class="px-3"><table class="w-full">
   <thead><tr class="bg-bg-weak-50">${th('Дата и время', 'rounded-l-full')}${th('Настройка')}${th('Было')}${th('Стало')}${th('Кто изменил', 'rounded-r-full')}</tr></thead>
   <tbody>${rows.length ? rows.map((j) => `<tr class="h-14 border-b border-stroke-soft-200/50 last:border-none">
     <td class="px-3 font-mono text-paragraph-xs text-text-sub-600">${j.t}</td><td class="px-3 text-label-sm text-text-strong-950">${esc(j.s)}</td>
@@ -1012,6 +1018,14 @@ function pageDocs() {
     '');
 }
 
+function pageSessions() {
+  const others = S.sessions.filter((s) => !s.cur).length;
+  const rows = S.sessions.map((s, i) => row(s.icon, esc(s.dev), `<span class="font-mono">${s.ip} · ${s.t}</span>`,
+    btn(I('logout-box-r-line') + 'Завершить', `data-act="sess-end" data-i="${i}" ${s.cur ? 'disabled' : ''}`, 'neutral-lighter', 'sm'))).join('');
+  return ntWrap(profileCard('timer-line', 'Активные сессии', 'Управление устройствами и входами',
+    btn('Завершить все', `data-act="sess-all" ${others ? '' : 'disabled'}`, 'danger-stroke', 'sm'),
+    sectionLabel('Активные сессии') + rows), 'Раздел без изменений, как у обычного пользователя. Текущую сессию завершить нельзя', 'rounded-16');
+}
 function simpleProfile(icon, title, desc, rows, note) {
   return ntWrap(profileCard(icon, title, desc, '', rows.map(([i, l, s, r]) => row(i, l, s, r)).join('')), note, 'rounded-16');
 }
@@ -1019,7 +1033,7 @@ function pageProfile(r) {
   if (r === 'p-commissions') return nwWrap(pageCommissions(), 'rounded-16');
   if (r === 'p-requisites') return pageRequisites();
   if (r === 'p-api') return pageApi();
-  if (r === 'p-journal') return nwWrap(pageJournal(), 'rounded-[24px]');
+  if (r === 'p-journal') return nwWrap(pageJournal(), 'rounded-16');
   if (r === 'p-documents') return nwWrap(pageDocs(), 'rounded-16');
   if (r === 'p-kyc') return simpleProfile('shield-check-line', 'KYC', 'Ваш уровень верификации', [
     ['shield-check-line', 'Уровень верификации', '', chip('Уровень 3', 'bg-success-lighter text-success-dark')],
@@ -1027,9 +1041,7 @@ function pageProfile(r) {
   if (r === 'p-security') return simpleProfile('lock-line', 'Безопасность', 'Вход и двухфакторная аутентификация', [
     ['lock-line', 'Пароль', '', btn('Изменить', 'data-act="toast" data-v="Раздел без изменений"', 'neutral-stroke', 'xs')],
     ['shield-check-line', 'Двухфакторная аутентификация', '', chip('Включена', 'bg-success-lighter text-success-dark')]], 'Раздел без изменений. 2FA опциональна, обязательной станет во второй итерации');
-  if (r === 'p-sessions') return simpleProfile('timer-line', 'Сессии', 'Активные сессии', [
-    ['computer-line', 'Chrome, Windows', 'Москва · текущая сессия', chip('Текущая')],
-    ['smartphone-line', 'Safari, iOS', 'Москва · 19.10.2026, 22:14', btn('Завершить', 'data-act="toast" data-v="Сессия завершена"', 'neutral-stroke', 'xs')]], 'Раздел без изменений, как у обычного пользователя');
+  if (r === 'p-sessions') return pageSessions();
   return simpleProfile('notification-line', 'Уведомления', 'Настройка рассылок', [
     ['mail-line', 'Письма на почту аккаунта', '', sw(true, 'data-act="toast" data-v="Раздел без изменений"')],
     ['telegram-line', 'Чат партнера в Telegram', 'Сообщения о выводах и проверках', sw(true, 'data-act="toast" data-v="Раздел без изменений"')]], 'Раздел без изменений, как у обычного пользователя');
@@ -1039,25 +1051,16 @@ function pageRegular() {
   return stubPage('layout-grid-line', 'Обычный кабинет BB', 'Экран обычного кабинета. Нужен для сравнения навигации, в прототипе не детализируется');
 }
 
-function pageBlocked() {
-  return dashCard('', `<div class="flex flex-col items-center gap-3 px-6 py-20 text-center">
-    <div class="flex size-12 items-center justify-center rounded-full bg-error-lighter">${I('lock-2-line', 'text-2xl text-error-base')}</div>
-    <p data-note="Текст ошибки в ТЗ не определен" class="text-label-md text-text-strong-950">Раздел недоступен</p>
-    <p class="max-w-[460px] text-paragraph-sm text-text-sub-600">Backend отклонил запрос: раздел не входит в состав партнерского кабинета. Операции закрываются на сервере по партнерскому признаку, а не скрытием пунктов меню</p>
-    ${btn('На главную', 'data-act="nav" data-to="home"', 'neutral-stroke', 'sm')}</div>`);
-}
-
 function pageContent() {
   const r = S.route;
   if (!S.partner) return pageRegular();
   if (r === 'home') return pageHome();
   if (r === 'assets') return pageAssets();
   if (r === 'history') return pageHistory();
-  if (r === 'kyc-sbp') return S.manual ? nwWrap(pageKycSbp(), 'rounded-16') : pageBlocked();
+  if (r === 'kyc-sbp') return nwWrap(pageKycSbp(), 'rounded-16');
   if (r === 'kyc-checks') return nwWrap(pageKycChecks(), 'rounded-[24px]');
   if (r === 'exchange') return stubPage('exchange-line', 'Обмен', 'Раздел без изменений: обмен рублей на USDT через стакан, как у обычного пользователя');
   if (r === 'otc') return stubPage('exchange-funds-line', 'OTC-сделки', 'Раздел без изменений: обмен вне стакана по договорной цене');
-  if (r === 'blocked') return pageBlocked();
   return pageProfile(r);
 }
 
@@ -1200,11 +1203,7 @@ function panel() {
       ${group('Сценарии')}
       ${trow('Оплата клиента по СБП', btn('Выставить', 'data-act="scn-new"', 'neutral-stroke', 'xs'), 'Появляется в истории со статусом «Ожидает»')}
       ${trow('Последняя ожидающая оплата', `<div class="flex gap-1.5">${btn('Оплачена', 'data-act="scn-paid"', 'neutral-stroke', 'xs')}${btn('Срок вышел', 'data-act="scn-exp"', 'neutral-stroke', 'xs')}</div>`, 'Станет «Завершено» или «Отменено»')}
-      ${trow('Запрос закрытого раздела', btn('Отправить', 'data-act="scn-blocked"', 'neutral-stroke', 'xs'), 'Ответ сервера на раздел вне состава кабинета')}
-      ${group('Вид')}
-      ${trow('Компоновка «Активы и вывод»', `<div class="w-[170px] max-w-full">${select('layout', S.layout, [['tiles', 'Плитки (как Главная)'], ['cards', 'Карточки'], ['panel', 'Единая панель'], ['list', 'Список'], ['hero', 'Основной сверху']])}</div>`, 'Варианты для сравнения')}
-      ${trow('Масштаб кабинета', `<div class="w-[110px]">${select('zoom', S.zoom, [['100', '100%'], ['90', '90%'], ['80', '80%'], ['75', '75%'], ['67', '67%']])}</div>`, 'Уменьшает кабинет целиком')}
-      ${trow('Темная тема', sw(S.theme === 'dark', 'data-act="theme"'), '')}
+      ${group('Прототип')}
       ${trow('Состояние прототипа', btn(I('refresh-line') + 'Сбросить', 'data-act="reset"', 'neutral-stroke', 'xs'), '')}
       </tbody>
     </table>
@@ -1213,11 +1212,16 @@ function panel() {
 }
 
 /* ---------- сборка ---------- */
+const PROFILE_ROUTES = ['r-profile', 'r-kyc', 'r-security', 'r-sessions', 'r-req', 'r-docs', 'r-notif', 'r-api'];
+const isProfileRoute = () => S.route.startsWith('p-') || PROFILE_ROUTES.includes(S.route);
 function title() {
+  if (isProfileRoute()) return 'Управление аккаунтом';
   if (!S.partner) return S.route === 'home' ? 'Главная' : 'Обычный кабинет';
   return PARTNER_PAGES[S.route] || '';
 }
+const subtitle = () => (isProfileRoute() ? 'Настройте профиль' : '');
 function render() {
+  if (S.partner && S.route === 'kyc-sbp' && !S.manual) S.route = 'home';
   document.documentElement.classList.toggle('dark', S.theme === 'dark');
   document.body.classList.toggle('hl-on', S.hl);
   document.body.classList.toggle('note-on', S.nt);
@@ -1230,7 +1234,7 @@ function render() {
   <div class="min-w-0 flex-1 overflow-hidden rounded-24">
     <div id="scroll" class="h-full w-full min-w-0 overflow-y-auto overscroll-contain thin-scroll">
       <div class="flex min-h-full w-full min-w-0 flex-col bg-bg-weak-50 px-8 py-5 lg:rounded-24" id="content">
-        ${pageHeader(title())}
+        ${pageHeader(title(), subtitle())}
         <div class="relative w-full min-w-0 text-text-strong-950">${pageContent()}</div>
       </div>
     </div>
@@ -1455,6 +1459,9 @@ const ACTIONS = {
   copy: (e) => { try { navigator.clipboard.writeText(e.dataset.v); } catch (x) { /* без буфера */ } toast('Скопировано'); },
   toast: (e) => toast(e.dataset.v),
   rerender: () => {},
+  support: () => toast('Чат поддержки не входит в прототип'),
+  'sess-end': (e) => { S.sessions.splice(Number(e.dataset.i), 1); toast('Сессия завершена'); },
+  'sess-all': () => { S.sessions = S.sessions.filter((s) => s.cur); toast('Остальные сессии завершены'); },
   'rng-open': () => {
     if (S.cal && S.cal.id === 'rng-kc') { S.cal = null; return; }
     const [y, m] = S.kc.from.split('-').map(Number);
@@ -1518,7 +1525,6 @@ const ACTIONS = {
     if (!h) { toast('Нет ожидающих оплат'); return; }
     h.st = 'canceled'; h.why = 'Срок оплаты вышел, оплаты не было (статус провайдера expired)'; toast('Срок вышел: статус «Отменено»');
   },
-  'scn-blocked': () => { S.partner ? (S.route = 'blocked') : toast('Партнерский признак выключен'); },
   reset: () => { location.reload(); },
 };
 
