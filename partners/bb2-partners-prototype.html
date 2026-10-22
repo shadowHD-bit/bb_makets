@@ -1227,8 +1227,10 @@ const state = {
   },
   exportOpen: false,
   collapsed: {           // key -> true, если панель свёрнута; остальные по умолчанию развёрнуты
-    'ap-autowithdraw': true, 'ap-commission': true, 'ap-invoiceschema': true,
-    'ap-errors': true, 'ap-billable': true, 'ap-usagelog': true, 'ap-telegram': true,
+    'ap-kycbridge': true, 'ap-requiredfields': true, 'ap-invoiceschema': true, 'ap-commission': true,
+    'ap-autoconvert': true, 'ap-autowithdraw': true,
+    'ap-idxchecks': true, 'ap-telegram': true, 'ap-documents': true, 'ap-errors': true,
+    'ap-billable': true, 'ap-usagelog': true,
   },
   dateUI: { open:false, target:'client', viewMonth:null, tempFrom:null, tempTo:null },
   openFilterMenu: null,   // 'partner' | 'status' | 'verif' | null
@@ -1435,7 +1437,7 @@ function mockInvoiceForOp(op, clientId){
         refundId: 'ref_' + (h % 89999 + 10000 + i),
         amount: full ? refundableAmount : Math.round(refundableAmount*p),
         // все возвраты, кроме последнего, уже подтверждены банком (accepted); у последнего - разные исходы
-        status: !last ? 'CONFIRMED' : (h % 7 === 0 ? 'FAILED' : (h % 4 === 0 ? 'PENDING' : 'CONFIRMED')),
+        status: !last ? 'CONFIRMED' : (h % 7 === 0 ? 'FAILED' : 'PENDING'),
         reason: full ? 'Полный возврат по заявке покупателя'
           : (parts.length > 1 ? (i === 0 ? 'Частичный возврат за один товар из заказа' : 'Повторный частичный возврат по заказу') : 'Частичный возврат за один товар из заказа'),
         createdAt: op.paidAt || op.createdAt,
@@ -2259,6 +2261,47 @@ function renderAccountPartnerTab(a){
           </div>
         </div>
 
+        <div class="panel" data-collapsed="${isCollapsed('ap-requiredfields')}">
+          ${collapsibleHead('ap-requiredfields', '<h3>Обязательные поля клиента</h3>')}
+          <div class="panel-b">
+            ${REQUIRED_FIELDS_GROUPS.map(g=>`
+              <div class="ts" style="margin:10px 0 6px;font-weight:600;color:var(--text)">${g.group}</div>
+              ${g.fields.map(f=>`
+                <label class="checkfilter" style="display:flex;margin-bottom:6px;opacity:.75">
+                  <input type="checkbox" disabled ${(a.requiredFields||REQUIRED_FIELDS_DEFAULT).includes(f.key)?'checked':''}>
+                  ${f.label}
+                </label>`).join('')}
+            `).join('')}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditRequiredFields">Редактировать</button></div>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-invoiceschema')}">
+          ${collapsibleHead('ap-invoiceschema', '<h3>Конфигурация инвойса</h3>')}
+          <div class="panel-b">
+            ${(function(){
+              const cfg = a.invoiceSchemaConfig;
+              if(!cfg) return `<div class="empty-state" style="padding:10px 0">Конфигурация не настроена — партнёр не может использовать метод «Инвойс», пока оператор её не заведёт</div>`;
+              const rows = INVOICE_SCHEMA_GROUPS.flatMap(g=>g.fields.map(f=>({group:g.group, label:f.label, path:cfg[f.key]}))).filter(r=>r.path);
+              const total = INVOICE_SCHEMA_FIELDS.length;
+              if(!rows.length) return `<div class="empty-state" style="padding:10px 0">Конфигурация пустая — ни один путь не задан</div>`;
+              return `
+                <div class="ts" style="margin-bottom:8px">Настроено ${rows.length} из ${total} полей</div>
+                <div class="twrap">
+                  <table class="grid">
+                    <thead><tr><th>Поле</th><th>Путь в JSON партнёра</th></tr></thead>
+                    <tbody>${rows.map(r=>`
+                      <tr>
+                        <td>${esc(r.label)}<div class="cell-sub">${esc(r.group)}</div></td>
+                        <td class="mono" style="font-size:12px">${esc(r.path)}</td>
+                      </tr>`).join('')}</tbody>
+                  </table>
+                </div>`;
+            })()}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditInvoiceSchema">Редактировать</button></div>
+          </div>
+        </div>
+
         <div class="panel" data-collapsed="${isCollapsed('ap-commission')}">
           ${collapsibleHead('ap-commission', '<h3>Комиссии</h3>')}
           <div class="panel-b">
@@ -2274,6 +2317,27 @@ function renderAccountPartnerTab(a){
             <div class="hairline"></div>
             <a href="#" id="marketFeesLink" style="color:var(--primary);font-weight:500;text-decoration:none;font-size:12.5px">Индивидуальные комиссии мейкера/тейкера по торговым парам →</a>
             <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditCommission">Изменить</button></div>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-autoconvert')}">
+          ${collapsibleHead('ap-autoconvert', '<h3>Автоконвертация</h3>')}
+          <div class="panel-b">
+            <div class="toggle-row">
+              <div><div class="tt">${a.autoConvertToUsdt?'Автоконвертация включена':'Автоконвертация выключена'}</div><div class="ts">Зачисленные рубли автоматически обмениваются на USDT по паре USDT/RUBR сразу после оплаты QR клиентом</div></div>
+              <button class="switch ${a.autoConvertToUsdt?'on':''}" data-toggle="autoConvertToUsdt"><span class="knob"></span></button>
+            </div>
+            <div class="toggle-row">
+              <div><div class="tt">${a.autoConvertBalance?'Автоконвертация накопленного остатка включена':'Автоконвертация накопленного остатка выключена'}</div><div class="ts">Когда остаток рублевого счета достигает верхнего порога, в USDT обменивается разница между остатком и нижним порогом</div></div>
+              <button class="switch ${a.autoConvertBalance?'on':''}" data-toggle="autoConvertBalance"><span class="knob"></span></button>
+            </div>
+            ${a.autoConvertBalance ? `
+            ${a.autoConvertToUsdt ? `<div class="helper-note" style="margin-top:10px"><span>При включенной автоконвертации зачислений рубли на счете не копятся, поэтому пороги накопленного остатка не срабатывают</span></div>` : ''}
+            <div class="field-grid" style="margin-top:12px">
+              <div class="field"><label>Нижний порог (RUBR) — столько останется на счете</label><input id="acLower" value="${esc(a.autoConvertLowerRubr||'')}" placeholder="0"></div>
+              <div class="field"><label>Верхний порог (RUBR) — при каком остатке срабатывает обмен</label><input id="acUpper" value="${esc(a.autoConvertUpperRubr||'')}" placeholder="500000"></div>
+            </div>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveAutoConvert">Сохранить пороги</button></div>` : ''}
           </div>
         </div>
 
@@ -2335,6 +2399,80 @@ function renderAccountPartnerTab(a){
             <div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="btnSaveAutoWithdraw">Сохранить изменения</button></div>
           </div>
         </div>
+      </div>
+
+      <div>
+        <div class="panel" data-collapsed="${isCollapsed('ap-hmac')}">
+          ${collapsibleHead('ap-hmac', '<h3>HMAC-секрет партнёрского API</h3>')}
+          <div class="panel-b">
+            <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
+            <div class="secretbox">
+              <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
+              <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
+              <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-idxchecks')}">
+          ${collapsibleHead('ap-idxchecks', '<h3>Проверки IDX</h3>')}
+          <div class="panel-b">
+            <div class="toggle-row" style="border-bottom:0">
+              <div><div class="tt">Прохождение IDX-проверок</div><div class="ts">Санкции, иноагенты, терроризм, розыск, паспортный комплекс, валидация телефона СБП</div></div>
+              <button class="switch ${a.idxChecksEnabled!==false?'on':''}" id="btnToggleIdxChecks"><span class="knob"></span></button>
+            </div>
+            ${a.idxChecksEnabled===false ? `
+            <div class="helper-note" style="background:var(--error-bg);color:var(--error-dark);margin-top:4px">
+              <span>⚠️</span><span>Выключено. Клиенты этого партнёра получают допуск к СБП/QR без единой внешней проверки.</span>
+            </div>` : ''}
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
+          ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
+          <div class="panel-b">
+            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
+            <div class="hairline"></div>
+            <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
+            <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
+            <label class="checkfilter" style="display:flex;margin-bottom:${a.manualLinksEnabled?'8':'4'}px;${a.manualLinksEnabled?'':'opacity:.55'}"><input type="checkbox" id="tgNotifyManual" ${a.manualNotifyEnabled?'checked':''} ${a.manualLinksEnabled?'':'disabled'}> Уведомления по ручной генерации ссылок</label>
+            ${a.manualLinksEnabled?'':'<div class="ts" style="margin-bottom:8px">Доступно при включенной ручной генерации ссылок</div>'}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-documents')}">
+          ${collapsibleHead('ap-documents', '<h3>Документы партнёра</h3>')}
+          <div class="panel-b">
+            ${renderPartnerDocs(a)}
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnUploadDoc">Загрузить документ</button></div>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-errors')}">
+          ${collapsibleHead('ap-errors', '<h3>Выгрузка ошибок за период</h3>')}
+          <div class="panel-b">
+            <div class="errexport-list">
+              ${[
+                {key:'kyc', label:'Ошибки KYC'},
+                {key:'sbp', label:'Ошибки API СБП'},
+                {key:'users', label:'Ошибки по пользователям'},
+              ].map(x=>`
+                <div class="errexport-item">
+                  <div class="errexport-label">${x.label}</div>
+                  <div class="daterange-chip">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    <span>13.08.2026 – 19.08.2026</span>
+                    <button class="chip-x" data-errclear="${x.key}" title="Сбросить период">✕</button>
+                  </div>
+                  <button class="icon-btn" data-errdownload="${x.key}" title="Скачать">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
 
         <div class="panel" data-collapsed="${isCollapsed('ap-billable')}">
           ${collapsibleHead('ap-billable', '<h3>Сводка billable-проверок</h3>')}
@@ -2383,138 +2521,6 @@ function renderAccountPartnerTab(a){
             </table>
           </div>
           <div class="panel-b" style="padding-top:10px"><button class="btn btn-sm" id="btnExportKycUsage">Экспорт CSV</button></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-hmac')}">
-          ${collapsibleHead('ap-hmac', '<h3>HMAC-секрет партнёрского API</h3>')}
-          <div class="panel-b">
-            <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
-            <div class="secretbox">
-              <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
-              <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
-              <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-requiredfields')}">
-          ${collapsibleHead('ap-requiredfields', '<h3>Обязательные поля клиента</h3>')}
-          <div class="panel-b">
-            ${REQUIRED_FIELDS_GROUPS.map(g=>`
-              <div class="ts" style="margin:10px 0 6px;font-weight:600;color:var(--text)">${g.group}</div>
-              ${g.fields.map(f=>`
-                <label class="checkfilter" style="display:flex;margin-bottom:6px;opacity:.75">
-                  <input type="checkbox" disabled ${(a.requiredFields||REQUIRED_FIELDS_DEFAULT).includes(f.key)?'checked':''}>
-                  ${f.label}
-                </label>`).join('')}
-            `).join('')}
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditRequiredFields">Редактировать</button></div>
-          </div>
-        </div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-idxchecks')}">
-          ${collapsibleHead('ap-idxchecks', '<h3>Проверки IDX</h3>')}
-          <div class="panel-b">
-            <div class="toggle-row" style="border-bottom:0">
-              <div><div class="tt">Прохождение IDX-проверок</div><div class="ts">Санкции, иноагенты, терроризм, розыск, паспортный комплекс, валидация телефона СБП</div></div>
-              <button class="switch ${a.idxChecksEnabled!==false?'on':''}" id="btnToggleIdxChecks"><span class="knob"></span></button>
-            </div>
-            ${a.idxChecksEnabled===false ? `
-            <div class="helper-note" style="background:var(--error-bg);color:var(--error-dark);margin-top:4px">
-              <span>⚠️</span><span>Выключено. Клиенты этого партнёра получают допуск к СБП/QR без единой внешней проверки.</span>
-            </div>` : ''}
-          </div>
-        </div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-invoiceschema')}">
-          ${collapsibleHead('ap-invoiceschema', '<h3>Конфигурация инвойса</h3>')}
-          <div class="panel-b">
-            ${(function(){
-              const cfg = a.invoiceSchemaConfig;
-              if(!cfg) return `<div class="empty-state" style="padding:10px 0">Конфигурация не настроена — партнёр не может использовать метод «Инвойс», пока оператор её не заведёт</div>`;
-              const rows = INVOICE_SCHEMA_GROUPS.flatMap(g=>g.fields.map(f=>({group:g.group, label:f.label, path:cfg[f.key]}))).filter(r=>r.path);
-              const total = INVOICE_SCHEMA_FIELDS.length;
-              if(!rows.length) return `<div class="empty-state" style="padding:10px 0">Конфигурация пустая — ни один путь не задан</div>`;
-              return `
-                <div class="ts" style="margin-bottom:8px">Настроено ${rows.length} из ${total} полей</div>
-                <div class="twrap">
-                  <table class="grid">
-                    <thead><tr><th>Поле</th><th>Путь в JSON партнёра</th></tr></thead>
-                    <tbody>${rows.map(r=>`
-                      <tr>
-                        <td>${esc(r.label)}<div class="cell-sub">${esc(r.group)}</div></td>
-                        <td class="mono" style="font-size:12px">${esc(r.path)}</td>
-                      </tr>`).join('')}</tbody>
-                  </table>
-                </div>`;
-            })()}
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnEditInvoiceSchema">Редактировать</button></div>
-          </div>
-        </div>
-        <div class="panel" data-collapsed="${isCollapsed('ap-autoconvert')}">
-          ${collapsibleHead('ap-autoconvert', '<h3>Автоконвертация</h3>')}
-          <div class="panel-b">
-            <div class="toggle-row">
-              <div><div class="tt">${a.autoConvertToUsdt?'Автоконвертация включена':'Автоконвертация выключена'}</div><div class="ts">Зачисленные рубли автоматически обмениваются на USDT по паре USDT/RUBR сразу после оплаты QR клиентом</div></div>
-              <button class="switch ${a.autoConvertToUsdt?'on':''}" data-toggle="autoConvertToUsdt"><span class="knob"></span></button>
-            </div>
-            <div class="toggle-row">
-              <div><div class="tt">${a.autoConvertBalance?'Автоконвертация накопленного остатка включена':'Автоконвертация накопленного остатка выключена'}</div><div class="ts">Когда остаток рублевого счета достигает верхнего порога, в USDT обменивается разница между остатком и нижним порогом</div></div>
-              <button class="switch ${a.autoConvertBalance?'on':''}" data-toggle="autoConvertBalance"><span class="knob"></span></button>
-            </div>
-            ${a.autoConvertBalance ? `
-            ${a.autoConvertToUsdt ? `<div class="helper-note" style="margin-top:10px"><span>При включенной автоконвертации зачислений рубли на счете не копятся, поэтому пороги накопленного остатка не срабатывают</span></div>` : ''}
-            <div class="field-grid" style="margin-top:12px">
-              <div class="field"><label>Нижний порог (RUBR) — столько останется на счете</label><input id="acLower" value="${esc(a.autoConvertLowerRubr||'')}" placeholder="0"></div>
-              <div class="field"><label>Верхний порог (RUBR) — при каком остатке срабатывает обмен</label><input id="acUpper" value="${esc(a.autoConvertUpperRubr||'')}" placeholder="500000"></div>
-            </div>
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveAutoConvert">Сохранить пороги</button></div>` : ''}
-          </div>
-        </div>
-
-        <div class="panel" data-collapsed="${isCollapsed('ap-documents')}">
-          ${collapsibleHead('ap-documents', '<h3>Документы партнёра</h3>')}
-          <div class="panel-b">
-            ${renderPartnerDocs(a)}
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnUploadDoc">Загрузить документ</button></div>
-          </div>
-        </div>
-
-        <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
-          ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
-          <div class="panel-b">
-            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
-            <div class="hairline"></div>
-            <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
-            <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
-            <label class="checkfilter" style="display:flex;margin-bottom:${a.manualLinksEnabled?'8':'4'}px;${a.manualLinksEnabled?'':'opacity:.55'}"><input type="checkbox" id="tgNotifyManual" ${a.manualNotifyEnabled?'checked':''} ${a.manualLinksEnabled?'':'disabled'}> Уведомления по ручной генерации ссылок</label>
-            ${a.manualLinksEnabled?'':'<div class="ts" style="margin-bottom:8px">Доступно при включенной ручной генерации ссылок</div>'}
-            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveTelegram">Сохранить</button></div>
-          </div>
-        </div>
-
-        <div class="panel" data-collapsed="${isCollapsed('ap-errors')}">
-          ${collapsibleHead('ap-errors', '<h3>Выгрузка ошибок за период</h3>')}
-          <div class="panel-b">
-            <div class="errexport-list">
-              ${[
-                {key:'kyc', label:'Ошибки KYC'},
-                {key:'sbp', label:'Ошибки API СБП'},
-                {key:'users', label:'Ошибки по пользователям'},
-              ].map(x=>`
-                <div class="errexport-item">
-                  <div class="errexport-label">${x.label}</div>
-                  <div class="daterange-chip">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                    <span>13.08.2026 – 19.08.2026</span>
-                    <button class="chip-x" data-errclear="${x.key}" title="Сбросить период">✕</button>
-                  </div>
-                  <button class="icon-btn" data-errdownload="${x.key}" title="Скачать">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                </div>
-              `).join('')}
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -4589,7 +4595,7 @@ function openCreateRefundModal(clientId, opId){
       createdAt: opNowStamp(),
     });
     closeModal(); render();
-    toast('Возврат создан (idempotency_key сформирован), у провайдера requested - ожидает ответа банка. Остаток уменьшен на сумму возврата');
+    toast('Возврат создан в статусе «В ожидании» (idempotency_key сформирован). Автоподтверждения нет: подтвердите или отклоните возврат вручную в его карточке. Остаток уменьшен на сумму возврата');
   });
 }
 
@@ -5723,4 +5729,3 @@ render();
 </script>
 </body>
 </html>
- 
