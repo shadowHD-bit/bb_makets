@@ -212,16 +212,17 @@ const S = {
   pk: null,
   offerUrl: 'https://bitbanker.org/docs/partner-offer',
   pg: { history: 1, journal: 1, kyc: 1 }, pgSig: {},
+  docTab: 'contracts', docErr: '',
   sessions: [
     { dev: 'Windows PC · Windows 10/11 · Chrome', ip: '10.20.141.35', t: '20.10.2026 16:35', cur: true, icon: 'computer-line' },
     { dev: 'iPhone · iOS 18 · Safari', ip: '10.20.88.14', t: '19.10.2026 22:14', icon: 'smartphone-line' },
   ],
   docs: [
-    { g: 'Договоры', n: 'Договор BitBanker - Nodex.pdf', d: '12.08.2026' },
-    { g: 'Приложения к договорам', n: 'Приложение 1. Тарифы.pdf', d: '12.08.2026' },
-    { g: 'Приложения к договорам', n: 'Допсоглашение 1. IBAN-выплаты.pdf', d: '02.09.2026' },
-    { g: 'Документы KYB', n: 'Устав.pdf', d: '05.08.2026' },
-    { g: 'Документы KYB', n: 'Выписка из ЕГРЮЛ.pdf', d: '05.08.2026' },
+    { g: 'Договоры', n: 'Договор BitBanker - Nodex.pdf', d: '12.08.2026', s: '1,2 МБ', ds: 'Договор' },
+    { g: 'Приложения к договорам', n: 'Приложение 1. Тарифы.pdf', d: '12.08.2026', s: '0,4 МБ', ds: 'Приложение к договору' },
+    { g: 'Приложения к договорам', n: 'Допсоглашение 1. IBAN-выплаты.pdf', d: '02.09.2026', s: '0,6 МБ', ds: 'Приложение к договору' },
+    { g: 'Документы KYB', n: 'Устав.pdf', d: '05.08.2026', s: '2,8 МБ' },
+    { g: 'Документы KYB', n: 'Выписка из ЕГРЮЛ.pdf', d: '05.08.2026', s: '0,9 МБ' },
   ],
   H: [
     { id: 'TX-4F7K2X9M', k: 'sbp', st: 'pending', age: 0, tm: '20.10.2026, 15:47', due: '16:02', legs: [{ c: 'RUBR', a: 10000 }], qr: 10183.30, cl: 'R123456', src: 'API', bb: 183.3, pf: 150, link: 'https://pay.bitbanker.org/q/7Hk2xP', n: '4912' },
@@ -1130,14 +1131,53 @@ function pageJournal() {
 </table>${pager('journal', pg)}</div>`);
 }
 
+const DOC_MAX = 8 * 1024 * 1024;
+const DOC_ERR = 'Недопустимый формат или размер файла';
+const DOC_HINT = 'PDF, все страницы одним файлом, до 8 МБ. Допускаются также JPG и PNG';
+function addDoc(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.size > DOC_MAX || !(file.size > 0)) { S.docErr = DOC_ERR; return false; }
+  S.docErr = '';
+  S.docs.push({ g: 'Документы KYB', n: file.name, d: fmtDT(new Date()).slice(0, 10), s: num(file.size / 1048576, 1) + ' МБ' });
+  toast('Документ загружен');
+  return true;
+}
+function pickDoc(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.size > DOC_MAX || !(file.size > 0)) { S.f.file = null; S.f.err = DOC_ERR; return; }
+  S.f.file = file; S.f.err = '';
+}
+function uploadModal() {
+  const f = S.f.file, err = S.f.err;
+  const zone = `<label data-drop class="flex cursor-pointer flex-col items-center gap-1.5 rounded-16 border border-dashed ${err ? 'border-error-base' : 'border-stroke-sub-300'} px-4 py-8 text-center transition-colors hover:bg-bg-weak-50">
+    <input type="file" data-file accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="hidden">
+    ${I(f ? 'file-text-line' : 'upload-cloud-2-line', 'text-2xl text-text-sub-600')}
+    ${f ? `<span class="text-label-sm text-text-strong-950">${esc(f.name)}</span><span class="text-paragraph-xs text-text-soft-400">${num(f.size / 1048576, 1)} МБ · нажмите, чтобы выбрать другой файл</span>`
+      : `<span class="text-label-sm text-text-strong-950">Перетащите файл или <span class="text-primary-base">выберите на компьютере</span></span><span class="text-paragraph-xs ${err ? 'text-error-base' : 'text-text-soft-400'}">${err || DOC_HINT}</span>`}
+  </label>`;
+  return modalShell('Загрузка документа KYB',
+    `<div class="flex flex-col gap-3">${ntWrap(zone, 'Требования к файлам - как в ЛК арбитражного аккаунта: PDF, все страницы одним файлом, до 8 МБ, для документов KYB еще JPG и PNG. Статусов у документов нет, удалить документ партнер не может. Загрузка есть только у документов KYB', 'rounded-16')}</div>`,
+    btn('Отмена', 'data-act="close-modal"', 'neutral-stroke', 'sm') + btn('Загрузить', `data-act="do-upload" ${f ? '' : 'disabled'}`, 'primary', 'sm'), 'w-[480px]', true);
+}
 function pageDocs() {
-  const groups = ['Договоры', 'Приложения к договорам', 'Документы KYB'];
-  return profileCard('file-text-line', 'Документы', 'Договоры, приложения и документы KYB', btn(I('upload-2-line') + 'Загрузить документ', 'data-act="upload-doc"', 'neutral-stroke', 'sm'),
-    groups.map((g) => sectionLabel(g) + (S.docs.filter((d) => d.g === g).map((d) => {
-      const i = S.docs.indexOf(d);
-      return row('file-text-line', esc(d.n), d.d, btn(I('download-2-line'), 'data-act="toast" data-v="Файл скачан"', 'neutral-ghost', 'icon-xs'), i === 0 ? 'data-note="Партнер не может удалить документ из кабинета. Те же документы видны оператору в карточке партнера"' : '');
-    }).join('') || '<p class="px-4 py-3 text-paragraph-sm text-text-soft-400">Документов нет</p>')).join('') +
-    '');
+  const tab = S.docTab;
+  const contracts = S.docs.filter((d) => d.g !== 'Документы KYB');
+  const kyb = S.docs.filter((d) => d.g === 'Документы KYB');
+  const seg = (id, label, n) => `<button type="button" data-act="doc-tab" data-v="${id}" class="rounded-full px-6 py-2.5 text-label-sm transition-colors ${tab === id ? 'bg-bg-strong-950 text-text-white-0' : 'text-text-sub-600 hover:text-text-strong-950'}">${label} · ${n}</button>`;
+  const tabs = `<div class="mb-4 inline-flex rounded-full bg-bg-weak-50 p-1">${seg('contracts', 'Договоры', contracts.length)}${seg('kyb', 'Документы KYB', kyb.length)}</div>`;
+  const th = (x, a = '') => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${a}">${x}</th>`;
+  const list = tab === 'contracts' ? contracts : kyb;
+  const rows = list.map((d) => `<tr class="h-16 border-b border-stroke-soft-200/50 last:border-none">
+    <td class="px-3"><div class="flex items-center gap-3"><span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-bg-weak-50">${I('file-text-line', 'text-lg text-text-sub-600')}</span><span class="text-label-sm text-text-strong-950">${esc(d.n)}</span></div></td>
+    ${tab === 'contracts' ? `<td class="px-3 text-paragraph-sm text-text-sub-600">${d.ds}</td>` : `<td class="px-3 font-mono text-paragraph-xs text-text-sub-600">${d.s || ''}</td>`}
+    <td class="px-3 font-mono text-paragraph-xs text-text-sub-600">${d.d}</td>
+    <td class="px-3 text-right">${btn(I('download-2-line') + 'Скачать документ', 'data-act="toast" data-v="Файл скачан"', 'neutral-lighter', 'xs')}</td></tr>`).join('');
+  const table = `<table class="w-full"><thead><tr class="bg-bg-weak-50">${th('Документ', 'rounded-l-full')}${th(tab === 'contracts' ? 'Описание' : 'Размер')}${th('Дата')}${th('Действия', 'rounded-r-full text-right')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="4" class="py-10 text-center text-paragraph-sm text-text-soft-400">Документов нет</td></tr>`}</tbody></table>`;
+  const note = tab === 'contracts' ? 'Договоры и приложения загружает оператор в карточке партнера, партнер их только скачивает. Статусов подписания нет, удалить документ партнер не может' : '';
+  const body = tabs + (note ? ntWrap(table, note, 'rounded-12') : table);
+  const act = tab === 'kyb' ? btn(I('upload-2-line') + 'Загрузить документ', 'data-act="m-upload"', 'neutral-stroke', 'sm') : '';
+  return profileCard('file-text-line', 'Документы', 'Договоры и документы KYB', act, body);
 }
 
 function pageSessions() {
@@ -1318,6 +1358,7 @@ function modalHtml() {
   if (m.t === 'other') return otherModal();
   if (m.t === 'topup') return topupModal();
   if (m.t === 'withdraw') return withdrawModal();
+  if (m.t === 'upload') return uploadModal();
   return '';
 }
 
@@ -1620,7 +1661,9 @@ const ACTIONS = {
     log('Адрес вебхука о событиях', S.c.hook2 || 'не задан', S.d.hook2 || 'не задан');
     S.c.hook1 = S.d.hook1; S.c.hook2 = S.d.hook2; toast('Адреса сохранены');
   },
-  'upload-doc': () => { S.docs.push({ g: 'Документы KYB', n: 'Новый документ.pdf', d: fmtDT(new Date()).slice(0, 10) }); toast('Документ загружен'); },
+  'm-upload': () => { S.modal = { t: 'upload' }; S.f = {}; },
+  'do-upload': () => { if (!S.f.file) return; addDoc(S.f.file); S.modal = null; S.f = {}; },
+  'doc-tab': (e) => { S.docTab = e.dataset.v; S.docErr = ''; },
   copy: (e) => { try { navigator.clipboard.writeText(e.dataset.v); } catch (x) { /* без буфера */ } toast('Скопировано'); },
   toast: (e) => toast(e.dataset.v),
   rerender: () => {},
@@ -1734,10 +1777,18 @@ document.addEventListener('input', (ev) => {
   }
 });
 document.addEventListener('change', (ev) => {
+  if (ev.target.matches && ev.target.matches('[data-file]')) { const f = ev.target.files && ev.target.files[0]; if (f) pickDoc(f); render(); return; }
   const t = ev.target.closest('[data-f]');
   if (!t) return;
   setPath(t.dataset.f, readVal(t));
   if (t.dataset.rerender) render();
+});
+document.addEventListener('dragover', (ev) => { if (ev.target.closest && ev.target.closest('[data-drop]')) ev.preventDefault(); });
+document.addEventListener('drop', (ev) => {
+  if (!(ev.target.closest && ev.target.closest('[data-drop]'))) return;
+  ev.preventDefault();
+  const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+  if (f) { pickDoc(f); render(); }
 });
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && S.modal) { S.modal = null; S.f = {}; render(); } });
 S.f = {};
@@ -1759,6 +1810,7 @@ S.f = {};
     else if (p === 'iclosed') S.pay = 'closed';
     else if (p === 'nomanual') S.manual = false;
     else if (p === 'nopanel') S.panelOpen = false;
+    else if (p === 'kyb') S.docTab = 'kyb';
     else if (p === 'paused') { S.pauseUntil = Date.now() + 3 * 3600 * 1000; }
     else if (p.indexOf('bridge=') === 0) S.bridge = p.slice(7);
     else if (p.indexOf('modal=') === 0) { const m = p.slice(6); S.f = {}; S.modal = m === 'tx' ? { t: 'tx', id: S.H[0].id } : { t: m }; }
