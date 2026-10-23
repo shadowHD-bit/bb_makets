@@ -402,6 +402,10 @@ table.grid tbody tr:last-child td{border-bottom:0}
 .toggle-row .tt{font-size:13px;font-weight:500}
 .ts{font-size:11.5px;color:var(--text-soft)}
 .toggle-row .ts{margin-top:2px}
+.qhelp{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:6px;border:1px solid var(--text-soft);border-radius:50%;color:var(--text-soft);font-size:10px;font-weight:600;line-height:1;cursor:help;vertical-align:middle;outline:0}
+.qhelp:hover,.qhelp:focus{color:var(--primary);border-color:var(--primary)}
+.qhelp .qtip{display:none;position:absolute;left:0;top:calc(100% + 8px);width:340px;padding:9px 11px;border-radius:8px;background:#1d2230;color:#fff;font-size:11.5px;font-weight:400;line-height:1.45;text-align:left;box-shadow:0 8px 24px rgba(14,18,27,.25);z-index:60;cursor:default}
+.qhelp:hover .qtip,.qhelp:focus .qtip{display:block}
 .switch{position:relative;width:36px;height:21px;flex:0 0 36px;border-radius:99px;background:var(--stroke-med);cursor:pointer;transition:background .15s;border:0;padding:0}
 .switch.on{background:var(--primary)}
 .switch .knob{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:99px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
@@ -2305,6 +2309,19 @@ function renderAccountPartnerTab(a){
         <div class="panel" data-collapsed="${isCollapsed('ap-commission')}">
           ${collapsibleHead('ap-commission', '<h3>Комиссии</h3>')}
           <div class="panel-b">
+            ${(()=>{
+              const pr = Number(String(a.paymentRate).replace(',','.'))||0, mn = Number(String(a.paymentMin).replace(',','.'))||0, amt = 10000;
+              const up = x=>Math.ceil(x*100-1e-9)/100, f2 = x=>x.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2});
+              const on = !!a.qrIncludesFee;
+              const fee = on ? Math.max(amt*pr/100, mn) : Math.max(mn, pr<100 ? amt*pr/(100-pr) : 0);
+              const qr = up(on ? amt : amt+fee), credit = up(on ? amt-fee : amt), feeR = up(fee);
+              return `
+            <div class="toggle-row">
+              <div><div class="tt">Уменьшить при запросе QR на комиссию Битбанкер<span class="qhelp" tabindex="0">?<span class="qtip">Пример для 10 000 ₽ по текущим ставкам: клиент платит ${f2(qr)} ₽, комиссия BitBanker ${f2(feeR)} ₽, партнеру зачисляется ${f2(Math.max(credit,0))} ₽. Тумблер действует только на ручные ссылки партнера (раздел «KYC и оплата СБП») и на счет, который создается автоматически после KYC. Счета через API считаются как при выключенном</span></span></div><div class="ts">${on?'Включено: клиент оплачивает ровно введенную партнером сумму, комиссия BitBanker вычитается из нее':'Выключено: к введенной партнером сумме добавляется комиссия BitBanker, на счет партнера зачисляется введенная сумма'}</div></div>
+              <button class="switch ${on?'on':''}" data-toggle="qrIncludesFee"><span class="knob"></span></button>
+            </div>
+            <div class="hairline"></div>`;
+            })()}
             <dl class="deflist cols3">
               <div><dt>Ставка платежа, %</dt><dd>${esc(a.paymentRate||'0')}</dd></div>
               <div><dt>Минимум комиссии платежа</dt><dd>${esc(a.paymentMin||'0')}</dd></div>
@@ -2618,8 +2635,9 @@ function bindAccountDetailPage(){
     else if(key==='canQr' && !a[key]) toast('QR выключен — допуск к пополнению по QR снят у всех клиентов партнёра');
     else if(key==='manualLinksEnabled' && !a[key]){ a.manualNotifyEnabled = false; toast('Ручная генерация ссылок выключена: раздел «KYC и оплата СБП» скрыт у партнера'); }
     else if(key==='manualLinksEnabled') toast('Ручная генерация ссылок включена');
+    else if(key==='qrIncludesFee') toast(a[key] ? 'Включено: комиссия BitBanker вычитается из суммы QR в ручных ссылках партнера' : 'Выключено: комиссия BitBanker добавляется к сумме QR в ручных ссылках партнера');
     else toast('Изменение сохранено');
-    if(['autoConvertToUsdt','autoConvertBalance','autoWithdrawEnabled','manualLinksEnabled'].includes(key)) render();
+    if(['autoConvertToUsdt','autoConvertBalance','autoWithdrawEnabled','manualLinksEnabled','qrIncludesFee'].includes(key)) render();
   }));
   $('#btnSaveAutoConvert')?.addEventListener('click', ()=>{
     const lo = parseFloat(String($('#acLower').value).replace(',','.'));
