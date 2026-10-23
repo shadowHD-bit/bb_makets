@@ -196,19 +196,22 @@ const feeStr = (p, a) => `${pct(p)}% / ${a} ₽`;
 /* ---------- состояние ---------- */
 const NOW = Date.now();
 const S = {
-  hl: false, nt: false, partner: true, manual: true, iban: true, bridge: 'on',
+  hl: false, nt: false, partner: true, manual: true, pay: 'open', bridge: 'on',
   theme: 'light', layout: 'tiles', zoom: '80', panelOpen: true, route: 'home', sbBig: false, sbOpen: true, dd: null, cal: null, expanded: { assets: false, exchange: false },
   conv: false, convBal: false, aw: false,
-  c: { feePct: '1.5', feeAbs: '50', bbPct: '1.8', bbAbs: '0', convLow: '0', convUp: '500000',
+  c: { qrIncl: false, feePct: '1.5', feeAbs: '50', bbPct: '1.8', bbAbs: '0', convLow: '0', convUp: '500000',
        awAddr: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', awLow: '100', awUp: '5000', hook1: 'https://nodex.io/hooks/payment', hook2: '' },
   d: {},
   pauseHours: 3, pauseUntil: null,
   apiKey: 'bb_pk_8f3a91c2d7e04b55a6c1', secret: 'bb_sk_••••••••••••••••••••', secretFresh: false,
   modal: null, toast: null, pill: null,
-  F: { circuit: 'all', source: 'all', op: 'all', type: 'all', status: 'all', period: 'all', q: '', cid: '' },
-  JF: { period: 'all', setting: 'all', who: 'all' },
+  F: { circuit: 'all', source: 'all', op: 'all', type: 'all', status: 'all', period: { kind: 'all' }, q: '', cid: '' },
+  JF: { period: { kind: 'all' }, setting: 'all', who: 'all' },
   kyc: { id: '', email: '', create: true, amount: '', state: null, link: '', payLink: '', err: '' },
-  kc: { from: '2026-08-01', to: '2026-10-20' },
+  kc: { kind: 'all', from: '2025-12-01', to: '2026-10-20' },
+  pk: null,
+  offerUrl: 'https://bitbanker.org/docs/partner-offer',
+  pg: { history: 1, journal: 1, kyc: 1 }, pgSig: {},
   sessions: [
     { dev: 'Windows PC · Windows 10/11 · Chrome', ip: '10.20.141.35', t: '20.10.2026 16:35', cur: true, icon: 'computer-line' },
     { dev: 'iPhone · iOS 18 · Safari', ip: '10.20.88.14', t: '19.10.2026 22:14', icon: 'smartphone-line' },
@@ -221,10 +224,10 @@ const S = {
     { g: 'Документы KYB', n: 'Выписка из ЕГРЮЛ.pdf', d: '05.08.2026' },
   ],
   H: [
-    { id: 'TX-4F7K2X9M', k: 'sbp', st: 'pending', age: 0, tm: '20.10.2026, 15:47', due: '16:02', legs: [{ c: 'RUBR', a: 10000 }], qr: 10172.94, cl: 'R123456', src: 'API', bb: 172.94, pf: 150, link: 'https://pay.bitbanker.org/q/7Hk2xP', n: '4912' },
-    { id: 'TX-9A21BD7C', k: 'sbp', st: 'done', age: 0, tm: '20.10.2026, 14:10', legs: [{ c: 'RUBR', a: 10000 }], qr: 10172.94, cl: 'R123456', src: 'Виджет', bb: 172.94, pf: 150, link: 'https://pay.bitbanker.org/q/Qw83mN', n: '4911', conv: '10 000 RUBR → 91,74 USDT по курсу 109,00' },
+    { id: 'TX-4F7K2X9M', k: 'sbp', st: 'pending', age: 0, tm: '20.10.2026, 15:47', due: '16:02', legs: [{ c: 'RUBR', a: 10000 }], qr: 10183.30, cl: 'R123456', src: 'API', bb: 183.3, pf: 150, link: 'https://pay.bitbanker.org/q/7Hk2xP', n: '4912' },
+    { id: 'TX-9A21BD7C', k: 'sbp', st: 'done', age: 0, tm: '20.10.2026, 14:10', legs: [{ c: 'RUBR', a: 10000 }], qr: 10183.30, cl: 'R123456', src: 'Виджет', bb: 183.3, pf: 150, link: 'https://pay.bitbanker.org/q/Qw83mN', n: '4911', conv: '10 000 RUBR → 91,74 USDT по курсу 109,00' },
     { id: 'TX-1C55E0AA', k: 'iban', st: 'processing', age: 0, tm: '20.10.2026, 13:02', legs: [{ c: 'USDT', a: -1250 }], cl: 'R120077', n: '8841', rcp: 'Ivan Petrov, DE89 3704 0044 0532 0130 00', body: 1200, bbfee: 60, credit: '1 104,48 EUR', rate: '1 USDT = 0,9204 EUR' },
-    { id: 'TX-77B90C12', k: 'sbp', st: 'canceled', age: 1, tm: '19.10.2026, 18:20', legs: [{ c: 'RUBR', a: 10000 }], qr: 10172.94, cl: 'R120411', src: 'Ручная ссылка', bb: 172.94, pf: 150, link: 'https://pay.bitbanker.org/q/Zr41tY', n: '4890', why: 'Срок оплаты вышел, оплаты не было (статус провайдера expired)' },
+    { id: 'TX-77B90C12', k: 'sbp', st: 'canceled', age: 1, tm: '19.10.2026, 18:20', legs: [{ c: 'RUBR', a: 10000 }], qr: 10183.30, cl: 'R120411', src: 'Ручная ссылка', bb: 183.3, pf: 150, link: 'https://pay.bitbanker.org/q/Zr41tY', n: '4890', why: 'Срок оплаты вышел, оплаты не было (статус провайдера expired)' },
     { id: 'TX-5D3E9F40', k: 'topup', st: 'review', age: 1, tm: '19.10.2026, 11:34', legs: [{ c: 'USDT', a: 2000 }], from: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE', hash: 'a91f3c0e77b2d45e9c10fa22b6d83a07c5e1f9d4a3b208c6e7d15f0a92b3c03e' },
     { id: 'TX-2E8A6B31', k: 'exchange', st: 'done', age: 2, tm: '18.10.2026, 10:05', legs: [{ c: 'RUBR', a: -90000 }, { c: 'USDT', a: 825.6 }], rate: '109,00', fee: '0,83 USDT', ord: '№1204, рыночный' },
     { id: 'TX-6F0C4D95', k: 'otc', st: 'done', age: 3, tm: '17.10.2026, 16:40', legs: [{ c: 'RUBR', a: -90000 }, { c: 'USDT', a: 828 }], rate: '108,70', deal: '№337' },
@@ -232,10 +235,13 @@ const S = {
     { id: 'TX-8C2F5A60', k: 'withdraw', st: 'processing', age: 4, tm: '16.10.2026, 09:48', legs: [{ c: 'USDT', a: -5000 }], to: 'TWd3Lp8vRk2Qm5Nz7Yc1Hx4Bj9Ue6Ak2Lp', hash: 'c07d19ab45e3f2086a1b7c93d4e5f6a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4', netfee: '1,00' },
     { id: 'TX-0A9B3C74', k: 'iban', st: 'done', age: 6, tm: '14.10.2026, 17:22', legs: [{ c: 'USDT', a: -840 }], cl: 'R119902', n: '8802', rcp: 'Anna Schmidt, DE02 1203 0000 0000 2020 51', body: 800, bbfee: 40, credit: '736,32 EUR', rate: '1 USDT = 0,9204 EUR' },
     { id: 'TX-4E1D8F26', k: 'iban', st: 'canceled', age: 8, tm: '12.10.2026, 15:01', legs: [{ c: 'USDT', a: -300 }], cl: 'R118540', n: '8760', rcp: 'Olga Ivanova, LT12 1000 0111 0100 1000', body: 290, bbfee: 10, credit: '-', rate: '-', why: 'Отклонена, средства возвращены партнеру' },
-    { id: 'TX-9D6A0B83', k: 'sbp', st: 'error', age: 9, tm: '11.10.2026, 13:55', legs: [{ c: 'RUBR', a: 5000 }], qr: 5086.47, cl: 'R117330', src: 'API', bb: 86.47, pf: 75, link: 'https://pay.bitbanker.org/q/Lk92aS', n: '4851', why: 'Отклонена провайдером (статус declined)' },
+    { id: 'TX-9D6A0B83', k: 'sbp', st: 'error', age: 9, tm: '11.10.2026, 13:55', legs: [{ c: 'RUBR', a: 5000 }], qr: 5091.65, cl: 'R117330', src: 'API', bb: 91.65, pf: 75, link: 'https://pay.bitbanker.org/q/Lk92aS', n: '4851', why: 'Отклонена провайдером (статус declined)' },
     { id: 'TX-7A4C2E19', k: 'withdraw', st: 'done', age: 12, tm: '08.10.2026, 10:30', legs: [{ c: 'USDT', a: -3000 }], to: 'TWd3Lp8vRk2Qm5Nz7Yc1Hx4Bj9Ue6Ak2Lp', hash: 'e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a3928170600', netfee: '1,00' },
   ],
   J: [
+    { t: '15.10.2026, 11:20', s: 'Перевыпуск секрета', a: '-', b: 'Секрет перевыпущен', who: 'Партнер' },
+    { t: '12.10.2026, 14:00', s: 'Минимальная сумма оплаты по СБП', a: '100 ₽', b: '500 ₽', who: 'Оператор' },
+    { t: '10.10.2026, 09:40', s: 'Комиссия BitBanker, выплата на IBAN (0+)', a: '2,2%', b: '2,0%', who: 'Оператор' },
     { t: '07.09.2026, 14:32', s: 'Комиссия партнера для клиента, СБП', a: '1,2% / 50 ₽', b: '1,5% / 50 ₽', who: 'Партнер' },
     { t: '07.09.2026, 11:05', s: 'Автовывод', a: 'Выключен', b: 'Включен', who: 'Партнер' },
     { t: '06.09.2026, 18:47', s: 'Адрес кошелька автовывода', a: 'TQn9…7fMz', b: 'TWd3…k2Lp', who: 'Партнер' },
@@ -243,12 +249,82 @@ const S = {
     { t: '04.09.2026, 16:20', s: 'Автоконвертация в USDT', a: 'Выключена', b: 'Включена', who: 'Оператор' },
     { t: '02.09.2026, 12:00', s: 'Комиссия BitBanker, пополнение по СБП', a: '1,7% / 0 ₽', b: '1,8% / 0 ₽', who: 'Оператор' },
     { t: '01.09.2026, 10:30', s: 'Максимальная сумма оплаты по СБП', a: '300 000 ₽', b: '500 000 ₽', who: 'Оператор' },
+    { t: '28.08.2026, 15:10', s: 'Автовывод', a: 'Включен', b: 'Выключен', who: 'Партнер' },
+    { t: '20.08.2026, 09:30', s: 'Комиссия партнера для клиента, СБП', a: '1,0% / 50 ₽', b: '1,2% / 50 ₽', who: 'Партнер' },
+    { t: '12.08.2026, 11:15', s: 'Открытие и закрытие направлений', a: 'Закрыто', b: 'Открыто', who: 'Оператор' },
+    { t: '12.08.2026, 11:10', s: 'Комиссия BitBanker, пополнение по СБП', a: '-', b: '1,7% / 0 ₽', who: 'Оператор' },
+    { t: '10.08.2026, 10:00', s: 'Максимальная сумма оплаты по СБП', a: '150 000 ₽', b: '300 000 ₽', who: 'Оператор' },
   ],
   bal: { rub: 1284530.4, usdt: 18420.55, free: 6200, frozen: 1250 },
 };
 S.d = { ...S.c };
 
 const who = () => 'Партнер';
+/* направление выплат на IBAN: none - не открывалось (счета нет), open - открыто, closed - закрыто оператором, счет и остаток сохраняются */
+const payOpen = () => S.pay === 'open';
+const hasPayout = () => S.pay !== 'none';
+const PAY_LABEL = { none: 'Не открывалось', open: 'Открыто', closed: 'Закрыто' };
+
+/* Расчет оплаты по СБП от текущих значений «Комиссий»: комиссия BitBanker считается от суммы QR (QR = зачисление / (1 - ставка)), берется большее из процента и минимума; комиссия партнера - от зачисления */
+function sbpCalc(amount, c = S.c) {
+  const num2 = (v) => Number(String(v).replace(',', '.')) || 0;
+  const pct = num2(c.bbPct), abs = num2(c.bbAbs);
+  let qr, bb, credit;
+  if (c.qrIncl) {
+    qr = amount;
+    bb = Math.max(qr * pct / 100, abs);
+    credit = qr - bb;
+  } else {
+    qr = pct > 0 ? amount / (1 - pct / 100) : amount + abs;
+    bb = Math.max(qr - amount, abs);
+    if (bb === abs) qr = amount + abs;
+    credit = amount;
+  }
+  const pf = Math.max(credit * num2(c.feePct) / 100, num2(c.feeAbs));
+  const r2 = (x) => Math.round(x * 100) / 100;
+  return { qr: r2(qr), bb: r2(bb), pf: r2(pf), credit: r2(credit) };
+}
+const OFFER_NOTE = 'Текст показывается, только если в карточке партнера в админке указана ссылка на оферту (поле «Ссылка на оферту для клиентов партнеров», приходит через GET /partner/manual-links/info). Ссылка открывается в новой вкладке. Если поле пусто - текст не выводится. Для клиента вне базы текст стоит под ссылкой на KYC, для клиента в базе - под ссылкой на оплату. В боевом потоке текст стоит на экране с QR, раздел на утверждении';
+function offerNote() {
+  const u = (S.offerUrl || '').trim();
+  if (!u) return '';
+  return ntWrap(`<p class="px-1 text-paragraph-xs text-text-soft-400">Клиент, оплачивая по ссылке, соглашается <a href="${esc(u)}" target="_blank" rel="noopener noreferrer" class="text-primary-base underline underline-offset-2 transition-colors hover:text-primary-darker">с договором оферты</a></p>`, OFFER_NOTE, 'rounded-12');
+}
+const qrLabel = () => (S.c.qrIncl ? 'Клиент отдает, ₽' : 'Клиент получит, ₽');
+const QR_NOTE = 'Заголовок меняется от тумблера «Уменьшить при запросе QR на комиссию Битбанкер» (Профиль - Комиссии): выключен - «Клиент получит», включен - «Клиент отдает». При включенном тумблере сумма должна быть больше комиссии BitBanker, нижнюю границу проверяет бэкенд';
+const QR_TOO_SMALL = 'Сумма слишком мала: после вычета комиссии BitBanker на счет партнера ничего не зачислится. Увеличьте сумму';
+function sbpHint(v) {
+  const a = parseFloat(String(v).replace(',', '.'));
+  if (!(a > 0)) return S.c.qrIncl ? 'Клиент оплатит ровно эту сумму, комиссия BitBanker вычитается из нее' : 'К сумме QR добавляется комиссия BitBanker';
+  const c = sbpCalc(a);
+  return `Клиент оплатит ${num(c.qr)} ₽ · на счет партнера зачислится ${num(Math.max(0, c.credit))} ₽ · комиссия BitBanker ${num(c.bb)} ₽`;
+}
+
+/* пагинация: по 10 строк, как ряд номеров страниц в списках кабинета; смена фильтров возвращает на первую страницу */
+const PAGE_SIZE = 10;
+function pageOf(key, total, sig) {
+  if (S.pgSig[key] !== sig) { S.pgSig[key] = sig; S.pg[key] = 1; }
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const cur = Math.min(Math.max(1, S.pg[key]), pages);
+  S.pg[key] = cur;
+  return { cur, pages, from: (cur - 1) * PAGE_SIZE, to: cur * PAGE_SIZE };
+}
+function pager(key, pg) {
+  if (pg.pages <= 1) return '';
+  const items = [];
+  if (pg.pages <= 7) { for (let i = 1; i <= pg.pages; i++) items.push(i); }
+  else {
+    items.push(1);
+    if (pg.cur > 3) items.push('…');
+    for (let i = Math.max(2, pg.cur - 1); i <= Math.min(pg.pages - 1, pg.cur + 1); i++) items.push(i);
+    if (pg.cur < pg.pages - 2) items.push('…');
+    items.push(pg.pages);
+  }
+  const cell = 'flex size-8 items-center justify-center rounded-10 text-label-sm transition-colors';
+  return `<div class="mt-4 flex items-center justify-center gap-1.5">${items.map((v) => (v === '…'
+    ? `<span class="${cell} text-text-soft-400">…</span>`
+    : `<button type="button" data-act="pg" data-k="${key}" data-p="${v}" class="${cell} ${v === pg.cur ? 'bg-bg-strong-950 text-text-white-0' : 'bg-bg-weak-50 text-text-sub-600 hover:bg-bg-soft-200'}">${v}</button>`)).join('')}</div>`;
+}
 const paused = () => !!(S.pauseUntil && S.pauseUntil > Date.now());
 const pauseText = () => `Вывод средств приостановлен до ${fmtDT(new Date(S.pauseUntil))} — изменён адрес кошелька`;
 function log(setting, was, now, actor) {
@@ -312,10 +388,10 @@ const field = (label, inner, { hint = '', err = '' } = {}) => `
   ${inner}
   ${err ? `<p class="text-paragraph-xs text-error-base">${err}</p>` : hint ? `<p class="text-paragraph-xs text-text-soft-400">${hint}</p>` : ''}
 </div>`;
-const input = (f, value, { ph = '', type = 'text', suffix = '', err = false, dis = false, mono = false } = {}) => `
+const input = (f, value, { ph = '', type = 'text', suffix = '', err = false, dis = false, mono = false, rr = false } = {}) => `
 <div class="flex w-full divide-x divide-stroke-soft-200 overflow-hidden rounded-10 border bg-bg-white-0 transition focus-within:border-stroke-sub-300 ${err ? 'border-error-base' : 'border-stroke-soft-200'} ${dis ? 'bg-bg-weak-50' : ''}">
   <div class="flex w-full min-w-0 items-center gap-2 px-3 py-2.5">
-    <input data-f="${f}" type="${type}" value="${esc(value)}" placeholder="${esc(ph)}" ${dis ? 'disabled' : ''} class="w-full min-w-0 bg-transparent text-label-sm text-text-strong-950 outline-none placeholder:text-text-soft-400 disabled:text-text-soft-400 ${mono ? 'font-mono' : ''}">
+    <input data-f="${f}" ${rr ? 'data-rerender="1"' : ''} type="${type}" value="${esc(value)}" placeholder="${esc(ph)}" ${dis ? 'disabled' : ''} class="w-full min-w-0 bg-transparent text-label-sm text-text-strong-950 outline-none placeholder:text-text-soft-400 disabled:text-text-soft-400 ${mono ? 'font-mono' : ''}">
   </div>
   ${suffix ? `<span class="flex items-center bg-bg-weak-50 px-3 text-label-sm text-text-sub-600">${suffix}</span>` : ''}
 </div>`;
@@ -370,44 +446,74 @@ function datePicker(f, value) {
 </div>`;
 }
 const ruDate = (iso) => { const [y, m, d] = iso.split('-'); return `${d}.${m}.${y}`; };
-/* период одним полем, как «Период» в фильтрах истории: календарь с выбором начала и конца, применяется сразу */
-function rangePicker() {
-  const id = 'rng-kc';
-  const open = S.cal && S.cal.id === id;
-  const [fy, fm] = S.kc.from.split('-').map(Number);
-  const y = open ? S.cal.y : fy;
-  const m = open ? S.cal.m : fm - 1;
-  const tmp = open ? S.cal.tmp : null;
-  const a = tmp || S.kc.from;
-  const b = tmp || S.kc.to;
-  const first = (new Date(y, m, 1).getDay() + 6) % 7;
-  const dim = new Date(y, m + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < first; i++) cells.push('<span></span>');
-  for (let d = 1; d <= dim; d++) {
-    const iso = `${y}-${pad(m + 1)}-${pad(d)}`;
-    const edge = iso === a || iso === b;
-    const mid = iso > a && iso < b;
-    cells.push(`<button type="button" data-act="rng-set" data-v="${iso}" class="flex h-9 items-center justify-center text-label-xs transition ${edge ? 'rounded-full bg-primary-base text-static-white' : mid ? 'bg-primary-alpha-10 text-text-strong-950' : 'rounded-full text-text-strong-950 hover:bg-bg-weak-50'}">${d}</button>`);
+/* Период, как в web-client: быстрые варианты сверху, календарь диапазона, кнопка внизу. «Сегодня» в демо - 20.10.2026, как в данных */
+const PK_TODAY = new Date(2026, 9, 20);
+const PK_PRESETS = [['all', 'Всё время'], ['7', '7 дней'], ['30', '30 дней'], ['90', '90 дней']];
+const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const dateOf = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const parseTm = (tm) => { const m = /^(\d{2})\.(\d{2})\.(\d{4})/.exec(tm || ''); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : PK_TODAY; };
+const pkValue = (id) => (id === 'kyc' ? { kind: S.kc.kind, days: S.kc.days, from: S.kc.from, to: S.kc.to } : id === 'hist' ? S.F.period : S.JF.period);
+function pkSet(id, v) {
+  if (id === 'kyc') {
+    if (v.kind === 'all') S.kc = { kind: 'all', from: '2025-12-01', to: isoOf(PK_TODAY) };
+    else if (v.kind === 'days') S.kc = { kind: 'days', days: v.days, from: isoOf(new Date(PK_TODAY.getTime() - v.days * 86400000)), to: isoOf(PK_TODAY) };
+    else S.kc = { kind: 'range', from: v.from, to: v.to };
+  } else if (id === 'hist') S.F.period = v;
+  else S.JF.period = v;
+}
+function pkInRange(d, v) {
+  if (!v || v.kind === 'all') return true;
+  if (v.kind === 'days') return Math.floor((PK_TODAY - d) / 86400000) <= v.days;
+  const iso = isoOf(d);
+  return iso >= v.from && iso <= v.to;
+}
+const pkLabel = (v) => (v.kind === 'all' ? 'Все время' : v.kind === 'days' ? `${v.days} дней` : `${ruDate(v.from)} - ${ruDate(v.to)}`);
+function periodPicker(id) {
+  const v = pkValue(id);
+  const open = S.pk && S.pk.id === id;
+  let popup = '';
+  if (open) {
+    const { y, m, a, b } = S.pk;
+    const first = (new Date(y, m, 1).getDay() + 6) % 7;
+    const dim = new Date(y, m + 1, 0).getDate();
+    const total = Math.ceil((first + dim) / 7) * 7;
+    const sel = a && b ? (a <= b ? [a, b] : [b, a]) : a ? [a, a] : null;
+    const cells = [];
+    for (let i = 0; i < total; i++) {
+      const d = new Date(y, m, 1 - first + i);
+      const iso = isoOf(d);
+      const other = d.getMonth() !== m;
+      const future = d > PK_TODAY;
+      const base = 'flex h-10 items-center justify-center text-label-sm transition-colors';
+      if (other || future) { cells.push(`<span class="${base} text-text-disabled-300">${d.getDate()}</span>`); continue; }
+      const edge = sel && (iso === sel[0] || iso === sel[1]);
+      const mid = sel && iso > sel[0] && iso < sel[1];
+      const today = iso === isoOf(PK_TODAY);
+      const cls = edge ? 'rounded-full bg-primary-base text-static-white' : mid ? 'bg-primary-alpha-10 text-text-strong-950' : today ? 'rounded-full bg-primary-alpha-10 text-primary-base' : 'rounded-full text-text-strong-950 hover:bg-bg-weak-50';
+      cells.push(`<button type="button" data-act="pk-day" data-v="${iso}" class="${base} ${cls}">${d.getDate()}</button>`);
+    }
+    const active = v.kind === 'all' ? 'all' : v.kind === 'days' ? String(v.days) : '';
+    popup = `<div class="absolute ${id === 'hist' ? 'right-0' : 'left-0'} top-9 z-30 w-[360px] rounded-[20px] border border-stroke-soft-200 bg-bg-white-0 p-3 shadow-regular-md">
+      <div class="mb-3 flex items-center gap-1">${PK_PRESETS.map(([k, l]) => `<button type="button" data-act="pk-preset" data-v="${k}" class="rounded-full px-3 py-1.5 text-label-xs transition-colors ${k === active ? 'bg-bg-strong-950 text-text-white-0' : 'text-text-sub-600 hover:bg-bg-weak-50'}">${l}</button>`).join('')}</div>
+      <div class="mb-2 flex items-center justify-between rounded-full bg-bg-weak-50 p-1.5">
+        <button type="button" data-act="pk-nav" data-d="-1" class="flex size-8 items-center justify-center rounded-full bg-bg-white-0 text-text-sub-600 transition-colors hover:text-text-strong-950">${I('arrow-left-s-line', 'text-lg')}</button>
+        <span class="text-label-sm text-text-strong-950">${MONTHS_RU[m]} ${y}</span>
+        <button type="button" data-act="pk-nav" data-d="1" class="flex size-8 items-center justify-center rounded-full bg-bg-white-0 text-text-sub-600 transition-colors hover:text-text-strong-950">${I('arrow-right-s-line', 'text-lg')}</button>
+      </div>
+      <div class="grid grid-cols-7 text-center">
+        ${['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map((w) => `<span class="flex h-9 items-center justify-center text-label-xs font-medium uppercase text-text-soft-400">${w}</span>`).join('')}
+        ${cells.join('')}
+      </div>
+      <button type="button" data-act="pk-apply" ${a && b ? '' : 'disabled'} class="mt-3 flex h-11 w-full items-center justify-center rounded-12 text-label-sm font-medium transition-colors ${a && b ? 'bg-primary-base text-static-white hover:bg-primary-darker' : 'cursor-not-allowed bg-bg-weak-50 text-text-disabled-300'}">${a && b ? 'Применить' : 'Выберите две даты'}</button>
+    </div>`;
   }
   return `
 <div class="relative">
-  <button type="button" data-act="rng-open" class="flex h-7 shrink-0 items-stretch rounded-full border transition-colors ${open ? 'border-stroke-sub-300' : 'border-stroke-soft-200 hover:border-stroke-sub-300'}">
+  <button type="button" data-act="pk-open" data-id="${id}" class="flex h-7 shrink-0 items-stretch rounded-full border transition-colors ${open ? 'border-stroke-sub-300' : 'border-stroke-soft-200 hover:border-stroke-sub-300'}">
     <span class="flex items-center pl-3 pr-2.5 text-label-xs text-text-soft-400">Период</span>
-    <span class="flex items-center gap-1.5 border-l border-stroke-soft-200 pl-2.5 pr-3 text-label-xs text-text-strong-950">${ruDate(S.kc.from)} - ${ruDate(S.kc.to)}${I('calendar-2-line', 'text-sm text-text-soft-400')}</span>
+    <span class="flex items-center gap-1.5 border-l border-stroke-soft-200 pl-2.5 pr-3 text-label-xs text-text-strong-950">${pkLabel(v)}${I('calendar-2-line', 'text-sm text-text-soft-400')}</span>
   </button>
-  ${open ? `<div class="absolute left-0 top-9 z-30 w-[300px] rounded-[16px] border border-stroke-soft-200 bg-bg-white-0 p-3 shadow-regular-md">
-    <div class="mb-2 flex items-center justify-between">
-      <button type="button" data-act="rng-nav" data-d="-1" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-sub-600 hover:bg-bg-weak-50">${I('arrow-left-s-line', 'text-base')}</button>
-      <span class="text-label-sm text-text-strong-950">${MONTHS_RU[m]} ${y}</span>
-      <button type="button" data-act="rng-nav" data-d="1" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-sub-600 hover:bg-bg-weak-50">${I('arrow-right-s-line', 'text-base')}</button>
-    </div>
-    <div class="grid grid-cols-7 gap-y-0.5 text-center">
-      ${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((w) => `<span class="flex h-8 items-center justify-center text-subheading-2xs uppercase text-text-soft-400">${w}</span>`).join('')}
-      ${cells.join('')}
-    </div>
-    <p class="mt-2 text-center text-paragraph-xs text-text-soft-400">${tmp ? 'Выберите конец периода' : 'Выберите начало периода'}</p>
-  </div>` : ''}
+  ${popup}
 </div>`;
 }
 const checkbox = (f, on, label) => `
@@ -625,7 +731,7 @@ function filteredHistory() {
     if (F.op !== 'all' && OPNAME[h.k] !== F.op) return false;
     if (F.type !== 'all' && KIND_TYPE[h.k] !== F.type) return false;
     if (F.status !== 'all' && h.st !== F.status) return false;
-    if (F.period !== 'all' && h.age > Number(F.period)) return false;
+    if (!pkInRange(parseTm(h.tm), F.period)) return false;
     if (F.cid && !(h.cl || '').toLowerCase().includes(F.cid.toLowerCase())) return false;
     if (F.q) {
       const q = F.q.toLowerCase().replace(/\s/g, '');
@@ -657,13 +763,14 @@ const searchPill = (f, value, ph, w = 'w-[240px]', isNew = false) => `
   <input data-f="${f}" data-rerender="1" value="${esc(value)}" placeholder="${esc(ph)}" class="w-full bg-transparent text-label-xs text-text-strong-950 outline-none placeholder:text-text-soft-400">
 </div>`;
 
-const PERIODS = [['all', 'Все время'], ['1', 'Сегодня и вчера'], ['7', '7 дней'], ['30', '30 дней']];
 const STATUS_OPTS = [['all', 'Все'], ['done', 'Завершено'], ['pending', 'Ожидает'], ['processing', 'В обработке'], ['canceled', 'Отменено'], ['error', 'Ошибка'], ['review', 'На проверке'], ['returned', 'Возвращено']];
 
 function pageHistory() {
-  const rows = filteredHistory();
+  const all = filteredHistory();
+  const pg = pageOf('history', all.length, JSON.stringify(S.F));
+  const rows = all.slice(pg.from, pg.to);
   const tot = {};
-  rows.filter((h) => h.st === 'done').forEach((h) => h.legs.forEach((l) => {
+  all.filter((h) => h.st === 'done').forEach((h) => h.legs.forEach((l) => {
     tot[l.c] = tot[l.c] || { in: 0, out: 0 };
     if (l.a > 0) tot[l.c].in += l.a; else tot[l.c].out += -l.a;
   }));
@@ -679,7 +786,7 @@ function pageHistory() {
     ${pill('f-op', 'Операция', S.F.op, [['all', 'Все'], ['Пополнение', 'Пополнение'], ['Вывод', 'Вывод'], ['Перевод', 'Перевод'], ['Обмен', 'Обмен'], ['OTC', 'OTC']])}
     ${pill('f-type', 'Тип', S.F.type, [['all', 'Все'], ['Крипто', 'Крипто'], ['Фиат', 'Фиат']])}
     ${pill('f-status', 'Статус', S.F.status, STATUS_OPTS)}
-    ${pill('f-period', 'Период', S.F.period, PERIODS)}
+    ${periodPicker('hist')}
   </div>
   <div class="flex w-full flex-wrap items-center gap-2">
     ${searchPill('F.q', S.F.q, 'Поиск по сумме, ID, хэшу', 'w-[260px]')}
@@ -706,7 +813,8 @@ function pageHistory() {
 <div class="thin-scroll overflow-x-auto px-4"><table class="w-full min-w-[880px]">
   <thead><tr class="max-h-7 rounded-full bg-bg-weak-50">${th('Монета / время', 'first:rounded-l-full')}${th('Сумма')}${th('Тип операции')}${th('Куда / Откуда')}${th('Хэш')}${th('Статус', 'last:rounded-r-full')}</tr></thead>
   <tbody>${body}</tbody>
-</table></div>`);
+</table></div>
+<div class="px-4">${pager('history', pg)}</div>`);
 }
 
 function pageHome() {
@@ -721,11 +829,11 @@ function pageHome() {
   const payoutSub = `<div class="mt-2 flex flex-col gap-0.5 text-paragraph-xs"><span class="flex justify-between"><span class="text-text-soft-400">Свободно</span><span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.free)}</span></span><span class="flex justify-between"><span class="text-text-soft-400">Под выплаты</span><span class="font-mono tabular-nums text-text-strong-950">${num(S.bal.frozen)}</span></span></div>`;
   const hero = `
 <div class="overflow-hidden rounded-[24px] border border-transparent dark:border-neutral-700/50" style="background:var(--balance-card-gradient)">
-  <div class="flex items-center justify-between px-5 py-4"><div><p class="text-label-sm text-static-white">Остатки по счетам</p><p class="text-paragraph-xs text-neutral-400">Рублевый, основной USDT${S.iban ? ' и счет выплат (IBAN)' : ''}</p></div></div>
+  <div class="flex items-center justify-between px-5 py-4"><div><p class="text-label-sm text-static-white">Остатки по счетам</p><p class="text-paragraph-xs text-neutral-400">Рублевый, основной USDT${hasPayout() ? ' и счет выплат (IBAN)' : ''}</p></div></div>
   <div class="mx-1.5 mb-1.5 rounded-[20px] bg-bg-white-0 p-5"><div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
     ${acc('Рублевый счет', S.bal.rub, 'RUBR')}
     ${acc('Основной счет', S.bal.usdt, 'USDT')}
-    ${S.iban ? acc('Счет выплат (IBAN)', S.bal.free + S.bal.frozen, 'USDT', payoutSub, true) : ''}
+    ${hasPayout() ? acc('Счет выплат (IBAN)', S.bal.free + S.bal.frozen, 'USDT', payoutSub + (S.pay === 'closed' ? `<div class="mt-2">${chip('Направление закрыто', 'bg-bg-weak-50 text-text-sub-600')}</div>` : ''), true) : ''}
   </div></div>
 </div>`;
   const last = S.H.slice(0, 5).map((h) => `
@@ -746,7 +854,7 @@ const A = (icon, label, attrs, primary = false, isNew = false) => ({ icon, label
 /* круглая кнопка действия с подписью снизу, как «Пополнить / Вывести» на главной web-client */
 const actBtn = (a) => `
 <div class="flex w-[92px] flex-col items-center gap-1.5">
-  <button type="button" ${a.attrs} ${a.isNew ? 'data-new="s"' : ''} aria-label="${a.label}" class="flex size-12 items-center justify-center rounded-full transition active:scale-95 ${a.primary ? 'bg-primary-base text-static-white hover:bg-primary-dark' : 'border border-stroke-soft-200 text-text-strong-950 hover:bg-bg-weak-50'}">${I(a.icon, 'text-xl')}</button>
+  <button type="button" ${a.attrs} ${a.isNew ? 'data-new="s"' : ''} ${a.disabled ? 'disabled' : ''} aria-label="${a.label}" class="flex size-12 items-center justify-center rounded-full transition active:scale-95 ${a.primary ? 'bg-primary-base text-static-white hover:bg-primary-dark' : 'border border-stroke-soft-200 text-text-strong-950 hover:bg-bg-weak-50'}">${I(a.icon, 'text-xl')}</button>
   <span class="min-h-8 text-center text-label-xs leading-4 text-text-sub-600">${a.label}</span>
 </div>`;
 const actRow = (acc) => `<div class="flex flex-wrap items-start gap-3">${acc.actions.map(actBtn).join('')}</div>`;
@@ -756,11 +864,13 @@ function accData() {
     actions: [A('exchange-line', 'Обменять', 'data-act="nav" data-to="exchange"', true)] };
   const main = { id: 'main', name: 'Основной счет', sub: 'Выручка партнера', cur: 'USDT', val: S.bal.usdt,
     actions: [A('arrow-up-line', 'Вывести', 'data-act="m-withdraw"', true),
-      ...(S.iban ? [A('arrow-left-right-line', 'На счет выплат', 'data-act="m-own" data-v="main"', false, true)] : []),
+      ...(payOpen() ? [A('arrow-left-right-line', 'На счет выплат', 'data-act="m-own" data-v="main"', false, true)] : []),
       A('send-plane-line', 'Другому аккаунту', 'data-act="m-other"', false, true)],
     notice: paused() ? banner('warn', 'pause-circle-line', pauseText(), 'data-new') : '' };
-  const payout = S.iban ? { id: 'payout', name: 'Счет выплат (IBAN)', sub: 'Выплаты клиентам партнера', cur: 'USDT', val: S.bal.free + S.bal.frozen, isNew: true, free: S.bal.free, frozen: S.bal.frozen,
-    actions: [A('add-line', 'Пополнить', 'data-act="m-topup"', true), A('arrow-left-right-line', 'На основной', 'data-act="m-own" data-v="payout"'), A('send-plane-line', 'Другому аккаунту', 'data-act="m-other"')] } : null;
+  const closed = S.pay === 'closed';
+  const payout = hasPayout() ? { id: 'payout', name: 'Счет выплат (IBAN)', sub: 'Выплаты клиентам партнера', cur: 'USDT', val: S.bal.free + S.bal.frozen, isNew: true, free: S.bal.free, frozen: S.bal.frozen,
+    actions: [{ ...A('add-line', 'Пополнить', 'data-act="m-topup"', true), disabled: closed }, A('arrow-left-right-line', 'На основной', 'data-act="m-own" data-v="payout"'), A('send-plane-line', 'Другому аккаунту', 'data-act="m-other"')],
+    notice: closed ? banner('info', 'information-line', 'Направление выплат закрыто. Остаток сохранен: его можно перевести на основной счет или другому аккаунту. Пополнение счета и новые выплаты клиентам недоступны', 'data-new') : '' } : null;
   return { rub, main, payout };
 }
 const balBig = (acc, cls = 'text-title-h4') => {
@@ -784,7 +894,7 @@ function vTiles(d) {
     <span class="flex justify-between gap-4"><span class="text-text-soft-400">Под выплаты</span><span class="font-mono tabular-nums text-text-strong-950">${num(acc.frozen)}</span></span>
   </div>`;
   /* одинаковая сетка из трех колонок: первая кнопка у всех плиток стоит на одной вертикали */
-  const tb = (a, v) => btn(I(a.icon) + a.label, `${a.attrs} ${a.isNew ? 'data-new="s"' : ''}`, v, 'sm', 'w-full');
+  const tb = (a, v) => btn(I(a.icon) + a.label, `${a.attrs} ${a.isNew ? 'data-new="s"' : ''} ${a.disabled ? 'disabled' : ''}`, v, 'sm', 'w-full');
   /* кнопки с текстом: основное действие на всю ширину, остальные в ряд под ним */
   const actions = (acc) => `<div class="flex flex-col gap-2 border-t border-stroke-soft-200 pt-4">${tb(acc.actions[0], 'primary')}${acc.actions.length > 1 ? `<div class="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">${acc.actions.slice(1).map((a) => tb(a, 'neutral-stroke')).join('')}</div>` : ''}</div>`;
   const tile = (acc) => `<div ${acc.isNew ? 'data-new="s"' : ''} class="flex min-w-0 flex-col gap-4 rounded-16 border border-stroke-soft-200 p-4">
@@ -856,7 +966,8 @@ function vHero(d) {
 function pageAssets() {
   const d = accData();
   const v = { tiles: vTiles, cards: vCards, panel: vPanel, list: vList, hero: vHero }[S.layout] || vTiles;
-  return S.iban ? v(d) : ntWrap(v(d), 'Счет выплат появляется вместе с направлением выплат на IBAN. Сейчас направление закрыто', 'rounded-[24px]');
+  if (S.pay === 'closed') return ntWrap(v(d), 'Направление закрыто оператором: счет выплат виден вместе с остатком. Работают перевод на основной счет и перевод другому аккаунту (только свободный остаток), пополнение недоступно, новые выплаты клиентам не создаются', 'rounded-[24px]');
+  return hasPayout() ? v(d) : ntWrap(v(d), 'Счет выплат появляется вместе с направлением выплат на IBAN. Сейчас направление не открывалось', 'rounded-[24px]');
 }
 
 function stubPage(icon, title, text) {
@@ -869,7 +980,7 @@ function pageKycSbp() {
   const k = S.kyc;
   const st = k.state;
   const checkRow = `<div class="flex items-start gap-2">
-    <div class="flex-1" data-note="Демо: ID на 200 - на проверке, на 300 - проверка пройдена, на 400 - отказ, остальные - не найден">${field('ID клиента на вашей площадке', input('kyc.id', k.id, { ph: 'ID клиента' }))}</div>
+    <div class="flex-1" data-note="Демо: ID на 200 - на проверке, на 300 - проверка пройдена, на 400 - отказ, на 500 - СБП отключен из-за неоплаченных счетов, остальные - не найден">${field('ID клиента на вашей площадке', input('kyc.id', k.id, { ph: 'ID клиента' }))}</div>
     ${btn('Проверить', 'data-act="kyc-check"', 'primary', 'default', 'h-[42px] mt-[26px]')}
   </div>`;
   let body = '';
@@ -877,34 +988,40 @@ function pageKycSbp() {
     body = `<div class="flex flex-col gap-4">
       ${field('Email клиента', input('kyc.email', k.email, { ph: 'client@example.com', type: 'email' }), { hint: 'Идентификатор клиента в системе BitBanker, нужен для отчетности перед регулятором. Дальше подставляется в оплаты как почта плательщика' })}
       ${checkbox('kyc.create', k.create, 'Сразу создать ссылку на оплату СБП после прохождения KYC')}
-      ${k.create ? field('Сумма оплаты, ₽', input('kyc.amount', k.amount, { ph: '10000', suffix: '₽' })) : ''}
+      ${k.create ? ntWrap(field(qrLabel(), input('kyc.amount', k.amount, { ph: '10000', suffix: '₽', rr: true }), { hint: sbpHint(k.amount) }), QR_NOTE, 'rounded-12') : ''}
       ${k.err ? `<p class="text-paragraph-xs text-error-base">${k.err}</p>` : ''}
       <div>${btn('Создать ссылку на KYC', 'data-act="kyc-create"', 'primary', 'sm')}</div>
-      ${k.link ? banner('ok', 'check-line', `Ссылка на проверку: <span class="font-mono">${k.link}</span> ${copyBtn(k.link)}`) : ''}
+      ${k.link ? banner('ok', 'check-line', `Ссылка на проверку: <span class="font-mono">${k.link}</span> ${copyBtn(k.link)}`) + offerNote() : ''}
     </div>`;
   } else if (st === 'check') {
     body = `<div class="flex flex-col gap-3">${banner('info', 'time-line', 'Клиент на проверке. Можно повторно выдать ссылку на проверку')}
       <div>${btn('Выдать ссылку на KYC повторно', 'data-act="kyc-create"', 'neutral-stroke', 'sm')}</div>
-      ${k.link ? banner('ok', 'check-line', `Ссылка на проверку: <span class="font-mono">${k.link}</span> ${copyBtn(k.link)}`) : ''}</div>`;
+      ${k.link ? banner('ok', 'check-line', `Ссылка на проверку: <span class="font-mono">${k.link}</span> ${copyBtn(k.link)}`) + offerNote() : ''}</div>`;
   } else if (st === 'ok') {
     body = `<div class="flex flex-col gap-4">${banner('ok', 'check-line', 'Проверка пройдена')}
-      ${field('Сумма оплаты, ₽', input('kyc.amount', k.amount, { ph: '10000', suffix: '₽' }))}
+      ${ntWrap(field(qrLabel(), input('kyc.amount', k.amount, { ph: '10000', suffix: '₽', rr: true }), { hint: sbpHint(k.amount) }), QR_NOTE, 'rounded-12')}
       ${k.err ? `<p class="text-paragraph-xs text-error-base">${k.err}</p>` : ''}
       <div>${btn('Создать ссылку на оплату СБП', 'data-act="kyc-pay"', 'primary', 'sm')}</div>
-      ${k.payLink ? banner('ok', 'check-line', `Ссылка на оплату: <span class="font-mono">${k.payLink}</span> ${copyBtn(k.payLink)}`) : ''}</div>`;
+      ${k.payLink ? banner('ok', 'check-line', `Ссылка на оплату: <span class="font-mono">${k.payLink}</span> ${copyBtn(k.payLink)}`) + offerNote() : ''}</div>`;
   } else if (st === 'rej') {
-    body = banner('err', 'error-warning-line', 'Отказ. Причина: отказано службой безопасности');
+    body = ntWrap(banner('err', 'error-warning-line', 'Заявка отклонена по результатам проверок'), 'Пока универсальный текст. Тексты причин по кодам проверок (телефон, паспорт, ИНН, безопасность и другие) согласуются в задаче «Статус KYC и причина отключения СБП клиента партнера»', 'rounded-12');
+  } else if (st === 'blk') {
+    body = `<div class="flex flex-col gap-3">${banner('ok', 'check-line', 'Проверка пройдена')}${ntWrap(banner('warn', 'information-line', 'СБП отключён: превышен лимит неоплаченных счетов, включение через менеджера'), 'Отдельное состояние: клиент существует и проверку прошел, показывать его как «не найден» нельзя. Ссылка на оплату не выдается', 'rounded-12')}</div>`;
   } else {
     body = '<p class="text-paragraph-sm text-text-soft-400">Введите ID клиента и нажмите «Проверить»</p>';
   }
   return profileCard('links-line', 'KYC и оплата СБП', 'Проверка клиента и ссылка на оплату для него', '', `<div class="flex max-w-[640px] flex-col gap-5 px-3 pt-2">${checkRow}${body}</div>`);
 }
 
-const MONTHS = [['2026-10', 'Октябрь 2026', 38, 31, 5, 2], ['2026-09', 'Сентябрь 2026', 64, 55, 6, 3], ['2026-08', 'Август 2026', 41, 36, 3, 2]];
+const MONTHS = [['2026-10', 'Октябрь 2026', 38, 31, 5, 2], ['2026-09', 'Сентябрь 2026', 64, 55, 6, 3], ['2026-08', 'Август 2026', 41, 36, 3, 2],
+  ['2026-07', 'Июль 2026', 52, 45, 5, 2], ['2026-06', 'Июнь 2026', 47, 41, 4, 2], ['2026-05', 'Май 2026', 39, 35, 3, 1], ['2026-04', 'Апрель 2026', 33, 29, 3, 1],
+  ['2026-03', 'Март 2026', 28, 25, 2, 1], ['2026-02', 'Февраль 2026', 22, 19, 2, 1], ['2026-01', 'Январь 2026', 18, 16, 1, 1], ['2025-12', 'Декабрь 2025', 15, 13, 1, 1]];
 function pageKycChecks() {
   const f = S.kc.from.slice(0, 7), t = S.kc.to.slice(0, 7);
   const m = S.bridge === 'never' ? [] : MONTHS.filter(([k]) => k >= f && k <= t);
   const sum = m.reduce((a, r) => [a[0] + r[2], a[1] + r[3], a[2] + r[4], a[3] + r[5]], [0, 0, 0, 0]);
+  const pg = pageOf('kyc', m.length, JSON.stringify([S.kc, S.bridge]));
+  const mRows = m.slice(pg.from, pg.to);
   const tile = (l, v) => `<div class="rounded-16 border border-stroke-soft-200 p-4"><p class="text-paragraph-xs text-text-soft-400">${l}</p><p class="mt-1 font-mono text-title-h6 tabular-nums text-text-strong-950">${v}</p></div>`;
   if (S.bridge === 'never') {
     return dashCard('', `<div class="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -915,13 +1032,14 @@ function pageKycChecks() {
   }
   return dashCard('', `<div class="flex flex-col gap-5 p-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      ${rangePicker()}
+      ${periodPicker('kyc')}
       ${btn(I('download-2-line') + 'Выгрузить', 'data-act="toast" data-v="Файл за выбранный период сформирован"', 'neutral-stroke', 'sm')}
     </div>
     ${S.bridge === 'off' ? banner('warn', 'information-line', 'KYC-мост отключен. Показаны исторические данные за период, когда мост работал') : ''}
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">${tile('Всего проверок', sum[0])}${tile('Успешных', sum[1])}${tile('Неуспешных', sum[2])}${tile('С повторным запросом документов', sum[3])}</div>
     <table class="w-full"><thead><tr class="bg-bg-weak-50">${['Месяц', 'Всего', 'Успешных', 'Неуспешных', 'С повторным запросом документов'].map((h, i) => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${i === 0 ? 'rounded-l-full' : ''} ${i === 4 ? 'rounded-r-full' : ''}">${h}</th>`).join('')}</tr></thead>
-    <tbody>${m.length ? m.map((r) => `<tr class="h-14 border-b border-stroke-soft-200/50 last:border-none"><td class="px-3 text-label-sm text-text-strong-950">${r[1]}</td>${r.slice(2).map((v) => `<td class="px-3 font-mono text-label-sm tabular-nums text-text-strong-950">${v}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="5" class="py-10 text-center text-paragraph-sm text-text-soft-400">За выбранный период проверок нет</td></tr>'}</tbody></table>
+    <tbody>${m.length ? mRows.map((r) => `<tr class="h-14 border-b border-stroke-soft-200/50 last:border-none"><td class="px-3 text-label-sm text-text-strong-950">${r[1]}</td>${r.slice(2).map((v) => `<td class="px-3 font-mono text-label-sm tabular-nums text-text-strong-950">${v}</td>`).join('')}</tr>`).join('') : '<tr><td colspan="5" class="py-10 text-center text-paragraph-sm text-text-soft-400">За выбранный период проверок нет</td></tr>'}</tbody></table>
+    ${pager('kyc', pg)}
     <p class="text-paragraph-xs text-text-soft-400">Считаются проверки, проведенные через мост, с итоговым результатом. Брошенные посередине не учитываются. Денежные суммы не выводятся: тариф и взаиморасчеты ведутся вне платформы</p>
   </div>`);
 }
@@ -930,7 +1048,7 @@ function pageCommissions() {
     const bbSbp = `<span class="font-mono tabular-nums text-text-strong-950">${feeStr(S.c.bbPct, S.c.bbAbs)}</span>`;
   const partnerSbp = `<div class="flex items-center gap-2"><div class="w-24">${input('d.feePct', S.d.feePct, { suffix: '%' })}</div><div class="w-28">${input('d.feeAbs', S.d.feeAbs, { suffix: '₽' })}</div>${btn('Сохранить', 'data-act="save-fee"', 'primary', 'xs')}</div>`;
   const tiers = [['0+', '2,0%', '5'], ['10 000+', '1,5%', '5'], ['100 000+', '1,0%', '5'], ['500 000+', '0,7%', '5']];
-  const iban = S.iban ? `${sectionLabel('Выплата клиенту на IBAN')}
+  const iban = payOpen() ? `${sectionLabel('Выплата клиенту на IBAN')}
     ${row('bank-line', 'Комиссия BitBanker', 'Уровни по сумме операции в USDT', '', 'data-note="Только чтение. Значения сетки ставок и минимальной комиссии в прототипе - демо"')}
     <div class="mx-3 mb-2 overflow-hidden rounded-12 border border-stroke-soft-200">
       <table class="w-full"><thead><tr class="bg-bg-weak-50 text-left text-label-xs font-normal text-text-soft-400"><th class="h-8 px-3 font-normal">Сумма операции, USDT</th><th class="px-3 font-normal">Процент</th><th class="px-3 font-normal">Фиксированная часть, USDT</th></tr></thead>
@@ -941,6 +1059,7 @@ function pageCommissions() {
     ${sectionLabel('Пополнение по СБП')}
     ${row('percent-line', 'Комиссия BitBanker', 'Применяется большее из процента и абсолютного значения', bbSbp, 'data-note="Только чтение. Ставку BitBanker задает оператор в карточке аккаунта"')}
     ${row('percent-line', 'Ваша комиссия для клиента', 'Процент и абсолютное значение в рублях', partnerSbp, 'data-note="Новое значение применяется к предрасчету и к оплатам, выставленным после изменения. Ранее выставленные считаются по значению на момент выставления"')}
+    ${row('arrow-left-right-line', 'Уменьшить при запросе QR на комиссию Битбанкер', S.c.qrIncl ? 'Включено: клиент оплачивает ровно введенную сумму QR, комиссия BitBanker вычитается из нее' : 'Выключено: к сумме QR добавляется комиссия BitBanker, на счет партнера зачисляется введенная сумма', sw(S.c.qrIncl, 'data-act="tog-qr"'), 'data-new="s" data-note="На утверждении: передача тумблера партнеру предложена в комментарии к ТЗ, решение не принято. Значение берется из карточки партнера (по умолчанию выключен). Меняет, сколько заплатит клиент и сколько получит партнер, изменение пишется в журнал"')}
     ${iban}
 `);
 }
@@ -991,10 +1110,13 @@ function pageApi() {
 
 function pageJournal() {
   const settings = [...new Set(S.J.map((j) => j.s))];
-  const rows = S.J.filter((j) => (S.JF.setting === 'all' || j.s === S.JF.setting) && (S.JF.who === 'all' || j.who === S.JF.who));
+  const all = S.J.filter((j) => (S.JF.setting === 'all' || j.s === S.JF.setting) && (S.JF.who === 'all' || j.who === S.JF.who) && pkInRange(parseTm(j.t), S.JF.period));
+  const pg = pageOf('journal', all.length, JSON.stringify(S.JF));
+  const rows = all.slice(pg.from, pg.to);
   const th = (x, a) => `<th class="h-9 px-3 text-left text-label-xs font-normal text-text-soft-400 ${a}">${x}</th>`;
   return profileCard('file-list-3-line', 'Журнал изменений', 'История изменений настроек партнера и условий обслуживания', '', `
 <div class="mb-4 mt-1 flex flex-wrap items-center gap-2 px-3">
+  ${periodPicker('jour')}
   ${pill('j-setting', 'Настройка', S.JF.setting, [['all', 'Все'], ...settings.map((s) => [s, s])])}
   ${pill('j-who', 'Кто изменил', S.JF.who, [['all', 'Все'], ['Партнер', 'Партнер'], ['Оператор', 'Оператор']])}
 </div>
@@ -1005,7 +1127,7 @@ function pageJournal() {
     <td class="px-3 font-mono text-paragraph-xs text-text-sub-600">${esc(j.a)}</td><td class="px-3 font-mono text-paragraph-xs text-text-strong-950">${esc(j.b)}</td>
     <td class="px-3">${chip(j.who, j.who === 'Оператор' ? 'bg-feature-lighter text-feature-base' : 'bg-bg-weak-50 text-text-sub-600')}</td></tr>`).join('')
     : '<tr><td colspan="5"><div class="flex flex-col items-center gap-2 py-12 text-center"><p class="text-label-sm text-text-sub-600">Записей пока нет</p><p class="text-paragraph-xs text-text-soft-400">Здесь появятся изменения настроек</p></div></td></tr>'}</tbody>
-</table></div>`);
+</table>${pager('journal', pg)}</div>`);
 }
 
 function pageDocs() {
@@ -1115,26 +1237,57 @@ function txModal(id) {
     btn(I('download-2-line') + 'Скачать квитанцию', 'data-act="toast" data-v="Квитанция скачана"', 'neutral-stroke', 'sm'));
 }
 
+/* Проверка получателя перевода: запускается сама, когда введенный email похож на адрес, до ввода суммы и комментария */
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+const rcptIsPartner = (e) => { const v = String(e).trim().toLowerCase(); return v.includes('partner') || v.endsWith('@nodex.io'); };
+let rcptTimer;
+function scheduleRcpt() {
+  clearTimeout(rcptTimer);
+  const e = (S.f.email || '').trim();
+  if (!EMAIL_RE.test(e)) { S.f.rcpt = { state: 'idle' }; return; }
+  S.f.rcpt = { state: 'checking' };
+  rcptTimer = setTimeout(() => {
+    if ((S.f.email || '').trim() !== e || !S.modal || S.modal.t !== 'other') return;
+    S.f.rcpt = { state: rcptIsPartner(e) ? 'ok' : 'err' };
+    const ae = document.activeElement;
+    const had = !!(ae && ae.dataset && ae.dataset.f === 'f.email');
+    render();
+    if (had) { const el = document.querySelector('[data-f="f.email"]'); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (x) { /* ignore */ } } }
+  }, 550);
+}
+
 function ownModal() {
-  const fromMain = (S.f.own || 'main') === 'main';
+  /* при закрытом направлении пополнение счета выплат недоступно, остается только перевод со счета выплат на основной */
+  const dir = payOpen() ? (S.f.own || 'main') : 'payout';
+  const fromMain = dir === 'main';
   const max = fromMain ? S.bal.usdt : S.bal.free;
+  const options = payOpen() ? [['main', 'Основной счет → Счет выплат (IBAN)'], ['payout', 'Счет выплат (IBAN) → Основной счет']] : [['payout', 'Счет выплат (IBAN) → Основной счет']];
   return modalShell('Перевод между своими счетами',
     `<div class="flex flex-col gap-4">
-      ${field('Направление', select('f.own', S.f.own || 'main', [['main', 'Основной счет → Счет выплат (IBAN)'], ['payout', 'Счет выплат (IBAN) → Основной счет']]))}
+      ${field('Направление', select('f.own', dir, options))}
       <div data-note="Комиссия 0. Работает во время паузы вывода">${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT' }), { hint: `Доступно: ${num(max)} USDT${fromMain ? '' : ' (свободный остаток, сумма под выплаты не переводится)'}`, err: S.f.err || '' })}</div>
     </div>`, btn('Отмена', 'data-act="close-modal"', 'neutral-stroke', 'sm') + btn('Перевести', 'data-act="do-own"', 'primary', 'sm'), 'w-[480px]', true);
 }
 function otherModal() {
-  const e = (S.f.email || '').trim().toLowerCase();
-  let err = '';
-  if (S.f.checked && e) err = e.includes('partner') || e.endsWith('@nodex.io') ? '' : 'Перевод этому получателю недоступен. С партнёрского аккаунта средства можно переводить только на другие партнёрские аккаунты — проверьте адрес получателя';
+  const src = S.f.src === 'payout' && hasPayout() ? 'payout' : 'main';
+  const max = src === 'payout' ? S.bal.free : S.bal.usdt;
+  const em = (S.f.email || '').trim();
+  const st = EMAIL_RE.test(em) && S.f.rcpt ? S.f.rcpt.state : 'idle';
+  const ok = st === 'ok';
+  const status = st === 'checking'
+    ? `<p class="flex items-center gap-1.5 text-paragraph-xs text-text-soft-400">${I('loader-4-line', 'animate-spin text-sm')}Проверяем получателя…</p>`
+    : st === 'ok'
+      ? `<p class="flex items-center gap-1.5 text-paragraph-xs text-success-base">${I('check-line', 'text-sm')}Получатель подтвержден</p>`
+      : st === 'err'
+        ? '<p class="text-paragraph-xs text-error-base">Перевод этому получателю недоступен. С партнёрского аккаунта средства можно переводить только на другие партнёрские аккаунты — проверьте адрес получателя</p>'
+        : '<p class="text-paragraph-xs text-text-soft-400">Переводить можно только партнерам платформы</p>';
   return modalShell('Перевод другому аккаунту',
     `<div class="flex flex-col gap-4">
-      ${field('С какого счета', select('f.src', S.f.src || 'main', [['main', 'Основной счет'], ...(S.iban ? [['payout', 'Счет выплат (IBAN)']] : [])]))}
-      <div data-note="Демо: email с partner - партнерский аккаунт, любой другой - без признака. Перевод незарегистрированному получателю недоступен, кешбэк 1% за такие переводы не начисляется">${field('Кому (email)', input('f.email', S.f.email || '', { ph: 'partner@example.com', err: !!err, type: 'email' }), { hint: 'Проверка получателя выполняется сразу после ввода email', err })}</div>
-      ${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT' }))}
-      ${field('Комментарий', input('f.note', S.f.note || '', { ph: 'Необязательно' }))}
-    </div>`, btn('Проверить получателя', 'data-act="check-email"', 'neutral-stroke', 'sm') + btn('Перевести', 'data-act="do-other"', 'primary', 'sm'), 'w-[480px]', true);
+      ${field('С какого счета', select('f.src', src, [['main', 'Основной счет'], ...(hasPayout() ? [['payout', 'Счет выплат (IBAN)']] : [])]))}
+      <div data-note="Демо: email с partner или на @nodex.io - партнерский аккаунт, любой другой - без признака. Проверка запускается сама после ввода email. Перевод незарегистрированному получателю недоступен, кешбэк 1% за такие переводы не начисляется">${field('Кому (email)', input('f.email', S.f.email || '', { ph: 'partner@example.com', err: st === 'err', rr: true }) + status)}</div>
+      <div data-note="Со счета выплат уходит только свободный остаток, замороженная под выплаты сумма не переводится">${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT', dis: !ok }), { hint: `Доступно: ${num(max)} USDT${src === 'payout' ? ' (свободный остаток, сумма под выплаты не переводится)' : ''}`, err: S.f.err || '' })}</div>
+      ${field('Комментарий', input('f.note', S.f.note || '', { ph: 'Необязательно', dis: !ok }))}
+    </div>`, btn('Отмена', 'data-act="close-modal"', 'neutral-stroke', 'sm') + btn('Перевести', `data-act="do-other" ${ok ? '' : 'disabled'}`, 'primary', 'sm'), 'w-[480px]', true);
 }
 function topupModal() {
   const a = 'TWd3Lp8vRk2Qm5Nz7Yc1Hx4Bj9Ue6Ak2Lp';
@@ -1180,7 +1333,7 @@ function panel() {
     <div><p class="text-label-md text-text-strong-950">Настройки прототипа</p><p class="text-paragraph-xs text-text-soft-400">Состояния кабинета и сценарии</p></div>
     <button type="button" data-act="panel-toggle" class="flex size-8 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 hover:bg-bg-weak-50">${I('close-line', 'text-base')}</button>
   </div>
-  <div class="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+  <div id="pscroll" class="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6">
     <table class="w-full table-fixed">
       <colgroup><col style="width:58%"><col style="width:42%"></colgroup>
       <thead><tr><th class="pb-1 text-left text-label-xs font-normal text-text-soft-400">Параметр</th><th class="pb-1 text-right text-label-xs font-normal text-text-soft-400">Значение</th></tr></thead>
@@ -1191,7 +1344,8 @@ function panel() {
       ${trow('Подсветка нового для партнера', sw(S.hl, 'data-act="tog" data-k="hl"'), 'Пунктирная обводка и бейдж «Новое для партнера»')}
       ${group('Аккаунт')}
       ${trow('Ручная генерация ссылок', sw(S.manual, 'data-act="tog" data-k="manual"', !S.partner), 'Показывает раздел «KYC и оплата СБП»')}
-      ${trow('Направление выплат на IBAN', sw(S.iban, 'data-act="tog" data-k="iban"', !S.partner), 'Счет выплат и комиссии по IBAN')}
+      ${trow('Направление выплат на IBAN', `<div class="w-[190px] max-w-full">${select('pay', S.pay, [['none', 'Не открывалось'], ['open', 'Открыто'], ['closed', 'Закрыто']])}</div>`, 'Закрыто: счет выплат остается с остатком, пополнение и новые выплаты недоступны')}
+      ${trow('Ссылка на оферту', `<div class="w-[190px] max-w-full">${input('offerUrl', S.offerUrl, { ph: 'https://', rr: true })}</div>`, 'Поле из карточки партнера в админке. Пусто - текст про оферту не показывается')}
       ${trow('KYC-мост', `<div class="w-[150px] max-w-full">${select('bridge', S.bridge, [['on', 'Подключен'], ['off', 'Отключен'], ['never', 'Не был подключен']])}</div>`, 'Влияет на раздел «KYC-проверки»')}
       ${group('Настройки партнера (общие значения)')}
       ${trow('Автоконвертация в USDT', sw(S.conv, 'data-act="tog" data-k="conv"', !S.partner), 'Общее значение с разделом «Реквизиты»')}
@@ -1226,6 +1380,7 @@ function render() {
   document.body.classList.toggle('hl-on', S.hl);
   document.body.classList.toggle('note-on', S.nt);
   const y = document.getElementById('scroll')?.scrollTop || 0;
+  const py = document.getElementById('pscroll')?.scrollTop || 0;
   const z = (Number(S.zoom) || 100) / 100;
   document.getElementById('app').innerHTML = `
 <div class="relative min-w-0 flex-1 overflow-hidden bg-[#0e0e10]">
@@ -1246,6 +1401,8 @@ function render() {
 ${panel()}`;
   const sc = document.getElementById('scroll');
   if (sc) sc.scrollTop = y;
+  const ps = document.getElementById('pscroll');
+  if (ps) ps.scrollTop = py;
   requestAnimationFrame(() => requestAnimationFrame(layoutNotes));
 }
 
@@ -1359,7 +1516,6 @@ function setFlag(k, v) {
     S.partner = v;
     S.route = mapRoute(S.route, v);
   } else if (k === 'manual') { S.manual = v; }
-  else if (k === 'iban') { log('Открытие и закрытие направлений', v ? 'Закрыто' : 'Открыто', v ? 'Открыто' : 'Закрыто', 'Оператор'); S.iban = v; }
   else if (k === 'conv') { log('Автоконвертация в USDT', v ? 'Выключена' : 'Включена', v ? 'Включена' : 'Выключена'); S.conv = v; }
   else if (k === 'convBal') { log('Автоконвертация накопленного остатка', v ? 'Выключена' : 'Включена', v ? 'Включена' : 'Выключена'); S.convBal = v; }
   else if (k === 'aw') { log('Автовывод', v ? 'Выключен' : 'Включен', v ? 'Включен' : 'Выключен'); S.aw = v; }
@@ -1382,15 +1538,16 @@ const ACTIONS = {
   lang: () => toast('В прототипе доступен только русский язык'),
   'panel-toggle': () => { S.panelOpen = !S.panelOpen; },
   tog: (e) => { const k = e.dataset.k; const cur = S[k]; setFlag(k, !cur); },
-  pill: (e) => { S.pill = S.pill === e.dataset.id ? null : e.dataset.id; },
+  pill: (e) => { S.pill = S.pill === e.dataset.id ? null : e.dataset.id; S.pk = null; },
+  pg: (e) => { S.pg[e.dataset.k] = Number(e.dataset.p); },
   'pill-set': (e) => {
-    const m = { 'f-circuit': 'circuit', 'f-source': 'source', 'f-op': 'op', 'f-type': 'type', 'f-status': 'status', 'f-period': 'period' };
+    const m = { 'f-circuit': 'circuit', 'f-source': 'source', 'f-op': 'op', 'f-type': 'type', 'f-status': 'status' };
     if (m[e.dataset.id]) S.F[m[e.dataset.id]] = e.dataset.v;
     if (e.dataset.id === 'j-setting') S.JF.setting = e.dataset.v;
     if (e.dataset.id === 'j-who') S.JF.who = e.dataset.v;
     S.pill = null;
   },
-  'reset-filters': () => { S.F = { circuit: 'all', source: 'all', op: 'all', type: 'all', status: 'all', period: 'all', q: '', cid: '' }; },
+  'reset-filters': () => { S.F = { circuit: 'all', source: 'all', op: 'all', type: 'all', status: 'all', period: { kind: 'all' }, q: '', cid: '' }; },
   export: () => toast('Выгрузка сформирована, в файл добавлена колонка Client ID'),
   'open-tx': (e) => { S.modal = { t: 'tx', id: e.dataset.id }; },
   'close-modal': () => { S.modal = null; S.f = {}; },
@@ -1399,26 +1556,28 @@ const ACTIONS = {
   'm-own': (e) => { S.modal = { t: 'own' }; S.f = { own: e.dataset.v }; },
   'm-other': () => { S.modal = { t: 'other' }; S.f = {}; },
   'm-withdraw': () => { S.modal = { t: 'withdraw' }; S.f = {}; },
-  'check-email': () => { S.f.checked = true; },
   'do-own': () => {
-    const fromMain = (S.f.own || 'main') === 'main';
+    const dir = payOpen() ? (S.f.own || 'main') : 'payout';
+    const fromMain = dir === 'main';
     const a = parseFloat(String(S.f.amount || '').replace(',', '.'));
     const max = fromMain ? S.bal.usdt : S.bal.free;
     if (!(a > 0)) { S.f.err = 'Укажите сумму'; return; }
-    if (a > max) { S.f.err = 'Сумма больше доступного остатка'; return; }
+    if (a > max) { S.f.err = 'Сумма больше доступного остатка: ' + num(max) + ' USDT'; return; }
     if (fromMain) { S.bal.usdt -= a; S.bal.free += a; } else { S.bal.free -= a; S.bal.usdt += a; }
     S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'transfer', st: 'done', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], dir: fromMain ? 'Основной → Счет выплат (IBAN)' : 'Счет выплат (IBAN) → Основной' });
     S.modal = null; S.f = {}; toast('Перевод выполнен');
   },
   'do-other': () => {
-    S.f.checked = true;
+    const src = S.f.src === 'payout' && hasPayout() ? 'payout' : 'main';
     const e = (S.f.email || '').trim().toLowerCase();
     const a = parseFloat(String(S.f.amount || '').replace(',', '.'));
-    if (!e) return;
-    if (!(e.includes('partner') || e.endsWith('@nodex.io'))) return;
-    if (!(a > 0)) { toast('Укажите сумму'); return; }
-    S.bal.usdt -= a;
-    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'transfer', st: 'done', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], dir: 'Основной → ' + e });
+    const max = src === 'payout' ? S.bal.free : S.bal.usdt;
+    if (!EMAIL_RE.test(e)) return;
+    if (!rcptIsPartner(e)) { S.f.rcpt = { state: 'err' }; return; }
+    if (!(a > 0)) { S.f.err = 'Укажите сумму'; return; }
+    if (a > max) { S.f.err = 'Сумма больше доступного остатка: ' + num(max) + ' USDT'; return; }
+    if (src === 'payout') S.bal.free -= a; else S.bal.usdt -= a;
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'transfer', st: 'done', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], dir: (src === 'payout' ? 'Счет выплат (IBAN)' : 'Основной') + ' → ' + e });
     S.modal = null; S.f = {}; toast('Перевод выполнен');
   },
   'do-withdraw': () => {
@@ -1429,6 +1588,12 @@ const ACTIONS = {
     const to = S.f.addr ?? S.c.awAddr;
     S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'withdraw', st: 'processing', age: 0, tm: fmtDT(new Date()), legs: [{ c: 'USDT', a: -a }], to, hash: 'f0e1d2c3b4a5968778695a4b3c2d1e0f1a2b3c4d5e6f708192a3b4c5d6e7f809', netfee: '1,00' });
     S.modal = null; S.f = {}; toast('Вывод отправлен в сеть');
+  },
+  'tog-qr': () => {
+    const was = S.c.qrIncl;
+    S.c.qrIncl = !was;
+    log('Уменьшить при запросе QR на комиссию BitBanker', was ? 'Включено' : 'Выключено', was ? 'Выключено' : 'Включено');
+    toast(was ? 'Выключено: к сумме QR добавляется комиссия BitBanker' : 'Включено: клиент оплачивает введенную сумму, комиссия вычитается');
   },
   'save-fee': () => {
     log('Комиссия партнера для клиента, СБП', feeStr(S.c.feePct, S.c.feeAbs), feeStr(S.d.feePct, S.d.feeAbs));
@@ -1462,21 +1627,34 @@ const ACTIONS = {
   support: () => toast('Чат поддержки не входит в прототип'),
   'sess-end': (e) => { S.sessions.splice(Number(e.dataset.i), 1); toast('Сессия завершена'); },
   'sess-all': () => { S.sessions = S.sessions.filter((s) => s.cur); toast('Остальные сессии завершены'); },
-  'rng-open': () => {
-    if (S.cal && S.cal.id === 'rng-kc') { S.cal = null; return; }
-    const [y, m] = S.kc.from.split('-').map(Number);
-    S.cal = { id: 'rng-kc', y, m: m - 1, tmp: null }; S.dd = null; S.pill = null;
+  'pk-open': (e) => {
+    const id = e.dataset.id;
+    if (S.pk && S.pk.id === id) { S.pk = null; return; }
+    const v = pkValue(id);
+    const base = v.kind === 'range' ? dateOf(v.from) : PK_TODAY;
+    S.pk = { id, y: base.getFullYear(), m: base.getMonth(), a: null, b: null };
+    S.pill = null; S.dd = null; S.cal = null;
   },
-  'rng-nav': (e) => { const d = Number(e.dataset.d); let m = S.cal.m + d, y = S.cal.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } S.cal = { ...S.cal, y, m }; },
-  'rng-set': (e) => {
+  'pk-nav': (e) => { let m = S.pk.m + Number(e.dataset.d), y = S.pk.y; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } S.pk = { ...S.pk, y, m }; },
+  'pk-day': (e) => {
     const v = e.dataset.v;
-    if (!S.cal.tmp) { S.cal = { ...S.cal, tmp: v }; return; }
-    const a = S.cal.tmp;
-    S.kc.from = a <= v ? a : v; S.kc.to = a <= v ? v : a; S.cal = null;
+    if (!S.pk.a || (S.pk.a && S.pk.b)) S.pk = { ...S.pk, a: v, b: null };
+    else S.pk = { ...S.pk, b: v };
+  },
+  'pk-preset': (e) => {
+    const k = e.dataset.v;
+    pkSet(S.pk.id, k === 'all' ? { kind: 'all' } : { kind: 'days', days: Number(k) });
+    S.pk = null;
+  },
+  'pk-apply': () => {
+    if (!(S.pk.a && S.pk.b)) return;
+    const [from, to] = S.pk.a <= S.pk.b ? [S.pk.a, S.pk.b] : [S.pk.b, S.pk.a];
+    pkSet(S.pk.id, { kind: 'range', from, to });
+    S.pk = null;
   },
   'acc-sel': (e) => { S.acc = e.dataset.id; },
-  'dd-open': (e) => { const id = e.dataset.id; S.dd = S.dd === id ? null : id; S.pill = null; S.cal = null; },
-  'dd-set': (e) => { setPath(e.dataset.f, e.dataset.v); S.dd = null; },
+  'dd-open': (e) => { const id = e.dataset.id; S.dd = S.dd === id ? null : id; S.pill = null; S.cal = null; S.pk = null; },
+  'dd-set': (e) => { if (e.dataset.f === 'pay') log('Открытие и закрытие направлений', PAY_LABEL[S.pay], PAY_LABEL[e.dataset.v], 'Оператор'); setPath(e.dataset.f, e.dataset.v); S.dd = null; },
   'cal-open': (e) => {
     const id = e.dataset.id;
     if (S.cal && S.cal.id === id) { S.cal = null; return; }
@@ -1490,13 +1668,14 @@ const ACTIONS = {
     const id = S.kyc.id.trim();
     S.kyc.link = ''; S.kyc.payLink = ''; S.kyc.err = '';
     if (!id) { S.kyc.err = 'Введите ID клиента'; S.kyc.state = null; return; }
-    S.kyc.state = id.endsWith('200') ? 'check' : id.endsWith('300') ? 'ok' : id.endsWith('400') ? 'rej' : 'new';
+    S.kyc.state = id.endsWith('200') ? 'check' : id.endsWith('300') ? 'ok' : id.endsWith('400') ? 'rej' : id.endsWith('500') ? 'blk' : 'new';
   },
   'kyc-create': () => {
     const k = S.kyc; k.err = '';
     if (k.state === 'new') {
       if (!k.email.trim()) { k.err = 'Email клиента обязателен при первом обращении'; return; }
       if (k.create && !(parseFloat(k.amount) > 0)) { k.err = 'Укажите сумму оплаты'; return; }
+      if (k.create && !(sbpCalc(parseFloat(k.amount)).credit > 0)) { k.err = QR_TOO_SMALL; return; }
     }
     k.link = 'https://kyc.bitbanker.org/s/' + Math.random().toString(36).slice(2, 10);
     k.state = 'check';
@@ -1504,15 +1683,16 @@ const ACTIONS = {
   'kyc-pay': () => {
     const k = S.kyc;
     if (!(parseFloat(k.amount) > 0)) { k.err = 'Укажите сумму оплаты'; return; }
+    if (!(sbpCalc(parseFloat(k.amount)).credit > 0)) { k.err = QR_TOO_SMALL; return; }
     k.err = ''; k.payLink = 'https://pay.bitbanker.org/q/' + Math.random().toString(36).slice(2, 8);
-    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'sbp', st: 'pending', age: 0, tm: fmtDT(new Date()), due: pad(new Date().getHours()) + ':' + pad((new Date().getMinutes() + 15) % 60), legs: [{ c: 'RUBR', a: parseFloat(k.amount) }], qr: parseFloat(k.amount) * 1.0173, cl: 'R' + k.id.replace(/\D/g, '').slice(0, 6), src: 'Ручная ссылка', bb: parseFloat(k.amount) * 0.0173, pf: parseFloat(k.amount) * 0.015, link: k.payLink, n: String(4913 + S.H.length) });
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'sbp', st: 'pending', age: 0, tm: fmtDT(new Date()), due: pad(new Date().getHours()) + ':' + pad((new Date().getMinutes() + 15) % 60), legs: [{ c: 'RUBR', a: sbpCalc(parseFloat(k.amount)).credit }], qr: sbpCalc(parseFloat(k.amount)).qr, cl: 'R' + k.id.replace(/\D/g, '').slice(0, 6), src: 'Ручная ссылка', bb: sbpCalc(parseFloat(k.amount)).bb, pf: sbpCalc(parseFloat(k.amount)).pf, link: k.payLink, n: String(4913 + S.H.length) });
     toast('Оплата выставлена и появилась в истории');
   },
   'pause-on': () => { startPause(); if (paused()) toast(pauseText()); else toast('Пауза не задана (0 часов)'); },
   'pause-off': () => { S.pauseUntil = null; },
   'scn-new': () => {
     const n = new Date(); const amt = [3000, 7500, 12000, 25000][Math.floor(Math.random() * 4)];
-    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'sbp', st: 'pending', age: 0, tm: fmtDT(n), due: pad(n.getHours()) + ':' + pad((n.getMinutes() + 15) % 60), legs: [{ c: 'RUBR', a: amt }], qr: amt * 1.0173, cl: 'R' + (100000 + Math.floor(Math.random() * 899999)), src: ['API', 'Виджет', 'Ручная ссылка'][Math.floor(Math.random() * 3)], bb: amt * 0.0173, pf: amt * 0.015, link: 'https://pay.bitbanker.org/q/' + Math.random().toString(36).slice(2, 8), n: String(4913 + S.H.length) });
+    S.H.unshift({ id: 'TX-' + Math.random().toString(16).slice(2, 10).toUpperCase(), k: 'sbp', st: 'pending', age: 0, tm: fmtDT(n), due: pad(n.getHours()) + ':' + pad((n.getMinutes() + 15) % 60), legs: [{ c: 'RUBR', a: sbpCalc(amt).credit }], qr: sbpCalc(amt).qr, cl: 'R' + (100000 + Math.floor(Math.random() * 899999)), src: ['API', 'Виджет', 'Ручная ссылка'][Math.floor(Math.random() * 3)], bb: sbpCalc(amt).bb, pf: sbpCalc(amt).pf, link: 'https://pay.bitbanker.org/q/' + Math.random().toString(36).slice(2, 8), n: String(4913 + S.H.length) });
     toast('Оплата клиента выставлена: статус «Ожидает»');
   },
   'scn-paid': () => {
@@ -1530,8 +1710,8 @@ const ACTIONS = {
 
 document.addEventListener('click', (ev) => {
   let t = ev.target.closest('[data-act]');
-  if (!t) { if (S.pill || S.dd || S.cal) { S.pill = null; S.dd = null; S.cal = null; render(); } return; }
-  if (!['dd-open', 'dd-set', 'pill', 'pill-set', 'cal-open', 'cal-nav', 'cal-set', 'rng-open', 'rng-nav', 'rng-set'].includes(t.dataset.act)) { S.pill = null; S.dd = null; S.cal = null; }
+  if (!t) { if (S.pill || S.dd || S.cal || S.pk) { S.pill = null; S.dd = null; S.cal = null; S.pk = null; render(); } return; }
+  if (!['dd-open', 'dd-set', 'pill', 'pill-set', 'cal-open', 'cal-nav', 'cal-set', 'pk-open', 'pk-nav', 'pk-day'].includes(t.dataset.act)) { S.pill = null; S.dd = null; S.cal = null; S.pk = null; }
   if (t.dataset.act === 'close-modal-bg') { if (ev.target !== t) return; }
   else if (ev.target.closest('[data-stop]') && t.dataset.act === 'close-modal-bg') return;
   const fn = ACTIONS[t.dataset.act];
@@ -1545,6 +1725,7 @@ document.addEventListener('input', (ev) => {
   const t = ev.target.closest('[data-f]');
   if (!t) return;
   setPath(t.dataset.f, readVal(t));
+  if (t.dataset.f === 'f.email') scheduleRcpt();
   if (t.dataset.rerender && t.tagName === 'INPUT' && t.type === 'text') {
     const pos = t.selectionStart; const f = t.dataset.f;
     render();
@@ -1569,12 +1750,13 @@ S.f = {};
     else if (p === 'convbal') S.convBal = true;
     else if (p === 'aw') S.aw = true;
     else if (p === 'nt') S.nt = true;
-    else if (p === 'rng') { S.route = 'kyc-checks'; S.cal = { id: 'rng-kc', y: 2026, m: 9, tmp: '2026-10-05' }; }
+    else if (p === 'rng') { S.route = 'kyc-checks'; S.pk = { id: 'kyc', y: 2026, m: 9, a: null, b: null }; }
     else if (p.indexOf('layout=') === 0) S.layout = p.slice(7);
     else if (p.indexOf('acc=') === 0) S.acc = p.slice(4);
     else if (p.indexOf('zoom=') === 0) S.zoom = p.slice(5);
     else if (p === 'nopartner') S.partner = false;
-    else if (p === 'noiban') S.iban = false;
+    else if (p === 'noiban') S.pay = 'none';
+    else if (p === 'iclosed') S.pay = 'closed';
     else if (p === 'nomanual') S.manual = false;
     else if (p === 'nopanel') S.panelOpen = false;
     else if (p === 'paused') { S.pauseUntil = Date.now() + 3 * 3600 * 1000; }
