@@ -690,7 +690,7 @@ function pageHeader(title, sub = '') {
   const ib = 'flex size-10 items-center justify-center rounded-full border border-stroke-soft-200 text-text-soft-400 transition-colors hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95';
   return `
 <div class="flex w-full items-center justify-between gap-6 pb-6">
-  <div class="min-w-0 flex-1"><p class="text-title-h5 font-medium leading-9 tracking-tight text-text-strong-950">${title}</p>${sub ? `<p class="mt-1 text-paragraph-sm text-text-soft-400">${sub}</p>` : ''}</div>
+  <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-3"><p class="text-title-h5 font-medium leading-9 tracking-tight text-text-strong-950">${title}</p>${S.partner ? `<span data-new="s" data-note="Плашка типа аккаунта рядом с заголовком, как у арбитражного аккаунта. Показывается во всех разделах партнерского кабинета, пока без отдельного дизайна" class="inline-flex items-center gap-1.5 rounded-full bg-primary-alpha-10 px-3 py-1 text-label-xs text-primary-base">${I('briefcase-line', 'text-sm')}Партнерский аккаунт</span>` : ''}</div>${sub ? `<p class="mt-1 text-paragraph-sm text-text-soft-400">${sub}</p>` : ''}</div>
   <div class="flex shrink-0 items-center gap-1.5">
     <button type="button" data-act="lang" class="flex h-10 items-center gap-1.5 rounded-full border border-stroke-soft-200 px-3 text-text-soft-400 transition hover:border-stroke-sub-300 hover:bg-bg-weak-50 hover:text-text-sub-600 active:scale-95">${I('global-line', 'text-lg')}<span class="text-label-xs">RU</span></button>
     <button type="button" data-act="theme" class="${ib}">${I(S.theme === 'dark' ? 'sun-line' : 'moon-line', 'text-lg')}</button>
