@@ -866,11 +866,11 @@ function accData() {
   const main = { id: 'main', name: 'Основной счет', sub: 'Выручка партнера', cur: 'USDT', val: S.bal.usdt,
     actions: [A('arrow-up-line', 'Вывести', 'data-act="m-withdraw"', true),
       ...(payOpen() ? [A('arrow-left-right-line', 'На счет выплат', 'data-act="m-own" data-v="main"', false, true)] : []),
-      A('send-plane-line', 'Другому аккаунту', 'data-act="m-other"', false, true)],
+      A('send-plane-line', 'Другому аккаунту', 'data-act="m-other" data-v="main"', false, true)],
     notice: paused() ? banner('warn', 'pause-circle-line', pauseText(), 'data-new') : '' };
   const closed = S.pay === 'closed';
   const payout = hasPayout() ? { id: 'payout', name: 'Счет выплат (IBAN)', sub: 'Выплаты клиентам партнера', cur: 'USDT', val: S.bal.free + S.bal.frozen, isNew: true, free: S.bal.free, frozen: S.bal.frozen,
-    actions: [{ ...A('add-line', 'Пополнить', 'data-act="m-topup"', true), disabled: closed }, A('arrow-left-right-line', 'На основной', 'data-act="m-own" data-v="payout"'), A('send-plane-line', 'Другому аккаунту', 'data-act="m-other"')],
+    actions: [{ ...A('add-line', 'Пополнить', 'data-act="m-topup"', true), disabled: closed }, A('arrow-left-right-line', 'На основной', 'data-act="m-own" data-v="payout"'), A('send-plane-line', 'Другому аккаунту', 'data-act="m-other" data-v="payout"')],
     notice: closed ? banner('info', 'information-line', 'Направление выплат закрыто. Остаток сохранен: его можно перевести на основной счет или другому аккаунту. Пополнение счета и новые выплаты клиентам недоступны', 'data-new') : '' } : null;
   return { rub, main, payout };
 }
@@ -1323,7 +1323,7 @@ function otherModal() {
         : '<p class="text-paragraph-xs text-text-soft-400">Переводить можно только партнерам платформы</p>';
   return modalShell('Перевод другому аккаунту',
     `<div class="flex flex-col gap-4">
-      ${field('С какого счета', select('f.src', src, [['main', 'Основной счет'], ...(hasPayout() ? [['payout', 'Счет выплат (IBAN)']] : [])]))}
+      <div data-note="Счета для списания в окне не выбирается: он определяется кнопкой, с которой открыто окно. С карточки основного счета - основной счет, с карточки счета выплат - счет выплат" class="flex items-center justify-between rounded-12 bg-bg-weak-50 px-3 py-2.5"><span class="text-paragraph-sm text-text-sub-600">Списание со счета</span><span class="text-label-sm text-text-strong-950">${src === 'payout' ? 'Счет выплат (IBAN)' : 'Основной счет'}</span></div>
       <div data-note="Демо: email с partner или на @nodex.io - партнерский аккаунт, любой другой - без признака. Проверка запускается сама после ввода email. Перевод незарегистрированному получателю недоступен, кешбэк 1% за такие переводы не начисляется">${field('Кому (email)', input('f.email', S.f.email || '', { ph: 'partner@example.com', err: st === 'err', rr: true }) + status)}</div>
       <div data-note="Со счета выплат уходит только свободный остаток, замороженная под выплаты сумма не переводится">${field('Сумма, USDT', input('f.amount', S.f.amount || '', { ph: '0,00', suffix: 'USDT', dis: !ok }), { hint: `Доступно: ${num(max)} USDT${src === 'payout' ? ' (свободный остаток, сумма под выплаты не переводится)' : ''}`, err: S.f.err || '' })}</div>
       ${field('Комментарий', input('f.note', S.f.note || '', { ph: 'Необязательно', dis: !ok }))}
@@ -1595,7 +1595,7 @@ const ACTIONS = {
   'close-modal-bg': (e, ev) => { if (ev.target === e) { S.modal = null; S.f = {}; } },
   'm-topup': () => { S.modal = { t: 'topup' }; S.f = {}; },
   'm-own': (e) => { S.modal = { t: 'own' }; S.f = { own: e.dataset.v }; },
-  'm-other': () => { S.modal = { t: 'other' }; S.f = {}; },
+  'm-other': (e) => { S.modal = { t: 'other' }; S.f = { src: e.dataset.v || 'main' }; },
   'm-withdraw': () => { S.modal = { t: 'withdraw' }; S.f = {}; },
   'do-own': () => {
     const dir = payOpen() ? (S.f.own || 'main') : 'payout';
