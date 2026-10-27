@@ -147,6 +147,15 @@ table.grid tbody tr:last-child td{border-bottom:0}
 
 .helper-note{font-size:11.5px;color:var(--text-soft);background:var(--bg-weak);border-radius:var(--radius-8);padding:8px 10px;display:flex;gap:7px;align-items:flex-start}
 .helper-note b{color:var(--text-sub)}
+.sec-h{font-size:12.5px;font-weight:600;color:var(--text-strong);padding-top:4px}
+.sec-h:not(:first-child){border-top:1px solid var(--stroke-soft);margin-top:4px;padding-top:14px}
+.mhint{font-size:11.5px;color:var(--text-soft);line-height:1.45}
+.cb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kyc-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kyc-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--stroke-soft);border-radius:var(--radius-8);font-size:12.5px;cursor:pointer}
+.field .kyc-opt input{width:auto;flex:none;margin:0;padding:0;border:0;box-shadow:none}
+.kyc-opt span{text-align:left}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 
 .overlay{position:fixed;inset:0;background:rgba(23,23,23,.42);display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;z-index:50;overflow-y:auto}
 .overlay.show{display:flex}
@@ -286,13 +295,21 @@ document.querySelector('.side-scroll').innerHTML = document.querySelector('.side
    (SBPSettingsPage, SbpSettingsModal клиента, PartnerMainInfoModal),
    найденным исследованием bb2/back-office-united-dev
    ============================================================ */
+/* справочник полей клиента партнера; у клиента партнера уровня KYC нет, только данные карточки */
+const KYC_FIELDS = [['last_name','Фамилия'],['first_name','Имя'],['patronymic','Отчество'],['birth_date','Дата рождения'],['phone','Телефон'],['email','Email'],['passport','Серия и номер паспорта'],['passport_issue_date','Дата выдачи паспорта'],['country_of_passport_issue','Страна выдачи паспорта'],['inn','ИНН']];
+const KYC_FIELD_NAMES = Object.fromEntries(KYC_FIELDS);
+function kycReq(kind){
+  /* обязательные поля клиента партнера: у каждого провайдера свой список, задается в админке (значения демо) */
+  return kind==='full'
+    ? ['last_name','first_name','patronymic','birth_date','phone','email','passport','passport_issue_date','country_of_passport_issue','inn']
+    : ['last_name','first_name','phone','email'];
+}
 const PROVIDERS = [
-  {iname:'pay2me', label:'pay2me', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-1'},
-  {iname:'vtb', label:'ВТБ', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-1'},
-  {iname:'bt6', label:'BT6 (Runa)', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-1'},
-  {iname:'mt', label:'Multitransfer', enabled:true, maintenance:false, maintenanceUntil:'', kycMin:'KYC-3'},
+  {iname:'pay2me', label:'pay2me', enabled:true, maintenance:false, maintenanceUntil:'', reqFields:kycReq('basic'), cbWindow:5, cbMinReq:10, cbOpen:15},
+  {iname:'vtb', label:'ВТБ', enabled:true, maintenance:false, maintenanceUntil:'', reqFields:kycReq('basic'), cbWindow:5, cbMinReq:10, cbOpen:15},
+  {iname:'bt6', label:'BT6 (Runa)', enabled:true, maintenance:false, maintenanceUntil:'', reqFields:kycReq('basic'), cbWindow:5, cbMinReq:10, cbOpen:15},
+  {iname:'mt', label:'Multitransfer', enabled:true, maintenance:false, maintenanceUntil:'', reqFields:kycReq('full'), cbWindow:5, cbMinReq:10, cbOpen:15},
 ];
-const KYC_LEVELS = ['KYC-1','KYC-2','KYC-3'];
 const PROVIDER_NAMES = Object.fromEntries(PROVIDERS.map(p=>[p.iname,p.label]));
 /* глобальный провайдер по умолчанию - для клиентов ББ без назначенного провайдера */
 let globalDefault = 'pay2me';
@@ -301,8 +318,8 @@ const PROVIDER_OPTIONS = PROVIDERS.map(p=>p.iname);
 let PROVIDER_LOG = [
   {provider:'mt', action:'Техработы включены', reason:'Плановое обслуживание у провайдера, оповещение в чате от 13.10.2026', actor:'a.krivikov@admin.com', time:'13.10.2026 09:12'},
   {provider:'mt', action:'Техработы выключены', reason:'Обслуживание завершено раньше срока', actor:'a.krivikov@admin.com', time:'13.10.2026 10:48'},
-  {provider:'pay2me', action:'Circuit breaker открыт (CIRCUIT_OPEN)', reason:'Серия ошибок провайдерского класса: 5xx и таймауты > 50% за 5 мин', actor:'система', time:'13.10.2026 14:02'},
-  {provider:'pay2me', action:'Circuit breaker закрыт (AVAILABLE)', reason:'Окно без ошибок истекло', actor:'система', time:'13.10.2026 14:17'},
+  {provider:'pay2me', action:'Circuit breaker открыт (CIRCUIT_OPEN)', reason:'Доля ошибок провайдерского класса (5xx, таймауты) выше 50% за 5 мин, не менее 10 запросов', actor:'система', time:'13.10.2026 14:02'},
+  {provider:'pay2me', action:'Circuit breaker закрыт (AVAILABLE)', reason:'Прошло 15 мин в состоянии CIRCUIT_OPEN', actor:'система', time:'13.10.2026 14:17'},
 ];
 
 let LIMITS = [
@@ -352,7 +369,7 @@ function toast(msg){
   wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
   setTimeout(()=>{el.classList.remove('show'); setTimeout(()=>el.remove(),200)},2600);
 }
-function openModal(html){ $('#modalBox').innerHTML=html; $('#overlay').classList.add('show'); $all('[data-close-modal]').forEach(b=>b.addEventListener('click',closeModal)); bindCustomSelects($('#modalBox')); }
+function openModal(html){ $('#modalBox').style.maxWidth=''; $('#modalBox').innerHTML=html; $('#overlay').classList.add('show'); $all('[data-close-modal]').forEach(b=>b.addEventListener('click',closeModal)); bindCustomSelects($('#modalBox')); }
 function closeModal(){ $('#overlay').classList.remove('show'); $('#modalBox').innerHTML=''; }
 $('#overlay').addEventListener('click',e=>{ if(e.target.id==='overlay') closeModal(); });
 
@@ -411,14 +428,18 @@ function setNavActive(id){
   $('#'+id)?.classList.add('nav-active');
 }
 function toggleCollapse(key){
-  state.collapsed[key] = !state.collapsed[key];
-  $(`[data-panel="${key}"]`).setAttribute('data-collapsed', state.collapsed[key] ? 'true':'false');
+  const panel = $(`[data-panel="${key}"]`);
+  const collapsed = panel.getAttribute('data-collapsed') === 'true';
+  state.collapsed[key] = !collapsed;
+  panel.setAttribute('data-collapsed', state.collapsed[key] ? 'true':'false');
   $(`[data-panel="${key}"] .panel-chev`).classList.toggle('open', !state.collapsed[key]);
 }
 
 function render(){
   if(state.page==='sbp-settings'){ setNavActive('navSbpSettings'); $('#stage').innerHTML = renderSbpSettingsPage(); }
   if(state.page==='client'){ setNavActive('navClient'); $('#stage').innerHTML = renderClientPage(); }
+  /* сохранить свёрнутость панелей между перерисовками */
+  Object.keys(state.collapsed).forEach(k=>{ const el=$(`[data-panel="${k}"]`); if(el){ el.setAttribute('data-collapsed', state.collapsed[k]?'true':'false'); $(`[data-panel="${k}"] .panel-chev`)?.classList.toggle('open', !state.collapsed[k]); } });
   bindEvents();
 }
 
@@ -436,14 +457,15 @@ function renderSbpSettingsPage(){
     <div class="panel" data-panel="providers">
       <div class="panel-h"><div><h3>Провайдеры СБП</h3><div class="hint">Доступность по каждому провайдеру. Недоступность запускает автоматическое переключение на резервного</div></div></div>
       <div class="twrap"><table class="grid">
-        <thead><tr><th>Провайдер</th><th>Статус</th><th>Мин. KYC</th><th>Включён</th><th>Техработы</th><th style="text-align:center">Действия</th></tr></thead>
+        <thead><tr><th>Провайдер</th><th>Статус</th><th>Обязательные поля клиента</th><th>Circuit breaker</th><th>Включён</th><th>Техработы</th><th style="text-align:center">Действия</th></tr></thead>
         <tbody>
           ${PROVIDERS.map(p=>{
             return `
             <tr>
               <td class="cell-strong">${esc(p.label)}${p.iname===globalDefault?' <span class="badge b-info" style="margin-left:4px"><span class="d"></span>по умолчанию</span>':''}</td>
               <td><span class="badge ${p.enabled && !p.maintenance?'b-success':p.maintenance?'b-warning':'b-faded'}"><span class="d"></span>${p.enabled && !p.maintenance?'AVAILABLE':p.maintenance?'MAINTENANCE':'DISABLED'}</span>${p.maintenance && p.maintenanceUntil?`<div class="cell-sub">до ${esc(p.maintenanceUntil.replace('T',' '))}</div>`:''}</td>
-              <td class="mono">${esc(p.kycMin)}</td>
+              <td title="${esc(p.reqFields.map(x=>KYC_FIELD_NAMES[x]).join(', '))}">${p.reqFields.length} из ${KYC_FIELDS.length}</td>
+              <td class="cell-sub">&gt; 50% за ${esc(p.cbWindow)} мин<div class="cell-sub">от ${esc(p.cbMinReq)} запросов · пауза ${esc(p.cbOpen)} мин</div></td>
               <td><button class="switch ${p.enabled?'on':''}" data-toggle-enabled="${p.iname}" title="enabled"><span class="knob"></span></button></td>
               <td><button class="switch ${p.maintenance?'on':''}" data-toggle-maintenance="${p.iname}" title="maintenance" ${!p.enabled?'disabled':''}><span class="knob"></span></button></td>
               <td style="text-align:center"><button class="btn btn-sm" data-edit-provider="${p.iname}" title="Настройки провайдера"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5.5 13H3v-2.5L11 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></button></td>
@@ -674,31 +696,52 @@ function bindEvents(){
   $all('[data-edit-provider]').forEach(b=>b.addEventListener('click',()=>{
     const p = PROVIDERS.find(x=>x.iname===b.dataset.editProvider);
     const isDef = p.iname===globalDefault;
+    const names = (arr)=>arr.map(x=>KYC_FIELD_NAMES[x]).join(', ');
     openModal(`
       <div class="modal-h"><h3>Настройки провайдера - ${esc(p.label)}</h3><button class="modal-x" data-close-modal>✕</button></div>
       <div class="modal-b">
-        <div class="field"><label>Минимальный уровень KYC клиента (kyc.minLevel)</label>
-          <div class="popwrap" data-select-id="kycMin">
-            <button type="button" class="fbtn" data-select-toggle="kycMin"><span class="fval" data-select-val="kycMin">${esc(p.kycMin)}</span>
-              <svg class="fchev" width="9" height="9" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
-            <div class="fmenu" data-select-menu="kycMin">${KYC_LEVELS.map(k=>`<button type="button" data-select-opt="kycMin" data-value="${k}" class="${k===p.kycMin?'sel':''}">${k}</button>`).join('')}</div>
-          </div>
+        <div class="sec-h">Требования к данным клиента</div>
+        <div class="field"><label>Обязательные поля клиента партнера</label>
+          <div class="kyc-list">${KYC_FIELDS.map(([k,t])=>`<label class="kyc-opt"><input type="checkbox" value="${k}" ${p.reqFields.includes(k)?'checked':''}><span>${t}</span></label>`).join('')}</div>
+          <div class="mhint">У клиента партнера нет уровня KYC, есть только данные карточки. Если хотя бы одного из отмеченных полей нет, провайдер клиенту не подходит. Состав полей в прототипе демонстрационный.</div>
         </div>
+        <div class="sec-h">Circuit breaker</div>
+        <div class="cb-grid">
+          <div class="field"><label>Окно подсчёта, мин</label><input id="cbWindow" inputmode="numeric" value="${esc(p.cbWindow)}"></div>
+          <div class="field"><label>Мин. запросов в окне</label><input id="cbMinReq" inputmode="numeric" value="${esc(p.cbMinReq)}"></div>
+          <div class="field"><label>Пауза после открытия, мин</label><input id="cbOpen" inputmode="numeric" value="${esc(p.cbOpen)}"></div>
+        </div>
+        <div class="mhint">Провайдер становится недоступным, когда доля ошибок (таймауты, 5xx, mTLS) за окно выше 50% и в окне не меньше указанного числа запросов. Через время паузы он возвращается сам.</div>
         <div class="toggle-row"><div><div class="tt">Провайдер по умолчанию (глобальный)</div><div class="ts">${isDef?'Сейчас провайдер по умолчанию. Чтобы сменить - включите этот переключатель у другого провайдера':(p.enabled?'Используется для клиентов ББ без назначенного провайдера. Только один на систему - прежний будет снят':'Нельзя назначить: провайдер выключен глобально')}</div></div>
           <button class="switch ${isDef?'on':''}" id="swDefaultProv" ${(isDef||!p.enabled)?'disabled':''}><span class="knob"></span></button></div>
-        <div class="helper-note"><span>ℹ️</span><span>Если уровень KYC клиента ниже минимума основного провайдера, а у резервного минимум ниже - операция выпускается через резервного (отдельного флага нет).</span></div>
+        <div class="helper-note"><span>ℹ️</span><span>Если у клиента партнера не хватает обязательных полей для основного провайдера, а для резервного хватает - операция выпускается через резервного (отдельного флага нет). Если не хватает ни для одного, партнеру уйдет вебхук со списком недостающих полей и ошибка.</span></div>
         <div class="field"><label>Причина <span style="color:var(--error)">*</span></label><textarea id="provReason" rows="2" placeholder="Обязательно - попадёт в историю изменений"></textarea></div>
       </div>
       <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="btnSaveProvider">Сохранить</button></div>
     `);
+    $('#modalBox').style.maxWidth='600px';
     $('#swDefaultProv').addEventListener('click',()=>{ if(!$('#swDefaultProv').disabled) $('#swDefaultProv').classList.toggle('on'); });
     $('#btnSaveProvider').addEventListener('click',()=>{
       const reason = $('#provReason').value.trim();
       if(!reason){ $('#provReason').style.borderColor='var(--error)'; toast('Укажите причину'); return; }
-      const v = getSelectValue('kycMin') || p.kycMin;
-      if(v!==p.kycMin){
-        PROVIDER_LOG.push({provider:p.iname, action:`kyc.minLevel: ${p.kycMin} → ${v}`, reason, actor:'super-admin@admin.com', time:'сейчас'});
-        p.kycMin = v;
+      const req = $all('.kyc-opt input:checked').map(i=>i.value);
+      if(!req.length){ toast('Выберите хотя бы одно обязательное поле'); return; }
+      const cb = {cbWindow:+$('#cbWindow').value, cbMinReq:+$('#cbMinReq').value, cbOpen:+$('#cbOpen').value};
+      if([cb.cbWindow,cb.cbMinReq,cb.cbOpen].some(x=>!Number.isInteger(x)||x<=0)){ toast('Circuit breaker: параметры - целые числа больше 0'); return; }
+      const cbNames = {cbWindow:'Circuit breaker - окно подсчёта, мин', cbMinReq:'Circuit breaker - мин. запросов в окне', cbOpen:'Circuit breaker - пауза после открытия, мин'};
+      Object.keys(cb).forEach(k=>{
+        if(cb[k]!==p[k]){
+          PROVIDER_LOG.push({provider:p.iname, action:`${cbNames[k]}: ${p[k]} → ${cb[k]}`, reason, actor:'super-admin@admin.com', time:'сейчас'});
+          p[k] = cb[k];
+        }
+      });
+      const added = req.filter(x=>!p.reqFields.includes(x)), removed = p.reqFields.filter(x=>!req.includes(x));
+      if(added.length || removed.length){
+        const parts = [];
+        if(added.length) parts.push('добавлено: ' + names(added));
+        if(removed.length) parts.push('убрано: ' + names(removed));
+        PROVIDER_LOG.push({provider:p.iname, action:`Обязательные поля клиента - ${parts.join('; ')}`, reason, actor:'super-admin@admin.com', time:'сейчас'});
+        p.reqFields = req;
       }
       if(!isDef && $('#swDefaultProv').classList.contains('on')){
         PROVIDER_LOG.push({provider:'Провайдер по умолчанию', action:`${PROVIDER_NAMES[globalDefault]} → ${p.label}`, reason, actor:'super-admin@admin.com', time:'сейчас'});
