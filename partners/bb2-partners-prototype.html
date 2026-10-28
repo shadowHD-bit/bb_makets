@@ -2420,14 +2420,40 @@ function renderAccountPartnerTab(a){
 
       <div>
         <div class="panel" data-collapsed="${isCollapsed('ap-hmac')}">
-          ${collapsibleHead('ap-hmac', '<h3>HMAC-секрет партнёрского API</h3>')}
+          ${collapsibleHead('ap-hmac', '<h3>API-ключ и секрет партнёрского API</h3>')}
           <div class="panel-b">
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px">API-ключ</div>
+            <div class="ts" style="margin-bottom:10px">Передается в заголовке x-api-key и определяет партнера. Создается и перевыпускается самим партнером в профиле BB (раздел API), здесь только просмотр.</div>
+            <div class="secretbox">
+              <span class="val" id="apiKeyVal">${a.apiKey?'••••••••••••••••••••••••':'ключ не выпущен'}</span>
+              <button class="btn btn-sm" id="btnShowApiKey" ${a.apiKey?'':'disabled'}>Показать</button>
+              <button class="btn btn-sm" id="btnCopyApiKey" ${a.apiKey?'':'disabled'}>Копировать</button>
+            </div>
+            <div class="hairline"></div>
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px">HMAC-секрет</div>
             <div class="ts" style="margin-bottom:10px">Используется для подписи запросов к партнёрскому REST API. Самостоятельно партнёр секрет не видит — только оператор.</div>
             <div class="secretbox">
               <span class="val" id="secretVal">${a.secret?'••••••••••••••••••••••••••••••••':'секрет не выпущен'}</span>
               <button class="btn btn-sm" id="btnShowSecret" ${a.secret?'':'disabled'}>Показать</button>
               <button class="btn btn-sm" id="btnRegenSecret">Перевыпустить</button>
             </div>
+          </div>
+        </div>
+
+        <div class="panel" data-collapsed="${isCollapsed('ap-webhooks')}">
+          ${collapsibleHead('ap-webhooks', '<h3>Вебхуки партнёрского API</h3>')}
+          <div class="panel-b">
+            <div class="field">
+              <label>Адрес вебхука о статусе оплаты</label>
+              <input id="whInvoicesUrl" value="${esc(a.invoicesWebhookUrl||'')}" placeholder="https://">
+              <div class="ts" style="margin-top:6px">Сюда приходят события по оплате: итог СБП-пополнения и зачисление перевода по реквизитам</div>
+            </div>
+            <div class="field" style="margin-top:12px">
+              <label>Адрес вебхука о событиях</label>
+              <input id="whEventsUrl" value="${esc(a.eventsWebhookUrl||'')}" placeholder="https://">
+              <div class="ts" style="margin-top:6px">Сюда приходят события по допуску: изменение допуска клиента к СБП и смена СБП-разрешения на аккаунте партнера</div>
+            </div>
+            <div style="margin-top:12px"><button class="btn btn-sm" id="btnSaveWebhooks" type="button">Сохранить</button></div>
           </div>
         </div>
 
@@ -2665,11 +2691,27 @@ function bindAccountDetailPage(){
     a.offerUrl = v;
     toast(v ? 'Ссылка на оферту сохранена' : 'Ссылка на оферту очищена');
   });
+  $('#btnSaveWebhooks')?.addEventListener('click', ()=>{
+    const inv = ($('#whInvoicesUrl').value||'').trim(), ev = ($('#whEventsUrl').value||'').trim();
+    const bad = [inv, ev].some(v=>v && !/^https?:\/\//i.test(v));
+    if(bad){ toast('Адрес вебхука должен начинаться с http:// или https://'); return; }
+    a.invoicesWebhookUrl = inv; a.eventsWebhookUrl = ev;
+    toast('Адреса вебхуков сохранены');
+  });
   $('#btnEditLimits')?.addEventListener('click', ()=>openLimitsModal(a));
   $('#btnShowSecret')?.addEventListener('click', (e)=>{
     const val = $('#secretVal');
     if(val.textContent.startsWith('••')){ val.textContent = a.secret; e.target.textContent='Скрыть'; }
     else { val.textContent = '••••••••••••••••••••••••••••••••'; e.target.textContent='Показать'; }
+  });
+  $('#btnShowApiKey')?.addEventListener('click', (e)=>{
+    const val = $('#apiKeyVal');
+    if(val.textContent.startsWith('••')){ val.textContent = a.apiKey; e.target.textContent='Скрыть'; }
+    else { val.textContent = '••••••••••••••••••••••••'; e.target.textContent='Показать'; }
+  });
+  $('#btnCopyApiKey')?.addEventListener('click', ()=>{
+    try{ navigator.clipboard.writeText(a.apiKey); }catch(_){}
+    toast('API-ключ скопирован');
   });
   $('#btnRegenSecret')?.addEventListener('click', ()=>{
     openConfirmModal({ title:'Перевыпустить HMAC-секрет?', body:'Старый секрет перестанет работать немедленно. Партнёру нужно будет обновить интеграцию.', confirmLabel:'Перевыпустить', danger:true,
@@ -4760,7 +4802,6 @@ function renderClientDetail(clientId){
               <div><dt>ID</dt><dd class="mono" style="font-size:11.5px">${esc(c.id)}</dd></div>
               <div><dt>ID партнера</dt><dd class="mono" style="font-size:11.5px">${a?esc(a.userId):'—'}</dd></div>
 
-              <div><dt>WL</dt><dd>${a?esc(a.name):'—'}</dd></div>
               <div><dt>Статус</dt><dd>${clientStatusBadge(c.status)}</dd></div>
 
               <div><dt>Статус верификации</dt><dd>${verifBadge(c.verificationStatus)}</dd></div>
