@@ -421,6 +421,23 @@ table.grid tbody tr:last-child td{border-bottom:0}
 }
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10)}
 .field .req{color:var(--error)}
+.csel{position:relative}
+.csel-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:8px 10px;font-size:12.5px;background:var(--bg-white);cursor:pointer;text-align:left;color:var(--text-strong)}
+.csel-btn:hover{border-color:#d4d4d4}
+.csel-btn.open,.csel-btn:focus-visible{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10);outline:0}
+.csel-btn .csel-ph{color:var(--text-soft)}
+.csel-btn .csel-code{color:var(--text-soft);font-size:11px;margin-left:6px}
+.csel-chev{flex:0 0 9px;color:var(--text-soft);transition:transform .15s}
+.csel-btn.open .csel-chev{transform:rotate(180deg)}
+.csel-pop{position:fixed;z-index:200;background:var(--bg-white);border:1px solid var(--stroke-soft);border-radius:var(--radius-10);box-shadow:var(--shadow-pop);padding:6px;display:flex;flex-direction:column;gap:4px}
+.csel-search{border:1px solid var(--stroke-med);border-radius:var(--radius-8);padding:7px 9px;font-size:12.5px;outline:0;width:100%}
+.csel-search:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-a10)}
+.csel-list{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.csel-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 9px;border:0;background:none;border-radius:var(--radius-8);font-size:12.5px;color:var(--text-strong);cursor:pointer;text-align:left}
+.csel-opt:hover{background:var(--bg-weak)}
+.csel-opt.sel{color:var(--primary);font-weight:600;background:var(--primary-a10)}
+.csel-opt .csel-code{color:var(--text-soft);font-size:11px;font-weight:400}
+.csel-empty{padding:10px;text-align:center;font-size:12px;color:var(--text-soft)}
 .field small{font-size:11px;color:var(--text-soft)}
 .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .field-grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -5450,43 +5467,133 @@ function openEditPartnerInfoModal(a){
   });
 }
 
+/* Справочник стран для ручного добавления клиента: в бэкенд уходит alpha-3 (RUS, KGZ...), в списке показываем название.
+   Состав демонстрационный - реальный справочник должен отдавать бэкенд. */
+const COUNTRY_OPTIONS = [
+  ['RUS','Россия'],['KGZ','Киргизия'],['KAZ','Казахстан'],['TJK','Таджикистан'],['UZB','Узбекистан'],
+  ['ARM','Армения'],['AZE','Азербайджан'],['BLR','Беларусь'],['GEO','Грузия'],['MDA','Молдова'],
+  ['TUR','Турция'],['ARE','ОАЭ'],['CYP','Кипр'],['CHN','Китай'],['IND','Индия'],['DEU','Германия'],['USA','США'],
+];
+function countrySelectHtml(id, selected){
+  return `<div class="csel" id="${id}" data-value="${selected||''}"><button type="button" class="csel-btn"></button></div>`;
+}
+/* Список со своим оформлением: поиск по названию и коду, список выбирается кликом. Значение лежит в data-value (alpha-3). */
+function initCountrySelect(id){
+  const root = document.getElementById(id), btn = root.querySelector('.csel-btn');
+  const chev = '<svg class="csel-chev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1l3.5 3.5L8 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  let pop = null;
+  const paint = ()=>{
+    const v = root.dataset.value, it = COUNTRY_OPTIONS.find(x=>x[0]===v);
+    btn.innerHTML = (it ? `<span>${it[1]}<span class="csel-code">${it[0]}</span></span>` : '<span class="csel-ph">Не выбрана</span>') + chev;
+  };
+  const close = ()=>{ if(pop){ pop.remove(); pop = null; } btn.classList.remove('open'); document.removeEventListener('mousedown', outside, true); };
+  const outside = e=>{ if(pop && !pop.contains(e.target) && !root.contains(e.target)) close(); };
+  const fill = q=>{
+    const v = root.dataset.value, qq = (q||'').trim().toLowerCase();
+    const items = COUNTRY_OPTIONS.filter(([c,n])=>!qq || n.toLowerCase().includes(qq) || c.toLowerCase().includes(qq));
+    pop.querySelector('.csel-list').innerHTML = items.length
+      ? items.map(([c,n])=>`<button type="button" class="csel-opt ${c===v?'sel':''}" data-v="${c}"><span>${n}</span><span class="csel-code">${c}</span></button>`).join('')
+      : '<div class="csel-empty">Ничего не найдено</div>';
+  };
+  btn.addEventListener('click', ()=>{
+    if(pop){ close(); return; }
+    const r = btn.getBoundingClientRect();
+    pop = document.createElement('div');
+    pop.className = 'csel-pop';
+    pop.style.left = r.left+'px'; pop.style.width = Math.max(r.width, 220)+'px';
+    pop.innerHTML = '<input class="csel-search" placeholder="Поиск страны" autocomplete="off"><div class="csel-list"></div>';
+    document.body.appendChild(pop);
+    // не помещается вниз - открываем вверх
+    const h = pop.offsetHeight;
+    pop.style.top = (window.innerHeight - r.bottom < h + 12 ? r.top - h - 6 : r.bottom + 6)+'px';
+    btn.classList.add('open'); fill('');
+    pop.querySelector('.csel-search').focus();
+    pop.querySelector('.csel-search').addEventListener('input', e=>fill(e.target.value));
+    pop.addEventListener('click', e=>{
+      const o = e.target.closest('.csel-opt'); if(!o) return;
+      root.dataset.value = o.dataset.v; paint(); close();
+    });
+    document.addEventListener('mousedown', outside, true);
+  });
+  paint();
+}
+
 function openNewClientModal(scopeAgentId){
   const agentOptions = agents.filter(a=>a.status==='ACTIVE').map(a=>`<option value="${a.id}" ${scopeAgentId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
   openModal(`
     <div class="modal-h"><h3>Новый внешний клиент</h3><button class="modal-x" data-close-modal>✕</button></div>
     <div class="modal-b">
-      <div class="field"><label>Партнёр (агент) <span class="req">*</span></label><select id="ncAgent">${agentOptions}</select></div>
+      <div class="field-grid">
+        <div class="field"><label>ID партнёра (агента) <span class="req">*</span></label><select id="ncAgent">${agentOptions}</select></div>
+        <div class="field"><label>Внешний ID</label><input id="ncExtId" placeholder="ext-00123"></div>
+      </div>
       <div class="field-grid cols3">
         <div class="field"><label>Фамилия <span class="req">*</span></label><input id="ncLast" placeholder="Иванов"></div>
         <div class="field"><label>Имя <span class="req">*</span></label><input id="ncFirst" placeholder="Иван"></div>
         <div class="field"><label>Отчество</label><input id="ncMiddle" placeholder="Иванович"></div>
       </div>
       <div class="field-grid">
-        <div class="field"><label>Телефон</label><input id="ncPhone" placeholder="+996 555 00 00 00"></div>
-        <div class="field"><label>Внешний ID</label><input id="ncExtId" placeholder="ext-00123"></div>
-      </div>
-      <div class="field-grid">
-        <div class="field"><label>Номер паспорта</label><input id="ncPassport"></div>
-        <div class="field"><label>Страна выдачи</label><input id="ncCountry" placeholder="KGZ"></div>
-      </div>
-      <div class="field-grid">
         <div class="field"><label>Фамилия как в документе</label><input id="ncLastNative" placeholder="Обязательно при иностранном документе"></div>
         <div class="field"><label>Имя как в документе</label><input id="ncFirstNative" placeholder="Обязательно при иностранном документе"></div>
       </div>
+      <div class="field-grid cols3">
+        <div class="field"><label>Email</label><input id="ncEmail" placeholder="client@example.com"></div>
+        <div class="field"><label>Телефон</label><input id="ncPhone" placeholder="+996 555 00 00 00"></div>
+        <div class="field"><label>Telegram ID</label><input id="ncTelegram"></div>
+      </div>
+      <div class="field-grid cols3">
+        <div class="field"><label>Дата рождения (ГГГГ-ММ-ДД)</label><input id="ncBirth" placeholder="1990-01-31"></div>
+        <div class="field"><label>Номер паспорта</label><input id="ncPassport"></div>
+        <div class="field"><label>Дата выдачи паспорта</label><input id="ncPassportDate" placeholder="2020-01-31"></div>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>Страна выдачи документа</label>${countrySelectHtml('ncCountry','')}</div>
+        <div class="field"><label>ИНН</label><input id="ncInn"></div>
+      </div>
+
+      <div class="hairline"></div>
+      <div class="section-num">Адрес регистрации</div>
+      <div class="field-grid cols3">
+        <div class="field"><label>Страна</label>${countrySelectHtml('ncAddrCountry','')}</div>
+        <div class="field"><label>Индекс</label><input id="ncAddrIndex"></div>
+        <div class="field"><label>Регион</label><input id="ncAddrState"></div>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>Город</label><input id="ncAddrCity"></div>
+        <div class="field"><label>Город (лат.)</label><input id="ncAddrCityEn"></div>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>Улица</label><input id="ncAddrStreet"></div>
+        <div class="field"><label>Улица (лат.)</label><input id="ncAddrStreetEn"></div>
+      </div>
+      <div class="field-grid cols3">
+        <div class="field"><label>Дополнение к улице</label><input id="ncAddrExtra"></div>
+        <div class="field"><label>Название строения</label><input id="ncAddrBuilding"></div>
+        <div class="field"><label>Дом</label><input id="ncAddrHouse"></div>
+      </div>
+      <div class="field" style="max-width:180px"><label>Квартира</label><input id="ncAddrFlat"></div>
+
+      <div class="hairline"></div>
+      <div class="section-num">Документы</div>
+      <div class="field"><button class="btn" id="ncUpload" type="button" style="width:fit-content">Загрузить файл</button><div id="ncFileName" style="margin-top:6px;font-size:12px;color:var(--text-soft)"></div></div>
+
+      <div class="hairline"></div>
       <div class="toggle-row"><div class="tt">Пополнение по СБП</div><button class="switch" id="ncSbp"><span class="knob"></span></button></div>
       <div class="toggle-row"><div class="tt">Пополнение по QR</div><button class="switch" id="ncQr"><span class="knob"></span></button></div>
     </div>
     <div class="modal-f"><button class="btn" data-close-modal>Отмена</button><button class="btn btn-primary" id="ncSave">Создать клиента</button></div>
   `, true);
+  initCountrySelect('ncCountry'); initCountrySelect('ncAddrCountry');
   $('#ncSbp').addEventListener('click', e=>e.currentTarget.classList.toggle('on'));
   $('#ncQr').addEventListener('click', e=>e.currentTarget.classList.toggle('on'));
+  $('#ncUpload').addEventListener('click', ()=>{ $('#ncFileName').textContent = 'passport_scan.pdf'; });
   $('#ncSave').addEventListener('click', ()=>{
     const agentId = $('#ncAgent').value, last=$('#ncLast').value.trim(), first=$('#ncFirst').value.trim();
     if(!agentId || !last || !first){ toast('Заполните партнёра, фамилию и имя'); return; }
-    const country = $('#ncCountry').value.trim();
+    const country = $('#ncCountry').dataset.value;
     // как в bb1 (partner_clients.py: validate_non_local_required_fields) - для
     // нелокального паспорта "как в документе" обязательны уже на создании, не только на правке
-    const isForeign = !!country && country.toUpperCase()!=='RUS';
+    const isForeign = !!country && country!=='RUS';
     const lastNative = $('#ncLastNative').value.trim(), firstNative = $('#ncFirstNative').value.trim();
     if(isForeign && (!lastNative || !firstNative)){
       toast('При иностранном документе обязательны «Фамилия как в документе» и «Имя как в документе»'); return;
@@ -5494,11 +5601,18 @@ function openNewClientModal(scopeAgentId){
     const id = 'c'+(clients.length+1);
     clients.push({
       id, agentId, externalId: $('#ncExtId').value.trim() || ('manual_'+Math.floor(Math.random()*9000+1000)),
-      firstName:first, lastName:last, middleName:$('#ncMiddle').value.trim(), email:'', phoneNumber:$('#ncPhone').value.trim(),
+      firstName:first, lastName:last, middleName:$('#ncMiddle').value.trim(), email:$('#ncEmail').value.trim(), phoneNumber:$('#ncPhone').value.trim(),
+      telegramId:$('#ncTelegram').value.trim(),
       status:'PENDING', verificationStatus:'PENDING', sourceChannel:'MANUAL', kycMethod:'MANUAL', checkResult:'PENDING',
       deletionRequested:false, sbpTopUp:$('#ncSbp').classList.contains('on'), qrTopUp:$('#ncQr').classList.contains('on'),
-      sbpTopUpFixed:false, sbpWithdrawal:false, sbpWithdrawalFixed:false, sbpBlockedByAntifraud:false, unpaidQrStreak:0, birthDate:'', passportNumber:$('#ncPassport').value.trim(),
-      passportIssuedDate:'', passportIssuingCountry:country, lastNameNative:lastNative, firstNameNative:firstNative, inn:'', registrationAddress:{},
+      sbpTopUpFixed:false, sbpWithdrawal:false, sbpWithdrawalFixed:false, sbpBlockedByAntifraud:false, unpaidQrStreak:0,
+      birthDate:$('#ncBirth').value.trim(), passportNumber:$('#ncPassport').value.trim(),
+      passportIssuedDate:$('#ncPassportDate').value.trim(), passportIssuingCountry:country, lastNameNative:lastNative, firstNameNative:firstNative, inn:$('#ncInn').value.trim(),
+      registrationAddress:{
+        country:$('#ncAddrCountry').dataset.value, postIndex:$('#ncAddrIndex').value.trim(), state:$('#ncAddrState').value.trim(),
+        city:$('#ncAddrCity').value.trim(), cityEn:$('#ncAddrCityEn').value.trim(), street:$('#ncAddrStreet').value.trim(), streetEn:$('#ncAddrStreetEn').value.trim(),
+        streetExtra:$('#ncAddrExtra').value.trim(), buildingName:$('#ncAddrBuilding').value.trim(), buildingNumber:$('#ncAddrHouse').value.trim(), flatNumber:$('#ncAddrFlat').value.trim(),
+      },
       createdAt: new Date().toLocaleString('ru-RU').slice(0,17), checks:{},
     });
     closeModal(); render(); toast('Клиент создан, проверки поставлены в очередь');
