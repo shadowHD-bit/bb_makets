@@ -2499,8 +2499,9 @@ function renderAccountPartnerTab(a){
         <div class="panel" data-collapsed="${isCollapsed('ap-telegram')}">
           ${collapsibleHead('ap-telegram', '<h3>Настройки Telegram-чата</h3>')}
           <div class="panel-b">
-            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
+            <div class="field"><label>ID Telegram-чата операторов</label><input id="tgOperatorChatId" value="${esc(a.operatorChatId||'')}" placeholder="-100...."></div>
             <div class="hairline"></div>
+            <div class="field"><label>ID Telegram-чата с партнёром</label><input id="tgChatId" value="${esc(a.partnerChatId)}" placeholder="-100...."></div>
             <div class="ts" style="margin-bottom:8px">Отправлять в чат:</div>
             <label class="checkfilter" style="display:flex;margin-bottom:8px"><input type="checkbox" id="tgNotifyErrors" ${a.sendChatNotifications?'checked':''}> Ошибки KYC и регистрации в TG чат с партнером</label>
             <label class="checkfilter" style="display:flex;margin-bottom:${a.manualLinksEnabled?'8':'4'}px;${a.manualLinksEnabled?'':'opacity:.55'}"><input type="checkbox" id="tgNotifyManual" ${a.manualNotifyEnabled?'checked':''} ${a.manualLinksEnabled?'':'disabled'}> Уведомления по ручной генерации ссылок</label>
@@ -2817,6 +2818,7 @@ function bindAccountDetailPage(){
 
   $('#btnSaveTelegram')?.addEventListener('click', ()=>{
     a.partnerChatId = $('#tgChatId').value;
+    a.operatorChatId = $('#tgOperatorChatId').value;
     a.sendChatNotifications = $('#tgNotifyErrors').checked;
     if($('#tgNotifyManual') && !$('#tgNotifyManual').disabled) a.manualNotifyEnabled = $('#tgNotifyManual').checked;
     render();
